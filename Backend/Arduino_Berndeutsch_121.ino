@@ -22,6 +22,9 @@
 #include <TimeLib.h>            // v1.6.1
 #include <Timezone.h>           // v1.2.4
 #include <Adafruit_NeoPixel.h>  // v1.10.4
+// libraries possibly needed for getUrlParameter
+#include <stdio.h>
+#include <string.h>
 
 char version[] = "V3";
 
@@ -31,13 +34,11 @@ WiFiServer server(80);
 // Variable to store the HTTP request
 String header;
 
-// Auxiliar variables to store the current output state
-String output5State = "off";
-String output4State = "off";
+// Auxiliar variables to store the web parameters
+int rgbRed = 255;
+int rgbGreen = 255;
+int rgbBlue = 255;
 
-// Assign output variables to GPIO pins
-const int output5 = 5;
-const int output4 = 4;
 
 // Current time
 unsigned long currentTime = millis();
@@ -76,15 +77,18 @@ unsigned int localPort = 8888;  // local port to listen for UDP packets
 
 static uint32_t Black = Adafruit_NeoPixel::Color(0, 0, 0);
 static uint32_t White = Adafruit_NeoPixel::Color(49, 52, 34);
-static uint32_t Grey = Adafruit_NeoPixel::Color(10, 10, 8);
 static uint32_t Red = Adafruit_NeoPixel::Color(90, 0, 0);
-static uint32_t Orange = Adafruit_NeoPixel::Color(75, 30, 0);
-static uint32_t Yellow = Adafruit_NeoPixel::Color(50, 50, 0);
 static uint32_t Green = Adafruit_NeoPixel::Color(10, 90, 0);
 static uint32_t Blue = Adafruit_NeoPixel::Color(0, 20, 85);
-static uint32_t DarkBlue = Adafruit_NeoPixel::Color(0, 10, 40);
-static uint32_t DarkestBlue = Adafruit_NeoPixel::Color(2, 0, 15);
-static uint32_t Purple = Adafruit_NeoPixel::Color(45, 0, 50);
+
+uint32_t colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+uint32_t colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+
+uint32_t foregroundColor = colorDay;
+uint32_t backgroundColor = Black;
+
+// Don't light up WiFi, only on requests
+uint32_t wifiColor = Black;
 
 /*
 | Ä | S | U | I | S | C | H | J | F | Ü | F |
@@ -137,24 +141,18 @@ static int WordMinFuenf[] = {8, 9, 10, -1};                   // FÜF
 static int WordMinZehn[] = {13, 12, -1};                      // ZÄ
 static int WordMinViertel[] = {21, 20, 19, 18, 17, 16, -1};   // VIERTU
 static int WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};   // ZWÄNZG
-static int WordMinTicks[] = {113, 114, 116, 117, -1};
+static int WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
 
 static int *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(121, D7, NEO_GRB + NEO_KHZ800);
-uint32_t foregroundColor = White;
-uint32_t backgroundColor = Black;
-
-
-// Don't light up WiFi, only on requests
-uint32_t wifiColor = Black;
 
 // How long this state should be displayed
 int wifiWait = 0;
 
 /**
  * Runs through all pixels
- * @param color
+ * @param color Adafruit_NeoPixel-Color to display
  */
 void chase(uint32_t color) {
   for (uint16_t i = 0; i < pixels.numPixels() + 4; i++) {
@@ -166,30 +164,7 @@ void chase(uint32_t color) {
 }
 
 /**
- * Shows logo or/and fix wifi
- * @param color
- */
-void showIntro(uint32_t color) {
-  for (int j = 0; j < 2; j++) {
-    if (WordURL[j] == WordFix) {
-      delay(450);
-    }
-    for (int i = 0; i < pixels.numPixels(); i++) {
-      if (WordURL[j][i] == -1) {
-        break;
-      } else {
-        pixels.setPixelColor(WordURL[j][i], White); // Erase pixel a few steps back
-      }
-      pixels.show();
-      delay(25);
-    }
-    pixels.show();
-    delay(250);
-  }
-}
-
-/**
- * Sets all pixels to the background
+ * Sets all pixels to the background-color
  */
 void blank() {
   for (int x = 0; x < pixels.numPixels(); ++x) {
@@ -207,30 +182,53 @@ void wipe() {
 
 /**
  * Sets array of pixels to a specific color
- * @param Word array of the id of the pixel
- * @param Color
+ * @param word array with the id's of the pixels
+ * @param color Adafruit_NeoPixel-Color to display those pixels
  */
-void lightup(int *Word, uint32_t Color) {
+void lightup(int *word, uint32_t color) {
   for (int x = 0; x < pixels.numPixels() + 1; x++) {
-    if (Word[x] == -1) {
+    if (word[x] == -1) {
       Serial.print(" ");
       break;
     } else {
-      pixels.setPixelColor(Word[x], Color);
+      pixels.setPixelColor(word[x], color);
     }
   }
 }
 
+/**
+ * Displays a successful wifi connection
+ */
 void showWifiSuccess() {
   lightup(WordWifi, Blue);
   lightup(SymbolWifi, Green);
   pixels.show();
 }
 
+/**
+ * Displays that wifi needs to be configured (select wlan access point wordclock)
+ */
 void connectWLAN() {
   lightup(WordFix, White);
   lightup(WordWifi, Blue);
   pixels.show();
+}
+
+/**
+ * Get the value of a URL-Parameter
+ */
+void getUrlParameter(char *url, char *parameterName) {
+    Serial.print(url);
+    Serial.print(parameterName);
+    char *parameterPtr = strstr(url, parameterName);
+    if (parameterPtr != NULL) {
+        int parameterValue;
+        sscanf(parameterPtr + strlen(parameterName) + 1, "%d", &parameterValue);
+        Serial.println(parameterValue);
+        return parameterValue;
+    } else {
+        return -1;
+    }
 }
 
 /**
@@ -247,7 +245,7 @@ void showHour() {
 }
 
 /**
- * Sets pixels for the current minutes values
+ * Sets pixels for the current minutes
  */
 void showMinute() {
   if (wordClockMinute != 0) {
@@ -291,14 +289,17 @@ void displayWifiStatus() {
   }
 }
 
+/**
+ * Displays the current time
+ */
 void displayTime() {
   blank();
 
   // Display darker color between 22:00 and 07:00
   if (wordClockHour > 6 && wordClockHour < 22) {
-    //foregroundColor = White;
+    foregroundColor = colorDay;
   } else {
-    foregroundColor = Grey;
+    foregroundColor = colorNight;
   }
 
   // light up "it's" it stays on
@@ -313,19 +314,22 @@ void displayTime() {
   pixels.show();
 }
 
+/**
+ * Initialize the display
+ */
 void setupDisplay() {
   pixels.begin();
   wipe();
 }
 
 /**
- * Sets the status of the wifi
- * @param Color
- * @param duration
+ * Displays the status of the wifi
+ * @param color Adafruit_NeoPixel-Color to display those pixels
+ * @param duration milliseconds to display the status
  */
-void setWifiStatus(uint32_t Color, int duration) {
+void setWifiStatus(uint32_t color, int duration) {
   wifiWait = duration;
-  wifiColor = Color;
+  wifiColor = color;
   lightup(SymbolWifi, wifiColor);
   pixels.show();
 }
@@ -344,7 +348,7 @@ void serialTime() {
 
 /**
  * utility for digital clock display: prints preceding colon and leading 0
- * @param digits
+ * @param digits value to format
  */
 void formatDigits(int digits) {
   if (digits < 10)
@@ -366,6 +370,9 @@ void getLocalTime() {
   wordClockHour = hour(timeWithDST);
 }
 
+/**
+ * Get current time value from a ntp server
+ */
 time_t getNtpTime() {
   setWifiStatus(Blue, 250);
   IPAddress ntpServerIP; // NTP server's ip address
@@ -402,7 +409,9 @@ time_t getNtpTime() {
   return 0; // return 0 if unable to get the time (Timelib just queries again)
 }
 
-// send an NTP request to the time server at the given address
+/**
+ * Send an NTP request to the time server at the given address
+ */
 void sendNTPpacket(IPAddress &address) {
   // set all bytes in the buffer to 0
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
@@ -472,6 +481,9 @@ void setupWifi() {
   server.begin();
 }
 
+/**
+ * Main setup to start WordClock
+ */
 void setup() {
   Serial.begin(115200);
   Serial.println("");
@@ -479,16 +491,14 @@ void setup() {
   Serial.println(version);
   setupDisplay();
 
-  chase(Orange); // run basic screen test and show success
+  chase(Green); // run basic screen test and show success
 
   setupWifi();
   setupTime();
-
-  //showWifiSuccess();
 }
 
 /**
- * Displays current time if minute changed
+ * Listen vor changed settings over the web interface and display current time in a loop
  */
 void loop() {
   WiFiClient client = server.available();   // Listen for incoming clients
@@ -516,31 +526,23 @@ void loop() {
             client.println();
             
             // turns the GPIOs on and off
-            if (header.indexOf("GET /5/on") >= 0) {
-              foregroundColor = Orange;
-              output5State = "on";
-              lastMinuteWordClock = 61;
-            } else if (header.indexOf("GET /5/off") >= 0) {
-              foregroundColor = White;
-              output5State = "off";
-              lastMinuteWordClock = 61;
-            } 
-            if (header.indexOf("GET /4/on") >= 0) {
-              foregroundColor = Purple;
-              output4State = "on";
-              lastMinuteWordClock = 61;
-            } else if (header.indexOf("GET /4/off") >= 0) {
-              foregroundColor = White;
-              output4State = "off";
-              lastMinuteWordClock = 61;
-            } 
+            if (getUrlParameter(header, "red") >= 0) {
+              rgbRed = getUrlParameter(header, "red");
+            }
+            if (getUrlParameter(header, "green") >= 0) {
+              rgbGreen = getUrlParameter(header, "green");
+            }
+            if (getUrlParameter(header, "blue") >= 0) {
+              rgbBlue = getUrlParameter(header, "blue");
+            }
+            uint32_t colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+            uint32_t colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+            lastMinuteWordClock = 61;
             
             // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
-            // CSS to style the on/off buttons 
-            // Feel free to change the background-color and font-size attributes to fit your preferences
             client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
             client.println(".button { background-color: #195B6A; border: none; color: white; padding: 16px 40px;");
             client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
@@ -549,22 +551,20 @@ void loop() {
             // Web Page Heading
             client.println("<body><h1>grrd's WordClock</h1>");
             
-            // Display current state, and ON/OFF buttons for GPIO 5  
-            client.println("<p>Color Orange - State " + output5State + "</p>");
-            // If the output5State is off, it displays the ON button       
-            if (output5State=="off") {
-              client.println("<p><a href=\"/5/on\"><button class=\"button\">ON</button></a></p>");
+            // Display current state
+            client.println("<p>Red or Green " + rgbRed + "</p>");
+            if (rgbRed==0) {
+              client.println("<p><a href=\"?red=255&green=0&blue=0\"><button class=\"button\">Red</button></a></p>");
             } else {
-              client.println("<p><a href=\"/5/off\"><button class=\"button button2\">OFF</button></a></p>");
+              client.println("<p><a href=\"?red=0&green=255&blue=0\"><button class=\"button button2\">Green</button></a></p>");
             } 
                
             // Display current state, and ON/OFF buttons for GPIO 4  
-            client.println("<p>Color Purple - State " + output4State + "</p>");
-            // If the output4State is off, it displays the ON button       
-            if (output4State=="off") {
-              client.println("<p><a href=\"/4/on\"><button class=\"button\">ON</button></a></p>");
+            client.println("<p>Blue or White " + rgbBlue + "</p>");
+            if (rgbBlue==0) {
+              client.println("<p><a href=\"?red=0&green=0&blue=255\"><button class=\"button\">Blue</button></a></p>");
             } else {
-              client.println("<p><a href=\"/4/off\"><button class=\"button button2\">OFF</button></a></p>");
+              client.println("<p><a href=\"?red=255&green=255&blue=255\"><button class=\"button button2\">White</button></a></p>");
             }
             client.println("</body></html>");
             
