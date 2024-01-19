@@ -57,7 +57,7 @@
         let red = parseInt(color.substring(1,3), 16);
         let green = parseInt(color.substring(3,5), 16);
         let blue = parseInt(color.substring(5,7), 16);
-        //window.location.search += ("&red=" + red + "&green" + green + "&blue" + blue);
+        window.location.search = ("&red=" + red + "&green=" + green + "&blue=" + blue);
         document.styleSheets[0].cssRules[3].style.fill = color;
         document.styleSheets[0].cssRules[3].style.textShadow = "0 0 10px " + color;
     }
