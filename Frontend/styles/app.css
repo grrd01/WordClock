@@ -33,11 +33,33 @@ body {
     text-shadow:0 0 10px #fff;
 }
 
+a:link {
+    color: #ee1149;
+}
+a:visited {
+    color: #de0139;
+}
+a:hover, a:focus {
+    color: #ff2162;
+}
+a:active {
+    color: #ff2162;
+}
+
 #settings, #settingsClose {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
+
+.svgButton {
+    width: 4.5vmin;
+    height: 4.5vmin;
+    stroke: #555;
+    stroke-linejoin: round;
+    stroke-width:6;
+    fill:none;
+}
 .svgButton:hover {
-    stroke: #fff !important;
+    stroke: #fff;
     text-shadow:0 0 10px #fff;
     cursor: pointer;
 }
@@ -52,7 +74,7 @@ body {
     left: 0;
     right: 0;
     margin: auto;
-    width: 400px;
+    width: 600px;
     max-width: calc(100vw - 40px);
 }
 .pageBody {
@@ -60,6 +82,7 @@ body {
     flex-direction: row;
     justify-content: space-between;
     margin-bottom: 20px;
+    align-items: center;
 }
 .pageFooter {
     margin-top: 40px;
@@ -69,37 +92,41 @@ body {
     -moz-appearance: none;
     appearance: none;
     background-color: transparent;
-    width: 35px;
-    height: 35px;
+    width: 4.5vmin;
+    height: 4.5vmin;
     border: none;
     cursor: pointer;
 }
 #color::-webkit-color-swatch {
     border-radius: 50%;
-    border: 3px solid #555;
+    border: 0.45vmin solid #555;
 }
 #color::-moz-color-swatch {
     border-radius: 50%;
-    border: 3px solid #555;
+    border: 0.45vmin solid #555;
 }
 #color::-webkit-color-swatch:hover {
-    border: 3px solid #fff;
+    border: 0.45vmin solid #fff;
 }
 #color::-moz-color-swatch:hover {
-    border: 3px solid #fff;
+    border: 0.45vmin solid #fff;
 }
 
 a:link {
     color: #ee1149;
 }
 a:visited {
-    color: #de0139;
+    filter: brightness(85%);
 }
 a:hover, a:focus {
-    color: #ff2162;
+    filter: brightness(125%);
 }
 a:active {
-    color: #ff2162;
+    filter: brightness(125%);
+}
+
+.hide {
+    display: none;
 }
 
 .swipe-in {

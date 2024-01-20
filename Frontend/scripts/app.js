@@ -2,6 +2,11 @@
     let date;
     let hour;
     let minute;
+    let darkMode = 1;
+    let rainbow = 0;
+    let rainbowRed = 255;
+    let rainbowGreen = 0;
+    let rainbowBlue = 0;
     const clock = document.getElementById("clock");
     const pageClock = document.getElementById("pageClock");
     const pageSettings = document.getElementById("pageSettings");
@@ -9,6 +14,19 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
+        if (rainbow) {
+            if (rainbowRed && !rainbowBlue) {
+                rainbowRed -= 1;
+                rainbowGreen += 1;
+            } else if (rainbowGreen) {
+                rainbowGreen -= 1;
+                rainbowBlue += 1;
+            } else {
+                rainbowBlue -= 1;
+                rainbowRed += 1;
+            }
+            fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
+        }
         if (minute === date.getMinutes()) {
             return;
         }
@@ -53,9 +71,28 @@
         pageClock.classList.add("swipe-out");
         pageSettings.classList.add("swipe-in");
     }
-    function fChangeColor() {
-        document.styleSheets[0].cssRules[3].style.fill = color.value;
-        document.styleSheets[0].cssRules[3].style.textShadow = "0 0 10px " + color.value;
+    function fChangeColor(color_in) {
+        document.styleSheets[0].cssRules[3].style.fill = color_in;
+        document.styleSheets[0].cssRules[3].style.textShadow = "0 0 10px " + color_in;
+        document.getElementsByTagName("a")[0].style.color = color_in;
+        document.getElementsByTagName("a")[1].style.color = color_in;
+    }
+    function fRainbow(rain_in) {
+        if (rain_in !== rainbow) {
+            document.getElementById("rainbowMode").children[0].classList.toggle("hide");
+            document.getElementById("rainbowMode").children[1].classList.toggle("hide");
+        }
+        rainbow = rain_in;
+        if (!rainbow) {
+            fChangeColor(color.value);
+        }
+    }
+    function fDarkMode(dark_in) {
+        if (dark_in !== darkMode) {
+            document.getElementById("darkMode").children[0].classList.toggle("hide");
+            document.getElementById("darkMode").children[1].classList.toggle("hide");
+        }
+        darkMode = dark_in;
     }
     function fHideSettings() {
         let red = parseInt(color.value.substring(1,3), 16);
@@ -66,13 +103,32 @@
         pageClock.classList.add("swipe-out-right");
         pageSettings.classList.add("swipe-in-left");
         localStorage.setItem("wc_color", color.value);
-        window.location.search = ("&red=" + red + "&green=" + green + "&blue=" + blue);
+        localStorage.setItem("wc_rainbow", rainbow);
+        localStorage.setItem("wc_darkmode", darkMode);
+        setTimeout(function() {
+            window.location.search = ("&red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode);
+        }, 500);
+
     }
     document.getElementById("settings").addEventListener("click", fShowSettings);
     document.getElementById("settingsClose").addEventListener("click", fHideSettings);
-    document.getElementById("color").addEventListener("change", fChangeColor, false);
+    document.getElementById("color").addEventListener("change", (ignore) => {
+        fChangeColor(color.value);
+    }, false);
+    document.getElementById("rainbowMode").addEventListener("click", (ignore) => {
+        fRainbow(1 - rainbow);
+    });
+    document.getElementById("darkMode").addEventListener("click", (ignore) => {
+        fDarkMode(1 - darkMode);
+    });
     if (localStorage.getItem("wc_color")) {
         color.value = localStorage.getItem("wc_color");
-        fChangeColor();
+        fChangeColor(color.value);
+    }
+    if (localStorage.getItem("wc_rainbow")) {
+        fRainbow(parseInt(localStorage.getItem("wc_rainbow")));
+    }
+    if (localStorage.getItem("wc_darkmode")) {
+        fDarkMode(parseInt(localStorage.getItem("wc_darkmode")));
     }
 }
