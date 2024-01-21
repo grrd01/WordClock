@@ -14,8 +14,7 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
-        /*
-        if (rainbow === 1) {
+        if (rainbow) {
             if (rainbowRed && !rainbowBlue) {
                 rainbowRed -= 1;
                 rainbowGreen += 1;
@@ -28,7 +27,7 @@
             }
             fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
         }
-        if (darkMode === 1 && (date.getHours() >=22 || date.getHours() < 7)) {
+        if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
             document.getElementsByTagName("body")[0].classList.add("dark");
         } else {
             document.getElementsByTagName("body")[0].classList.remove("dark");
@@ -36,7 +35,6 @@
         if (minute === date.getMinutes()) {
             return;
         }
-        */
         minute = date.getMinutes();
         clock.classList.remove(...clock.classList);
         if (minute >= 55) {
@@ -138,5 +136,4 @@
     if (localStorage.getItem("wc_darkmode")) {
         fDarkMode(parseInt(localStorage.getItem("wc_darkmode")));
     }
-    document.getElementById("iphone").href = document.getElementById("icon").href;
 }
