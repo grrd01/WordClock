@@ -14,7 +14,8 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
-        if (rainbow) {
+        alert("settime3a");
+        if (rainbow === 1) {
             if (rainbowRed && !rainbowBlue) {
                 rainbowRed -= 1;
                 rainbowGreen += 1;
@@ -27,15 +28,17 @@
             }
             fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
         }
-        if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
+        alert("settime3b");
+        if (darkMode === 1 && (date.getHours() >=22 || date.getHours() < 7)) {
             document.getElementsByTagName("body")[0].classList.add("dark");
         } else {
             document.getElementsByTagName("body")[0].classList.remove("dark");
         }
+        alert("settime3c");
         if (minute === date.getMinutes()) {
             return;
         }
-        alert("settime2");
+        alert("settime3d");
         minute = date.getMinutes();
         clock.classList.remove(...clock.classList);
         if (minute >= 55) {
