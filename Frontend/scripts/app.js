@@ -35,7 +35,7 @@
         if (minute === date.getMinutes()) {
             return;
         }
-        alert("settime");
+        alert("settime2");
         minute = date.getMinutes();
         clock.classList.remove(...clock.classList);
         if (minute >= 55) {
