@@ -40,6 +40,7 @@ int rgbGreen = 255;
 int rgbBlue = 255;
 int darkMode = 1;
 int rainbow = 0;
+int rainbowWait = 200;
 
 
 // Current time
@@ -553,6 +554,12 @@ void loop() {
             if (extractParameterValue(url, "red=") >= 0) {
               rgbRed = extractParameterValue(url, "red=");
             }
+            if (rainbow == 1) {
+              rgbRed = 255;
+              rgbGreen = 0;
+              rgbBlue = 0;
+              rainbowWait = 20;
+            }
             
             colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
             colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
@@ -586,6 +593,27 @@ void loop() {
     client.stop();
     Serial.println("Client disconnected.");
     Serial.println("");
+  }
+
+  if (rainbow == 1) {
+    if (rainbowWait > 0) {
+      rainbowWait--;
+    } else {
+      rainbowWait = 200;
+      if (rgbRed > 0 && !rgbBlue > 0) {
+          rgbRed--;
+          rgbGreen++;
+      } else if (rgbGreen > 0) {
+          rgbGreen--;
+          rgbBlue++;
+      } else {
+          rgbBlue--;
+          rgbRed++;
+      }
+      colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+      colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+      lastMinuteWordClock = 61;
+    }
   }
 
 

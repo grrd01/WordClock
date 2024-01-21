@@ -136,4 +136,5 @@
     if (localStorage.getItem("wc_darkmode")) {
         fDarkMode(parseInt(localStorage.getItem("wc_darkmode")));
     }
+    document.getElementById("iphone").href = document.getElementById("icon").href;
 }
