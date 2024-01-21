@@ -14,6 +14,7 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
+        /*
         if (rainbow === 1) {
             if (rainbowRed && !rainbowBlue) {
                 rainbowRed -= 1;
@@ -35,6 +36,7 @@
         if (minute === date.getMinutes()) {
             return;
         }
+        */
         minute = date.getMinutes();
         clock.classList.remove(...clock.classList);
         if (minute >= 55) {
