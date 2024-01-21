@@ -14,19 +14,19 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
-        // if (rainbow === 1) {
-        //     if (rainbowRed && !rainbowBlue) {
-        //         rainbowRed -= 1;
-        //         rainbowGreen += 1;
-        //     } else if (rainbowGreen) {
-        //         rainbowGreen -= 1;
-        //         rainbowBlue += 1;
-        //     } else {
-        //         rainbowBlue -= 1;
-        //         rainbowRed += 1;
-        //     }
-        //     fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
-        // }
+        if (rainbow === 1) {
+            if (rainbowRed && !rainbowBlue) {
+                rainbowRed -= 1;
+                rainbowGreen += 1;
+            } else if (rainbowGreen) {
+                rainbowGreen -= 1;
+                rainbowBlue += 1;
+            } else {
+                rainbowBlue -= 1;
+                rainbowRed += 1;
+            }
+            fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
+        }
         if (darkMode === 1 && (date.getHours() >=22 || date.getHours() < 7)) {
             document.getElementsByTagName("body")[0].classList.add("dark");
         } else {
