@@ -14,6 +14,7 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
+        alert("settime");
         if (rainbow) {
             if (rainbowRed && !rainbowBlue) {
                 rainbowRed -= 1;
