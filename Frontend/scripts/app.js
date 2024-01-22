@@ -34,6 +34,7 @@
             fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
             alert("nachchangecolor");
         }
+        alert("vordarkmode");
         alert("vordarkmode" + darkMode + date.getHours());
         if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
             alert("indarkmode");

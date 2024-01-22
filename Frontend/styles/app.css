@@ -130,7 +130,7 @@ a:active {
 }
 
 .hide {
-    display: none;
+    visibility: hidden;
 }
 .dark {
     filter: brightness(60%);
