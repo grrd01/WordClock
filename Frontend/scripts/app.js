@@ -14,6 +14,7 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
+        /*
         alert("in settime" + hour);
         if (rainbow) {
             alert("in rainbow "+ rainbow);
@@ -48,6 +49,8 @@
             alert("inifminute");
             return;
         }
+
+         */
         minute = date.getMinutes();
         alert("vorclockclass" +clock.classList);
         clock.classList.remove(...clock.classList);
