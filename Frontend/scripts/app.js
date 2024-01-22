@@ -54,6 +54,7 @@
         minute = date.getMinutes();
         alert("vorclockclass" +clock.classList);
         clock.classList.remove(...clock.classList);
+        alert("nachclockclass"+minute);
         if (minute >= 55) {
             clock.classList.add("M5", "MV");
         } else if (minute >= 50) {
@@ -102,6 +103,7 @@
         document.getElementsByTagName("a")[1].style.color = color_in;
     }
     function fRainbow(rain_in) {
+        alert("rainbow2");
         if (rain_in !== rainbow) {
             document.getElementById("rainbowMode").children[0].classList.toggle("hide");
             document.getElementById("rainbowMode").children[1].classList.toggle("hide");
@@ -112,6 +114,7 @@
         }
     }
     function fDarkMode(dark_in) {
+        alert("darkmode2");
         if (dark_in !== darkMode) {
             document.getElementById("darkMode").children[0].classList.toggle("hide");
             document.getElementById("darkMode").children[1].classList.toggle("hide");
@@ -140,9 +143,11 @@
         fChangeColor(color.value);
     }, false);
     document.getElementById("rainbowMode").addEventListener("click", (ignore) => {
+        alert("rainbow1");
         fRainbow(1 - rainbow);
     });
     document.getElementById("darkMode").addEventListener("click", (ignore) => {
+        alert("darkmode1");
         fDarkMode(1 - darkMode);
     });
     if (localStorage.getItem("wc_color")) {
