@@ -14,6 +14,7 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
+        minute = date.getMinutes();
         if (rainbow) {
             if (rainbowRed && !rainbowBlue) {
                 rainbowRed -= 1;
@@ -35,7 +36,6 @@
         if (minute === date.getMinutes()) {
             return;
         }
-        minute = date.getMinutes();
         clock.classList.remove(...clock.classList);
         if (minute >= 55) {
             clock.classList.add("M5", "MV");
@@ -66,9 +66,6 @@
         clock.classList.add("H" + hour.toString());
         clock.classList.add("M" + (minute % 5).toString());
     }
-    // todo
-    //setInterval(setTime, 100);
-
     function fShowSettings() {
         // Fix for Firefox OnKeydown
         document.activeElement.blur();
@@ -139,6 +136,5 @@
     }
     document.getElementById("iphone").href = document.getElementById("icon").href;
 
-    //todo
-    setTime();
+    setInterval(setTime, 100);
 }
