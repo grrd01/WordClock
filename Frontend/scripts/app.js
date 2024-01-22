@@ -14,28 +14,41 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
+        alert("in settime" + hour);
         if (rainbow) {
+            alert("in rainbow "+ rainbow);
             if (rainbowRed && !rainbowBlue) {
+                alert("in red "+ rainbowRed);
                 rainbowRed -= 1;
                 rainbowGreen += 1;
             } else if (rainbowGreen) {
+                alert("in green "+ rainbowGreen);
                 rainbowGreen -= 1;
                 rainbowBlue += 1;
             } else {
+                alert("in blue "+ rainbowBlue);
                 rainbowBlue -= 1;
                 rainbowRed += 1;
             }
+            alert("vorchangecolor");
             fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
+            alert("nachchangecolor");
         }
+        alert("vordarkmode" + darkMode + date.getHours());
         if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
+            alert("indarkmode");
             document.getElementsByTagName("body")[0].classList.add("dark");
         } else {
+            alert("elsedarkmode");
             document.getElementsByTagName("body")[0].classList.remove("dark");
         }
+        alert("vorifminute");
         if (minute === date.getMinutes()) {
+            alert("inifminute");
             return;
         }
         minute = date.getMinutes();
+        alert("vorclockclass" +clock.classList);
         clock.classList.remove(...clock.classList);
         if (minute >= 55) {
             clock.classList.add("M5", "MV");
@@ -65,8 +78,10 @@
         }
         clock.classList.add("H" + hour.toString());
         clock.classList.add("M" + (minute % 5).toString());
+        alert("nachclockclass" +clock.classList);
     }
-    setInterval(setTime, 100);
+    // todo
+    //setInterval(setTime, 100);
 
     function fShowSettings() {
         // Fix for Firefox OnKeydown
@@ -137,4 +152,7 @@
         fDarkMode(parseInt(localStorage.getItem("wc_darkmode")));
     }
     document.getElementById("iphone").href = document.getElementById("icon").href;
+
+    //todo
+    setTime();
 }
