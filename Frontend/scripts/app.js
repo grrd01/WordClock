@@ -27,11 +27,6 @@
             }
             fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
         }
-        if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
-            document.getElementsByTagName("body")[0].classList.add("dark");
-        } else {
-            document.getElementsByTagName("body")[0].classList.remove("dark");
-        }
         if (minute === date.getMinutes()) {
             return;
         }
