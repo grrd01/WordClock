@@ -14,47 +14,29 @@
     function setTime () {
         date = new Date();
         hour = date.getHours() % 12;
-        /*
-        alert("in settime" + hour);
         if (rainbow) {
-            alert("in rainbow "+ rainbow);
             if (rainbowRed && !rainbowBlue) {
-                alert("in red "+ rainbowRed);
                 rainbowRed -= 1;
                 rainbowGreen += 1;
             } else if (rainbowGreen) {
-                alert("in green "+ rainbowGreen);
                 rainbowGreen -= 1;
                 rainbowBlue += 1;
             } else {
-                alert("in blue "+ rainbowBlue);
                 rainbowBlue -= 1;
                 rainbowRed += 1;
             }
-            alert("vorchangecolor");
             fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
-            alert("nachchangecolor");
         }
-        alert("vordarkmode");
-        alert("vordarkmode" + darkMode + date.getHours());
         if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
-            alert("indarkmode");
             document.getElementsByTagName("body")[0].classList.add("dark");
         } else {
-            alert("elsedarkmode");
             document.getElementsByTagName("body")[0].classList.remove("dark");
         }
-        alert("vorifminute");
         if (minute === date.getMinutes()) {
-            alert("inifminute");
             return;
         }
-
-         */
         minute = date.getMinutes();
-        alert("vorclockclass" +clock.classList);
         clock.classList.remove(...clock.classList);
-        alert("nachclockclass"+minute);
         if (minute >= 55) {
             clock.classList.add("M5", "MV");
         } else if (minute >= 50) {
@@ -83,7 +65,6 @@
         }
         clock.classList.add("H" + hour.toString());
         clock.classList.add("M" + (minute % 5).toString());
-        alert("nachclockclass" +clock.classList);
     }
     // todo
     //setInterval(setTime, 100);
@@ -103,7 +84,6 @@
         document.getElementsByTagName("a")[1].style.color = color_in;
     }
     function fRainbow(rain_in) {
-        alert("rainbow2");
         if (rain_in !== rainbow) {
             document.getElementById("rainbowMode").children[0].classList.toggle("hide");
             document.getElementById("rainbowMode").children[1].classList.toggle("hide");
@@ -114,7 +94,6 @@
         }
     }
     function fDarkMode(dark_in) {
-        alert("darkmode2");
         if (dark_in !== darkMode) {
             document.getElementById("darkMode").children[0].classList.toggle("hide");
             document.getElementById("darkMode").children[1].classList.toggle("hide");
@@ -143,11 +122,9 @@
         fChangeColor(color.value);
     }, false);
     document.getElementById("rainbowMode").addEventListener("click", (ignore) => {
-        alert("rainbow1");
         fRainbow(1 - rainbow);
     });
     document.getElementById("darkMode").addEventListener("click", (ignore) => {
-        alert("darkmode1");
         fDarkMode(1 - darkMode);
     });
     if (localStorage.getItem("wc_color")) {
