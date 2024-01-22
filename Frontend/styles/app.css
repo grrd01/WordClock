@@ -7,8 +7,8 @@ body {
     background: linear-gradient(#444, #222);
     min-width: 100vw;
     margin: 0;
-    position:fixed;
-    overflow:hidden;
+    position: fixed;
+    overflow: hidden;
     font-family: Arial, sans-serif;
     font-size: large;
     color: white;
@@ -26,43 +26,45 @@ body {
     background: linear-gradient(#444, #222);
 }
 
-.glow, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA,
-.H1 .H1, .H2 .H2, .H3 .H3, .H4 .H4, .H5 .H5, .H6 .H6, .H7 .H7, .H8 .H8, .H9 .H9, .H10 .H10, .H11 .H11, .H0 .H0,
-.M1 .M1, .M2 .M1, .M3 .M1, .M4 .M1, .M2 .M2, .M3 .M2, .M4 .M2, .M3 .M3, .M4 .M3, .M4 .M4 {
+.glow, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA, .H1 .H1, .H2 .H2, .H3 .H3, .H4 .H4, .H5 .H5, .H6 .H6, .H7 .H7, .H8 .H8, .H9 .H9, .H10 .H10, .H11 .H11, .H12 .H12, .M1 .M1, .M2 .M1, .M3 .M1, .M4 .M1, .M2 .M2, .M3 .M2, .M4 .M2, .M3 .M3, .M4 .M3, .M4 .M4 {
     fill: #fff;
-    text-shadow:0 0 10px #fff;
+    text-shadow: 0 0 10px #fff;
 }
 
 a:link {
     color: #ee1149;
 }
+
 a:visited {
     color: #de0139;
 }
+
 a:hover, a:focus {
     color: #ff2162;
 }
+
 a:active {
     color: #ff2162;
 }
 
 #settings, #settingsClose {
-    position: absolute; right: 4vmin; bottom: 4vmin;
+    position: absolute;
+    right: 4vmin;
+    bottom: 4vmin;
 }
 
 .svgButton {
     width: 4.5vmin;
     height: 4.5vmin;
-    min-width: 30px;
-    min-height: 30px;
     stroke: #555;
     stroke-linejoin: round;
-    stroke-width:6;
-    fill:none;
+    stroke-width: 6;
+    fill: none;
 }
+
 .svgButton:hover {
     stroke: #fff;
-    text-shadow:0 0 10px #fff;
+    text-shadow: 0 0 10px #fff;
     cursor: pointer;
 }
 
@@ -71,6 +73,7 @@ a:active {
     visibility: hidden;
     opacity: 0;
 }
+
 .pageContent {
     display: block;
     left: 0;
@@ -79,6 +82,7 @@ a:active {
     width: 600px;
     max-width: calc(100vw - 40px);
 }
+
 .pageBody {
     display: flex;
     flex-direction: row;
@@ -86,9 +90,11 @@ a:active {
     margin-bottom: 20px;
     align-items: center;
 }
+
 .pageFooter {
     margin-top: 40px;
 }
+
 #color {
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -96,22 +102,24 @@ a:active {
     background-color: transparent;
     width: 4.5vmin;
     height: 4.5vmin;
-    min-width: 30px;
-    min-height: 30px;
     border: none;
     cursor: pointer;
 }
+
 #color::-webkit-color-swatch {
     border-radius: 50%;
     border: 0.45vmin solid #555;
 }
+
 #color::-moz-color-swatch {
     border-radius: 50%;
     border: 0.45vmin solid #555;
 }
+
 #color::-webkit-color-swatch:hover {
     border: 0.45vmin solid #fff;
 }
+
 #color::-moz-color-swatch:hover {
     border: 0.45vmin solid #fff;
 }
@@ -119,19 +127,23 @@ a:active {
 a:link {
     color: #ee1149;
 }
+
 a:visited {
     filter: brightness(85%);
 }
+
 a:hover, a:focus {
     filter: brightness(125%);
 }
+
 a:active {
     filter: brightness(125%);
 }
 
 .hide {
-    visibility: hidden;
+    display: none;
 }
+
 .dark {
     filter: brightness(60%);
 }
@@ -183,6 +195,7 @@ a:active {
         opacity: 0;
     }
 }
+
 .swipe-in-left {
     animation-name: swipe-in-left;
     animation-fill-mode: forwards;
@@ -230,4 +243,3 @@ a:active {
         opacity: 1;
     }
 }
-
