@@ -13,7 +13,6 @@
     const color = document.getElementById("color");
     function setTime () {
         date = new Date();
-        hour = date.getHours() % 12;
         if (rainbow) {
             if (rainbowRed && !rainbowBlue) {
                 rainbowRed -= 1;
@@ -60,9 +59,11 @@
         } else if (minute >= 5) {
             clock.classList.add("M5", "MA");
         }
+        hour = date.getHours();
         if (minute >= 25) {
             hour += 1;
         }
+        hour = hour % 12;
         clock.classList.add("H" + hour.toString());
         clock.classList.add("M" + (minute % 5).toString());
     }
