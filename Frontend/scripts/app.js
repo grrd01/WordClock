@@ -1,4 +1,6 @@
-{
+(function () {
+    "use strict";
+
     let date;
     let hour;
     let minute;
@@ -67,6 +69,8 @@
         clock.classList.add("H" + hour.toString());
         clock.classList.add("M" + (minute % 5).toString());
     }
+    setInterval(setTime, 100);
+
     function fShowSettings() {
         // Fix for Firefox OnKeydown
         document.activeElement.blur();
@@ -137,5 +141,4 @@
     }
     document.getElementById("iphone").href = document.getElementById("icon").href;
 
-    setInterval(setTime, 100);
-}
+}());
