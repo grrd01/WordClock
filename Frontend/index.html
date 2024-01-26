@@ -157,12 +157,10 @@
             <circle cx="37" cy="37" r="12" />
         </svg>
     </div>
-
-
-    <div id="pageSettings" class="page">
+    <div id="pageSettings" class="page" style="overflow: auto">
         <div class="pageContent">
             <div class="pageHead">
-                <svg id="clock" viewBox="5 0 110 30" preserveAspectRatio="xMidYMid slice" role="img" style="font: 6px sans-serif; fill: #555; text-shadow: none; text-anchor: middle; width: 100%;">
+                <svg id="clock" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img" style="font: 6px sans-serif; fill: #555; text-shadow: none; text-anchor: middle; width: 100%;">
                     <text x="07" y="10">E</text>
                     <text x="17" y="10">W</text>
                     <text x="27" y="10">F</text>
@@ -208,12 +206,32 @@
             </div>
             <div class="pageFooter">
                 <p class="popup-content">Handgmachti Software us Bärn</p>
-                <p class="popup-content">Gérard Tyedmers -  <a href="https://grrd.ch">grrd.ch</a> - <a href="mailto:grrd@gmx.net">grrd@gmx.net</a> </p>
+                <p class="popup-content">
+                    <span>Gérard&nbsp;Tyedmers</span>
+                    <span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 -5 160 170" stroke="#fff" fill="none" stroke-width="10">
+                            <circle cx="80" cy="80" r="70"/>
+                            <path d="M27 32c7 20 93 43 121 28M13 60c-3 30 117 60 135 35M16 106c16 19 84 39 112 24M100 13C34 3 10 130 65 148M100 13C70 33 45 118 65 148M100 13c13 22 5 112-35 135M100 13c60 35 20 147-35 135"/>
+                        </svg>&nbsp;
+                        <a href="https://grrd.ch">grrd.ch</a>
+                    </span>
+                    <span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="30px" height="24px" viewBox="0 0 222 179" stroke="#fff" fill="none" stroke-width="10" stroke-linecap="round">
+                            <g transform="translate(-10,10) rotate(-6)">
+                                <rect x="15" y="25" rx="10" ry="10" width="192" height="129"/>
+                                <path d="M15 40 C131 125, 91 125, 207 40"/>
+                                <line x1="15" y1="134" x2="77" y2="90"/>
+                                <line x1="207" y1="134" x2="145" y2="90"/>
+                            </g>
+                        </svg>&nbsp;
+                        <a href="mailto:grrd@gmx.net">grrd@gmx.net</a>
+                    </span>
+                </p>
             </div>
-            <svg id="settingsClose" class="svgButton" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70">
-                <path transform="scale(0.85) translate(5,5)" d="M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z" />
-            </svg>
         </div>
+        <svg id="settingsClose" class="svgButton" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70">
+            <path transform="scale(0.85) translate(5,5)" d="M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z" />
+        </svg>
     </div>
     <script src="scripts/app.js"></script>
 </body>
