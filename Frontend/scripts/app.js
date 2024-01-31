@@ -13,6 +13,7 @@
     const pageClock = document.getElementById("pageClock");
     const pageSettings = document.getElementById("pageSettings");
     const color = document.getElementById("color");
+    const speed = document.getElementById("speed");
     function setTime () {
         date = new Date();
         if (rainbow) {
@@ -80,10 +81,7 @@
         pageSettings.classList.add("swipe-in");
     }
     function fChangeColor(color_in) {
-        document.styleSheets[0].cssRules[3].style.fill = color_in;
-        document.styleSheets[0].cssRules[3].style.textShadow = "0 0 10px " + color_in;
-        document.getElementsByTagName("a")[0].style.color = color_in;
-        document.getElementsByTagName("a")[1].style.color = color_in;
+        document.documentElement.style.setProperty('--main-color', color_in);
     }
     function fRainbow(rain_in) {
         if (rain_in !== rainbow) {
@@ -113,14 +111,15 @@
         localStorage.setItem("wc_color", color.value);
         localStorage.setItem("wc_rainbow", rainbow);
         localStorage.setItem("wc_darkmode", darkMode);
+        localStorage.setItem("wc_speed", speed.value.toString());
         setTimeout(function() {
-            window.location.search = ("&red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode);
+            window.location.search = ("&red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value);
         }, 500);
 
     }
     document.getElementById("settings").addEventListener("click", fShowSettings);
     document.getElementById("settingsClose").addEventListener("click", fHideSettings);
-    document.getElementById("color").addEventListener("change", (ignore) => {
+    color.addEventListener("change", (ignore) => {
         fChangeColor(color.value);
     }, false);
     document.getElementById("rainbowMode").addEventListener("click", (ignore) => {
@@ -128,6 +127,9 @@
     });
     document.getElementById("darkMode").addEventListener("click", (ignore) => {
         fDarkMode(1 - darkMode);
+    });
+    speed.addEventListener("change", (ignore) => {
+        console.log(speed.value);
     });
     if (localStorage.getItem("wc_color")) {
         color.value = localStorage.getItem("wc_color");
@@ -138,6 +140,9 @@
     }
     if (localStorage.getItem("wc_darkmode")) {
         fDarkMode(parseInt(localStorage.getItem("wc_darkmode")));
+    }
+    if (localStorage.getItem("wc_speed")) {
+        speed.value = (parseInt(localStorage.getItem("wc_speed")));
     }
     document.getElementById("iphone").href = document.getElementById("icon").href;
 

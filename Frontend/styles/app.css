@@ -1,3 +1,7 @@
+:root {
+    --main-color: #878ade;
+}
+
 html {
     height: 100%;
     user-select: none;
@@ -29,12 +33,21 @@ body {
 .glow, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA,
 .H1 .H1, .H2 .H2, .H3 .H3, .H4 .H4, .H5 .H5, .H6 .H6, .H7 .H7, .H8 .H8, .H9 .H9, .H10 .H10, .H11 .H11, .H0 .H0,
 .M1 .M1, .M2 .M1, .M3 .M1, .M4 .M1, .M2 .M2, .M3 .M2, .M4 .M2, .M3 .M3, .M4 .M3, .M4 .M4 {
-    fill: #fff;
-    text-shadow:0 0 10px #fff;
+    fill: var(--main-color);
+    text-shadow:0 0 10px var(--main-color);
 }
 
 a:link {
-    color: #878ade;
+    color: var(--main-color);
+}
+a:visited {
+    filter: brightness(85%);
+}
+a:hover, a:focus {
+    filter: brightness(125%);
+}
+a:active {
+    filter: brightness(125%);
 }
 
 #settings, #settingsClose {
@@ -210,3 +223,43 @@ a:link {
     }
 }
 
+.slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: none;
+    margin: 10px 0;
+    direction: rtl;
+    border: solid calc(2px + 0.2vmin) #555;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 3vmin;
+    height: 3vmin;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 50%;
+    background: var(--main-color);
+    cursor: pointer;
+    outline: solid 0.45vmin #555;
+}
+.slider::-webkit-slider-thumb:hover {
+    outline: solid 0.45vmin #fff;
+}
+
+.slider::-moz-range-thumb {
+    width: 3vmin;
+    height: 3vmin;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 50%;
+    background: var(--main-color);
+    cursor: pointer;
+    outline: solid 0.45vmin #555;
+}
+.slider::-moz-range-thumb:hover {
+    outline: solid 0.45vmin #fff;
+}

@@ -537,12 +537,12 @@ void loop() {
             const char *url = header.c_str();
             if (extractParameterValue(url, "darkmode=") == 1) {
               darkMode = 1;
-            } else {
+            } else if (extractParameterValue(url, "darkmode=") == 0) {
               darkMode = 0;
             }
             if (extractParameterValue(url, "rainbow=") == 1) {
               rainbow = 1;
-            } else {
+            } else if (extractParameterValue(url, "rainbow=") == 0) {
               rainbow = 0;
             }
             if (extractParameterValue(url, "blue=") >= 0) {
@@ -558,7 +558,7 @@ void loop() {
               rgbRed = 255;
               rgbGreen = 0;
               rgbBlue = 0;
-              rainbowWait = 20;
+              rainbowWait = 200;
             }
             
             colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
