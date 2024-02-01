@@ -16,19 +16,6 @@
     const speed = document.getElementById("speed");
     function setTime () {
         date = new Date();
-        if (rainbow) {
-            if (rainbowRed && !rainbowBlue) {
-                rainbowRed -= 1;
-                rainbowGreen += 1;
-            } else if (rainbowGreen) {
-                rainbowGreen -= 1;
-                rainbowBlue += 1;
-            } else {
-                rainbowBlue -= 1;
-                rainbowRed += 1;
-            }
-            fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
-        }
         if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
             document.getElementsByTagName("body")[0].classList.add("dark");
         } else {
@@ -72,6 +59,23 @@
     }
     setInterval(setTime, 100);
 
+    function fChangeRainbow() {
+        if (rainbow) {
+            if (rainbowRed && !rainbowBlue) {
+                rainbowRed -= 1;
+                rainbowGreen += 1;
+            } else if (rainbowGreen) {
+                rainbowGreen -= 1;
+                rainbowBlue += 1;
+            } else {
+                rainbowBlue -= 1;
+                rainbowRed += 1;
+            }
+            fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
+            setTimeout(fChangeRainbow, speed.value / 10);
+        }
+    }
+
     function fShowSettings() {
         // Fix for Firefox OnKeydown
         document.activeElement.blur();
@@ -89,7 +93,9 @@
             document.getElementById("rainbowMode").children[1].classList.toggle("hide");
         }
         rainbow = rain_in;
-        if (!rainbow) {
+        if (rainbow) {
+            fChangeRainbow();
+        } else {
             fChangeColor(color.value);
         }
     }

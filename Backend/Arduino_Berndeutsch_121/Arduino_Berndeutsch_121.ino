@@ -40,6 +40,7 @@ int rgbGreen = 255;
 int rgbBlue = 255;
 int darkMode = 1;
 int rainbow = 0;
+int rainbowSpeed = 200;
 int rainbowWait = 200;
 
 
@@ -535,6 +536,9 @@ void loop() {
             client.println();
             
             const char *url = header.c_str();
+            if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") >= 2000) {
+              rainbowSpeed = extractParameterValue(url, "speed=");
+            }
             if (extractParameterValue(url, "darkmode=") == 1) {
               darkMode = 1;
             } else if (extractParameterValue(url, "darkmode=") == 0) {
@@ -558,7 +562,7 @@ void loop() {
               rgbRed = 255;
               rgbGreen = 0;
               rgbBlue = 0;
-              rainbowWait = 200;
+              rainbowWait = rainbowSpeed;
             }
             
             colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
@@ -599,7 +603,7 @@ void loop() {
     if (rainbowWait > 0) {
       rainbowWait--;
     } else {
-      rainbowWait = 200;
+      rainbowWait = rainbowSpeed;
       if (rgbRed > 0 && !rgbBlue > 0) {
           rgbRed--;
           rgbGreen++;
