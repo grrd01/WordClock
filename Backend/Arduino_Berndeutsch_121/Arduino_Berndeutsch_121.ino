@@ -536,7 +536,7 @@ void loop() {
             client.println();
             
             const char *url = header.c_str();
-            if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") >= 2000) {
+            if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
               rainbowSpeed = extractParameterValue(url, "speed=");
             }
             if (extractParameterValue(url, "darkmode=") == 1) {
