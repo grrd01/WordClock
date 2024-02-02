@@ -41,12 +41,15 @@ a:link {
     color: var(--main-color);
 }
 a:visited {
+    color: var(--main-color);
     filter: brightness(85%);
 }
 a:hover, a:focus {
+    color: var(--main-color);
     filter: brightness(125%);
 }
 a:active {
+    color: var(--main-color);
     filter: brightness(125%);
 }
 
