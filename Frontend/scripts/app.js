@@ -106,6 +106,9 @@
         }
         darkMode = dark_in;
     }
+    function fRgb2Hex(r, g, b) {
+        return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
+    }
     function fHideSettings() {
         let red = parseInt(color.value.substring(1,3), 16);
         let green = parseInt(color.value.substring(3,5), 16);
@@ -118,10 +121,9 @@
         localStorage.setItem("wc_rainbow", rainbow);
         localStorage.setItem("wc_darkmode", darkMode);
         localStorage.setItem("wc_speed", speed.value.toString());
-        setTimeout(function() {
-            window.location.search = ("&red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value);
-        }, 500);
-
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value, true);
+        xhr.send();
     }
     document.getElementById("settings").addEventListener("click", fShowSettings);
     document.getElementById("settingsClose").addEventListener("click", fHideSettings);
@@ -151,5 +153,20 @@
         speed.value = (parseInt(localStorage.getItem("wc_speed")));
     }
     document.getElementById("iphone").href = document.getElementById("icon").href;
+
+    // load current params from client
+    let xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState === 4 && this.status === 200) {
+            let response = JSON.parse(xhttp.responseText);
+            color.value = fRgb2Hex(response.red, response.green, response.blue);
+            fChangeColor(color.value);
+            fDarkMode(response.darkmode);
+            fRainbow(response.rainbow);
+            speed.value = response.speed;
+        }
+    };
+    xhttp.open("GET", "get_params", true);
+    xhttp.send();
 
 }());
