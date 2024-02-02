@@ -22,9 +22,6 @@
 #include <TimeLib.h>            // v1.6.1
 #include <Timezone.h>           // v1.2.4
 #include <Adafruit_NeoPixel.h>  // v1.10.4
-// libraries possibly needed for getUrlParameter
-#include <stdio.h>
-#include <string.h>
 
 char version[] = "V3";
 
