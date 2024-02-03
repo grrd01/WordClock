@@ -121,12 +121,49 @@
         localStorage.setItem("wc_rainbow", rainbow);
         localStorage.setItem("wc_darkmode", darkMode);
         localStorage.setItem("wc_speed", speed.value.toString());
-        let xhr = new XMLHttpRequest();
-        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value, true);
-        xhr.send();
+        if (window.location.href.startsWith("192.168.")) {
+            let xhr = new XMLHttpRequest();
+            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value, true);
+            xhr.send();
+        }
+    }
+    function fFindWordClock (ip1, ip2) {
+        // ping ip-adress to check for wordClock in local network
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 200 && xhttp.responseText.startsWith("WORDCLOCK")) {
+                    document.getElementById("searchLabel").innerHTML = "Ha se gfunde: http://192.168." + ip1 + "." + ip2;
+                    setTimeout(function() {
+                        window.open("http://192.168." + ip1 + "." + ip2,"_self");
+                    }, 3000);
+
+                } else {
+                    ip2++;
+                    if (ip2 === 256) {
+                        ip1++;
+                        ip2 = 0;
+                    }
+                    if (ip1 < 256) {
+                        document.getElementById("searchLabel").innerHTML = "Hie isch si nid: http://192.168." + ip1 + "." + ip2;
+                        fFindWordClock(ip1, ip2);
+                    }
+                }
+            }
+        };
+        xhttp.timeout = 300;
+        //xhttp.ontimeout = function () { alert("Timed out!!!"); }
+        xhttp.open("GET", "http://192.168." + ip1 + "." + ip2 + "/ping", true);
+        xhttp.send();
     }
     document.getElementById("settings").addEventListener("click", fShowSettings);
     document.getElementById("settingsClose").addEventListener("click", fHideSettings);
+    document.getElementById("searchClock").addEventListener("click", (ignore) => {
+        //document.getElementById("searchClock").removeEventListener("click");
+        document.getElementById("searchClock").style.pointerEvents = "none";
+        // 192.168. 0.0 is the beginning of the private IP address range that includes all IP addresses through 192.168. 255.255.
+        fFindWordClock(0, 0);
+    });
     color.addEventListener("change", (ignore) => {
         fChangeColor(color.value);
     }, false);
@@ -154,21 +191,24 @@
     }
     document.getElementById("iphone").href = document.getElementById("icon").href;
 
-    // load current params from client
-    let xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function() {
-        if (this.readyState === 4 && this.status === 200) {
-            let response = JSON.parse(xhttp.responseText);
-            if (!response.rainbow) {
-                color.value = fRgb2Hex(response.red, response.green, response.blue);
+    // load current params from clock
+    if (window.location.href.startsWith("192.168.")) {
+        document.getElementById("searchBody").classList.add("hide");
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4 && this.status === 200) {
+                let response = JSON.parse(xhttp.responseText);
+                if (!response.rainbow) {
+                    color.value = fRgb2Hex(response.red, response.green, response.blue);
+                }
+                fChangeColor(color.value);
+                fDarkMode(response.darkmode);
+                fRainbow(response.rainbow);
+                speed.value = response.speed;
             }
-            fChangeColor(color.value);
-            fDarkMode(response.darkmode);
-            fRainbow(response.rainbow);
-            speed.value = response.speed;
-        }
-    };
-    xhttp.open("GET", "get_params", true);
-    xhttp.send();
+        };
+        xhttp.open("GET", "get_params", true);
+        xhttp.send();
+    }
 
 }());

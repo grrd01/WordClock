@@ -565,6 +565,14 @@ void loop() {
               client.println("Connection: close");
               client.println();
               client.println("OK");
+            } else if (header.indexOf("ping") >= 0) {
+              // Client is searching for ip-adress of wordclock:
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:text/plain");
+              client.println("Access-Control-Allow-Origin: *");
+              client.println("Connection: close");
+              client.println();
+              client.println("WORDCLOCK");
             } else if (header.indexOf("get_params") >= 0) {
               // Send current params to client:
               client.println("HTTP/1.1 200 OK");
