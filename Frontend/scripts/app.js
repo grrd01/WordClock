@@ -159,7 +159,9 @@
     xhttp.onreadystatechange = function() {
         if (this.readyState === 4 && this.status === 200) {
             let response = JSON.parse(xhttp.responseText);
-            color.value = fRgb2Hex(response.red, response.green, response.blue);
+            if (!response.rainbow) {
+                color.value = fRgb2Hex(response.red, response.green, response.blue);
+            }
             fChangeColor(color.value);
             fDarkMode(response.darkmode);
             fRainbow(response.rainbow);

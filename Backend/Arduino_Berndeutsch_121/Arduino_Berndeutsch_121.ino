@@ -582,7 +582,7 @@ void loop() {
               client.println(", \"darkmode\":");
               client.println(darkMode);
               client.println(", \"speed\":");
-              client.println(rainbowSpeed);
+              client.println(rainbowSpeed / 4 + 48);
               client.println("}");
             } else {
               // New connection, send web interface to client:
