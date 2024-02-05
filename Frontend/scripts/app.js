@@ -12,6 +12,7 @@
     const clock = document.getElementById("clock");
     const pageClock = document.getElementById("pageClock");
     const pageSettings = document.getElementById("pageSettings");
+    const pageSnake = document.getElementById("pageSnake");
     const color = document.getElementById("color");
     const speed = document.getElementById("speed");
     function setTime () {
@@ -115,6 +116,7 @@
         let blue = parseInt(color.value.substring(5,7), 16);
         pageClock.classList.remove("swipe-out");
         pageSettings.classList.remove("swipe-in");
+        pageSettings.classList.remove("swipe-out-right")
         pageClock.classList.add("swipe-out-right");
         pageSettings.classList.add("swipe-in-left");
         localStorage.setItem("wc_color", color.value);
@@ -156,6 +158,20 @@
         xhttp.open("GET", "http://192.168." + ip1 + "." + ip2 + "/ping", true);
         xhttp.send();
     }
+    function fShowSnake() {
+        // Fix for Firefox OnKeydown
+        document.activeElement.blur();
+        pageSettings.classList.remove("swipe-out-right");
+        pageSnake.classList.remove("swipe-in-left");
+        pageSettings.classList.add("swipe-out");
+        pageSnake.classList.add("swipe-in");
+    }
+    function fHideSnake() {
+        pageSettings.classList.remove("swipe-out");
+        pageSnake.classList.remove("swipe-in");
+        pageSettings.classList.add("swipe-out-right");
+        pageSnake.classList.add("swipe-in-left");
+    }
     document.getElementById("settings").addEventListener("click", fShowSettings);
     document.getElementById("settingsClose").addEventListener("click", fHideSettings);
     document.getElementById("searchClock").addEventListener("click", (ignore) => {
@@ -164,6 +180,8 @@
         // 192.168. 0.0 is the beginning of the private IP address range that includes all IP addresses through 192.168. 255.255.
         fFindWordClock(0, 0);
     });
+    document.getElementById("playSnake").addEventListener("click", fShowSnake);
+    document.getElementById("exitSnake").addEventListener("click", fHideSnake);
     color.addEventListener("change", (ignore) => {
         fChangeColor(color.value);
     }, false);

@@ -53,7 +53,7 @@ a:active {
     filter: brightness(125%);
 }
 
-#settings, #settingsClose {
+#settings, #settingsClose, #exitSnake {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
@@ -73,7 +73,7 @@ a:active {
     cursor: pointer;
 }
 
-#pageSettings {
+#pageSettings, #pageSnake {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;
