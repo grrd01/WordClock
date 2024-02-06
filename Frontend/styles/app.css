@@ -57,7 +57,7 @@ a:active {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
-.svgButton {
+.svgButton, .snakeButton {
     width: 4.5vmin;
     height: 4.5vmin;
     min-width: 30px;
@@ -67,10 +67,15 @@ a:active {
     stroke-width:6;
     fill:none;
 }
-.svgButton:hover {
+.svgButton:hover, .snakeButton:hover {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
     cursor: pointer;
+}
+.snakeButton {
+    stroke-width:1.4;
+    fill: #333;
+    fill-opacity: 0.01;
 }
 
 #pageSettings, #pageSnake {

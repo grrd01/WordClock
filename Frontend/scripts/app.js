@@ -165,12 +165,25 @@
         pageSnake.classList.remove("swipe-in-left");
         pageSettings.classList.add("swipe-out");
         pageSnake.classList.add("swipe-in");
+        fSendSnake (0);
+    }
+    function fSendSnake (dir) {
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4 && this.status === 200) {
+                //let response = JSON.parse(xhttp.responseText);
+                console.log("current score" + xhttp.responseText);
+            }
+        };
+        xhttp.open("GET", "snake?dir=" + dir, true);
+        xhttp.send();
     }
     function fHideSnake() {
         pageSettings.classList.remove("swipe-out");
         pageSnake.classList.remove("swipe-in");
         pageSettings.classList.add("swipe-out-right");
         pageSnake.classList.add("swipe-in-left");
+        fSendSnake (-1);
     }
     document.getElementById("settings").addEventListener("click", fShowSettings);
     document.getElementById("settingsClose").addEventListener("click", fHideSettings);
@@ -182,6 +195,11 @@
     });
     document.getElementById("playSnake").addEventListener("click", fShowSnake);
     document.getElementById("exitSnake").addEventListener("click", fHideSnake);
+    Array.from(document.getElementsByClassName("snakeButton")).forEach(function(element) {
+        element.addEventListener("click", function (e) {
+            fSendSnake(e.target.getAttribute("data-num"));
+        });
+    });
     color.addEventListener("change", (ignore) => {
         fChangeColor(color.value);
     }, false);

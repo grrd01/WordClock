@@ -151,6 +151,17 @@ Adafruit_NeoPixel pixels = Adafruit_NeoPixel(121, D7, NEO_GRB + NEO_KHZ800);
 // How long this state should be displayed
 int wifiWait = 0;
 
+// Snake variables
+int snake[120];
+int snakeLen = 3;
+int snakeNext = -1;
+int snakeSnack = -1;
+int snakeDir = 0;
+int snakeSpeed = 400;
+int snakeWait = 400;
+bool inSnake = false;
+
+
 /**
  * Runs through all pixels
  * @param color Adafruit_NeoPixel-Color to display
@@ -488,6 +499,24 @@ void setupWifi() {
   server.begin();
 }
 
+/*
+ * places a snack on an empty space in snake game
+ */
+void setSnack() {
+  int i;
+  snakeSnack = random(121);
+  for (i = snakeLen - 1; i >= 0; i--) {
+    if (snakeSnack == snake[i]){
+       // place occupied by snake
+       i = -1;
+       break;
+    }
+  }
+  if (i >= 0) {
+    setSnack();
+  }
+}
+
 /**
  * Main setup to start WordClock
  */
@@ -502,6 +531,7 @@ void setup() {
 
   setupWifi();
   setupTime();
+  randomSeed(analogRead(0));
 }
 
 /**
@@ -525,7 +555,31 @@ void loop() {
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
-            if (header.indexOf("update_params") >= 0) {
+            if (header.indexOf("snake") >= 0) {
+              // Client is searching for ip-adress of wordclock:
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:text/plain");
+              client.println("Access-Control-Allow-Origin: *");
+              client.println("Connection: close");
+              client.println();
+              client.println(snakeLen);
+              if (inSnake) {
+                if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 5) {
+                  snakeDir = extractParameterValue(url, "dir=");
+                }
+              } else {
+                // start new snake game
+                inSnake = true;
+                snake[0] = 49;
+                snake[1] = 60;
+                snake[2] = 71;
+                snake[3] = -1;
+                snakeLen = 3;
+                //todo: snack neu setzen
+                blank();
+                lightup(snake, Green);
+              }
+            } else if (header.indexOf("update_params") >= 0) {
               // Get new params from client:
               const char *url = header.c_str();
               if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
@@ -630,6 +684,76 @@ void loop() {
     client.stop();
     Serial.println("Client disconnected.");
     Serial.println("");
+  }
+
+  if (inSnake) {
+    if (snakeDir == -1) {
+      // exit game
+      inSnake = false;
+    }
+    if (snakeWait > 0) {
+      snakeWait--;
+    } else {
+      snakeNext = -1;
+      snakeWait = snakeSpeed;
+      if (snakeDir == 1) {
+        // move snake up
+        snakeNext = snake[0] - 1 - 2 * snake[0] % 11;
+        if (snakeNext < 0) {
+          snakeNext = -3;
+        }
+      } else if (snakeDir == 2) {
+        // move snake right
+        snakeNext = snake[0] + 1 - 2 * (floor(snake[0] / 11)) % 2;
+        if (floor(snakeNext / 11) != floor(snake[0] / 11)) {
+          snakeNext = -3;
+        }
+      } else if (snakeDir == 3) {
+        // move snake down
+        snakeNext = snake[0] + 1 + 2 * (10 - snake[0] % 11);
+        if (snakeNext > 120) {
+          snakeNext = -3;
+        }
+      } else if (snakeDir == 4) {
+        // move snake left
+        snakeNext = snake[0] - 1 + 2 * (floor(snake[0] / 11)) % 2;
+        if (floor(snakeNext / 11) != floor(snake[0] / 11)) {
+          snakeNext = -3;
+        }
+      }
+      if (snakeNext == snake[1]) {
+        // ignore move backwards
+        snakeNext = -2;
+      }
+      for (int i = snakeLen - 1; i > 1; i--) {
+        if (snakeNext == snake[i]) {
+          // bite own tail
+          snakeNext = -3;
+        }
+      }
+      if (snakeNext = snakeSnack) {
+        // found snack
+        snakeLen++;
+        //todo: snack neu setzen
+      }
+
+      if (snakeNext >= 0) {
+        // move snake on step forward
+        for (int i = snakeLen - 1; i > 0; i--) {
+          snake[i] = snake[i-1];
+        }
+        snake[0] = snakeNext;
+        blank();
+        lightup(snake, Green);
+      }
+
+      if (snakeNext == -3) {
+        // game over
+        chase(Red);
+      }
+
+    }
+    break;
   }
 
   if (rainbow == 1) {
