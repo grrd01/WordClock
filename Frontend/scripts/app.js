@@ -123,7 +123,7 @@
         localStorage.setItem("wc_rainbow", rainbow);
         localStorage.setItem("wc_darkmode", darkMode);
         localStorage.setItem("wc_speed", speed.value.toString());
-        if (window.location.href.startsWith("192.168.")) {
+        if (window.location.href.includes("192.168.")) {
             let xhr = new XMLHttpRequest();
             xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value, true);
             xhr.send();
@@ -228,7 +228,7 @@
     document.getElementById("iphone").href = document.getElementById("icon").href;
 
     // load current params from clock
-    if (window.location.href.startsWith("192.168.")) {
+    if (window.location.href.includes("192.168.")) {
         document.getElementById("searchBody").classList.add("hide");
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
