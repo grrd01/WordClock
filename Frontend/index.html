@@ -15,7 +15,7 @@
 </head>
 <body>
     <div id="pageClock" class="page">
-        <svg id="clock" viewBox="0 0 115 110" preserveAspectRatio="xMidYMid slice" role="img" style="font: 6px sans-serif; fill: #555; text-shadow: none; text-anchor: middle; width: 100vmin; margin: auto; display: block;">
+        <svg id="clock" viewBox="0 0 115 110" preserveAspectRatio="xMidYMid slice" role="img">
             <text x="07" y="10" class="glow">E</text>
             <text x="17" y="10" class="glow">S</text>
             <text x="27" y="10">D</text>
@@ -160,7 +160,7 @@
     <div id="pageSettings" class="page" style="overflow: auto">
         <div class="pageContent">
             <div class="pageHead">
-                <svg id="clock" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img" style="font: 6px sans-serif; fill: #555; text-shadow: none; text-anchor: middle; width: 100%;">
+                <svg id="settingsTitle" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
                     <text x="07" y="10">E</text>
                     <text x="17" y="10">W</text>
                     <text x="27" y="10">F</text>
@@ -189,8 +189,8 @@
             <div id="searchBody" class="pageBody">
                 <label id="searchLabel">Mini WordClock sueche.</label>
                 <svg id="searchClock" class="svgButton" xmlns="http://www.w3.org/2000/svg" viewBox="-15 -15 135 135">
-                        <circle cx="40" cy="40" r="30" stroke-width="12" />
-                        <line x1="65" y1="65" x2="85" y2="85" stroke-width="12" />
+                    <circle cx="40" cy="40" r="30" stroke-width="12" />
+                    <line x1="65" y1="65" x2="85" y2="85" stroke-width="12" />
                 </svg>
             </div>
             <div class="pageBody">
@@ -205,10 +205,10 @@
                 </svg>
             </div>
             <div class="pageBody">
-                <label for="speed" style="width: 100%">Wie schnäu?</label>
+                <label id="speedLabel" for="speed">Wie schnäu?</label>
                 <input type="range" id="speed" class="slider"  min="50" max="2000" />
-                <label  >gmüetlech</label>
-                <label for="speed">jufle</label>
+                <label>gmüetlech</label>
+                <label>jufle</label>
             </div>
             <div class="pageBody">
                 <label>Ir Nacht chli weniger häu.</label>
@@ -220,7 +220,7 @@
             <div id="snakeBody" class="pageBody">
                 <label>Schnäu e Rundi Snake spile.</label>
                 <svg id="playSnake" class="svgButton" xmlns="http://www.w3.org/2000/svg" viewBox="-2 -1 12 16">
-                    <path d="M2 2 L9 7 L2 12 Z" style="stroke-width:1.4;" />
+                    <path d="M2 2 L9 7 L2 12 Z" stroke-width="1.4" />
                 </svg>
             </div>
             <div class="pageFooter">
@@ -253,7 +253,7 @@
         </svg>
     </div>
     <div id="pageSnake" class="page">
-        <svg id="clock" viewBox="0 0 115 110" preserveAspectRatio="xMidYMid slice" role="img" style="fill: #555; text-shadow: none; width: 100vmin; margin: auto; display: block;">
+        <svg id="control" viewBox="0 0 115 110" preserveAspectRatio="xMidYMid slice" role="img">
             <path id="snakeUp" data-num="1" class="snakeButton" transform="scale(3.8) translate(8,10) rotate(270)" d="M2 2 L9 7 L2 12 Z" />
             <path id="snakeRight" data-num="2" class="snakeButton" transform="scale(3.8) translate(20,7.5)" d="M2 2 L9 7 L2 12 Z" />
             <path id="snakeDown" data-num="3" class="snakeButton" transform="scale(3.8) translate(22,19) rotate(90)" d="M2 2 L9 7 L2 12 Z" />
