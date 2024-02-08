@@ -165,7 +165,7 @@
         pageSnake.classList.remove("swipe-in-left");
         pageSettings.classList.add("swipe-out");
         pageSnake.classList.add("swipe-in");
-        fSendSnake (0);
+        fSendSnake (5);
     }
     function fSendSnake (dir) {
         let xhttp = new XMLHttpRequest();
@@ -183,7 +183,7 @@
         pageSnake.classList.remove("swipe-in");
         pageSettings.classList.add("swipe-out-right");
         pageSnake.classList.add("swipe-in-left");
-        fSendSnake (-1);
+        fSendSnake (6);
     }
     document.getElementById("settings").addEventListener("click", fShowSettings);
     document.getElementById("settingsClose").addEventListener("click", fHideSettings);
