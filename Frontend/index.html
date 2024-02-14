@@ -1,4 +1,9 @@
 <!doctype html>
+<!--
+* grrd's WordClock
+* Copyright (c) 2024 Gerard Tyedmers, grrd@gmx.net
+* Licensed under the MPL 2.0 License
+-->
 <html lang=en>
 <head>
     <meta charset=utf-8>
@@ -254,14 +259,15 @@
     </div>
     <div id="pageSnake" class="page">
         <svg id="control" viewBox="0 0 115 110" preserveAspectRatio="xMidYMid slice" role="img">
-            <path id="snakeUp" data-num="1" class="snakeButton" transform="scale(3.8) translate(8,10) rotate(270)" d="M2 2 L9 7 L2 12 Z" />
-            <path id="snakeRight" data-num="2" class="snakeButton" transform="scale(3.8) translate(20,7.5)" d="M2 2 L9 7 L2 12 Z" />
-            <path id="snakeDown" data-num="3" class="snakeButton" transform="scale(3.8) translate(22,19) rotate(90)" d="M2 2 L9 7 L2 12 Z" />
-            <path id="snakeLeft" data-num="4" class="snakeButton" transform="scale(3.8) translate(10,21.5) rotate(180)" d="M2 2 L9 7 L2 12 Z" />
+            <path data-num="1" class="snakeButton" transform="scale(3.8) translate(8,10) rotate(270)" d="M2 2 L9 7 L2 12 Z" />
+            <path data-num="2" class="snakeButton" transform="scale(3.8) translate(20,7.5)" d="M2 2 L9 7 L2 12 Z" />
+            <path data-num="3" class="snakeButton" transform="scale(3.8) translate(22,19) rotate(90)" d="M2 2 L9 7 L2 12 Z" />
+            <path data-num="4" class="snakeButton" transform="scale(3.8) translate(10,21.5) rotate(180)" d="M2 2 L9 7 L2 12 Z" />
         </svg>
         <svg id="exitSnake" class="svgButton" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74 74">
             <path transform="scale(0.9) translate(5,5)" d="M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z" />>
         </svg>
+        <span id="scoreSnake"></span>
     </div>
     <script src="scripts/app.js"></script>
 </body>

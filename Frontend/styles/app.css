@@ -71,6 +71,10 @@ a:active {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
+#scoreSnake {
+    position: absolute; left: 4vmin; bottom: 4vmin;
+}
+
 .svgButton, .snakeButton {
     width: 4.5vmin;
     height: 4.5vmin;
@@ -81,7 +85,8 @@ a:active {
     stroke-width:6;
     fill:none;
 }
-.svgButton:hover, .snakeButton:hover {
+
+.svgButton:hover, .snakeButton:hover, .snakeButton.glow {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
     cursor: pointer;
