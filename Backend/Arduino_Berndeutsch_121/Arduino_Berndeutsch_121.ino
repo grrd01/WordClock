@@ -492,6 +492,9 @@ void setSnack() {
         snakeSnack = -1;
       }
     }
+    if (snakeSnack == snakeNext) {
+      snakeSnack = -1;
+    }
   }
   pixels.setPixelColor(snakeSnack, Red);
 }
@@ -556,6 +559,8 @@ void loop() {
                 snake[3] = -1;
                 snakeLen = 3;
                 snakeDir = 0;
+                snakeNext = -1;
+                snakeSpeed = 40000;
                 blank();
                 lightup(snake, Green);
                 setSnack();
@@ -719,6 +724,7 @@ void loop() {
         snakeLen++;
         snake[snakeLen] = -1;
         setSnack();
+        snakeSpeed = snakeSpeed - 200;
       }
 
       if (snakeNext >= 0) {
