@@ -3,8 +3,10 @@
 This repository contains the code for the LOLIN (WEMOS) D1 mini Lite (ESP8266) Wordclock offered by FabLab Bern:
 [WordClock-Worshop @ FabLab Bern](https://fablab-bern.ch/wordclock-workshop/)
 
-Hardware required:
+Generate custom clockface:
+[SVG-Generator](https://wordclock.collaud.me/)
 
+Hardware required:
 
 
 |   Anz | Element                  | Link                                                                                                             |    Preis |
@@ -45,5 +47,4 @@ Acryl-Lack
 				
 	Optional			
 	Spiegel	252 x 252 x 3mm	4,40	https://www.bauundhobby.ch/bauen-renovieren/glas-kunstglas/kunstglas/spiegel-3-mm-klar/p/5840827
-				
 				
