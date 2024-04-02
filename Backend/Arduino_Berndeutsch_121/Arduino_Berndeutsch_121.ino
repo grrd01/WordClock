@@ -115,12 +115,15 @@ static int WordStundeZwei[] = {48, 49, 50, 51, -1};                 // ZWÖI
 static int WordStundeDrei[] = {52, 53, 54, -1};                     // DRÜ
 static int WordStundeVier[] = {64, 63, 62, 61, 60, -1};             // VIERI
 static int WordStundeFuenf[] = {59, 58, 57, 56, -1};                // FÜFI
-static int WordStundeSechs[] = {66, 67, 68, 69, 70, 71, -1};        // SÄCHSI
+// FabLab: static int WordStundeSechs[] = {66, 67, 68, 69, 70, 71, -1};        // SÄCHSI
+static int WordStundeSechs[] = {68, 69, 70, 71, 72, 73, -1};        // SÄCHSI
 static int WordStundeSieben[] = {72, 73, 74, 75, 76, -1};           // SIBNI
 static int WordStundeAcht[] = {87, 86, 85, 84, 83, -1};             // ACHTI
 static int WordStundeNeun[] = {82, 81, 80, 79, -1};                 // NÜNI
-static int WordStundeZehn[] = {89, 90, 91, 92, -1};                 // ZÄNI
-static int WordStundeElf[] = {93, 94, 95, 96, -1};                  // EUFI
+// FabLab: static int WordStundeZehn[] = {89, 90, 91, 92, -1};                 // ZÄNI
+static int WordStundeZehn[] = {90, 91, 92, 93, -1};                 // ZÄNI
+// FabLab: static int WordStundeElf[] = {93, 94, 95, 96, -1};                  // EUFI
+static int WordStundeElf[] = {95, 96, 97, 98, -1};                  // EUFI
 static int WordStundeZwoelf[] = {106, 105, 104, 103, 102, 101, -1}; // ZWÖUFI
 
 static int *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, WordStundeDrei, WordStundeVier,
@@ -130,7 +133,8 @@ static int *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, W
 
 // Minute
 static int WordMinFuenf[] = {8, 9, 10, -1};                   // FÜF
-static int WordMinZehn[] = {13, 12, -1};                      // ZÄ
+// FabLab: static int WordMinZehn[] = {13, 12, -1};                      // ZÄ
+static int WordMinZehn[] = {14, 13, 12, -1};                      // ZÄ
 static int WordMinViertel[] = {21, 20, 19, 18, 17, 16, -1};   // VIERTU
 static int WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};   // ZWÄNZG
 static int WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
