@@ -71,6 +71,10 @@ a:active {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
+#power {
+    position: absolute; left: 4vmin; bottom: 4vmin;
+}
+
 #scoreSnake {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
@@ -82,6 +86,7 @@ a:active {
     min-height: 30px;
     stroke: #555;
     stroke-linejoin: round;
+    stroke-linecap: round;
     stroke-width:6;
     fill:none;
 }

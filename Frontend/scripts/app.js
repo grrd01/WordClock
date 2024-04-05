@@ -105,6 +105,13 @@
     }
 
     /**
+     * Turn the display on/off
+     */
+    function fTogglePower() {
+        clock.classList.toggle("off");
+    }
+
+    /**
      * Display the settings-page
      */
     function fShowSettings() {
@@ -263,6 +270,7 @@
         pageSnake.classList.add("swipe-in-left");
         fSendSnake (6);
     }
+    $("power").addEventListener("click", fTogglePower);
     $("settings").addEventListener("click", fShowSettings);
     $("settingsClose").addEventListener("click", fHideSettings);
     $("searchClock").addEventListener("click", (ignore) => {
