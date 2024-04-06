@@ -51,6 +51,17 @@ body {
     text-shadow:0 0 10px var(--main-color);
 }
 
+.off .glow {
+    fill: #555;
+    text-shadow: none;
+}
+
+.dark .glow, .dark .M5 .M5, .dark .M10 .M10, .dark .M15 .M15, .dark .M20 .M20, .dark .M30 .M30, .dark .MV .MV, .dark .MA .MA,
+.dark .H1 .H1, .dark .H2 .H2, .dark .H3 .H3, .dark .H4 .H4, .dark .H5 .H5, .dark .H6 .H6, .dark .H7 .H7, .dark .H8 .H8, .dark .H9 .H9, .dark .H10 .H10, .dark .H11 .H11, .dark .H0 .H0,
+.dark .M1 .M1, .dark .M2 .M1, .dark .M3 .M1, .dark .M4 .M1, .dark .M2 .M2, .dark .M3 .M2, .dark .M4 .M2, .dark .M3 .M3, .dark .M4 .M3, .dark .M4 .M4 {
+    filter: brightness(70%);
+}
+
 a:link {
     color: var(--main-color);
 }
@@ -155,9 +166,6 @@ a:active {
 
 .hide {
     display: none;
-}
-.dark {
-    filter: brightness(60%);
 }
 
 .swipe-in {

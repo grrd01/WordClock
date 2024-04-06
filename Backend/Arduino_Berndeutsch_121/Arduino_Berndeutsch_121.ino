@@ -35,6 +35,7 @@ String header;
 int rgbRed = 255;
 int rgbGreen = 255;
 int rgbBlue = 255;
+int power = 1;
 int darkMode = 1;
 int rainbow = 0;
 int rainbowSpeed = 200;
@@ -296,6 +297,11 @@ void displayWifiStatus() {
  */
 void displayTime() {
   blank();
+  // sleep and return when power off
+  if (power == 0) {
+    delay(500);
+    return;
+  }
 
   // Display darker color between 22:00 and 07:00
   if (darkMode == 1 && (wordClockHour >= 22 || wordClockHour < 7)) {
@@ -577,6 +583,11 @@ void loop() {
             } else if (header.indexOf("update_params") >= 0) {
               // Get new params from client:
               const char *url = header.c_str();
+              if (extractParameterValue(url, "power=") == 1) {
+                power = 1;
+              } else if (extractParameterValue(url, "power=") == 0) {
+                power = 0;
+              }
               if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
                 rainbowSpeed = (extractParameterValue(url, "speed=") - 48) * 4;
               }
@@ -640,6 +651,8 @@ void loop() {
               client.println(darkMode);
               client.println(", \"speed\":");
               client.println(rainbowSpeed / 4 + 48);
+              client.println(", \"power\":");
+              client.println(power);
               client.println("}");
             } else {
               // New connection, send web interface to client:

@@ -13,6 +13,7 @@
     let date;
     let hour;
     let minute;
+    let power = 1;
     let darkMode = 1;
     let rainbow = 0;
     let rainbowRed = 255;
@@ -51,6 +52,9 @@
         }
         minute = date.getMinutes();
         clock.classList.remove(...clock.classList);
+        if (power === 0) {
+            return;
+        }
         if (minute >= 55) {
             clock.classList.add("M5", "MV");
         } else if (minute >= 50) {
@@ -105,10 +109,24 @@
     }
 
     /**
-     * Turn the display on/off
+     * Toggle the display on/off
      */
     function fTogglePower() {
-        clock.classList.toggle("off");
+        fSetPower(1 - power);
+        fUpdateParams();
+    }
+
+    /**
+     * Turn the display on/off
+     */
+    function fSetPower(power_in) {
+        power = power_in;
+        if (power) {
+            document.getElementsByTagName("body")[0].classList.remove("off");
+        } else {
+            document.getElementsByTagName("body")[0].classList.add("off");
+        }
+        minute = -1;
     }
 
     /**
@@ -149,7 +167,7 @@
 
     /**
      * Set dark-mode on or off
-     * @param {int} dark_in : 1 = rainbow on; 0 = rainbow off
+     * @param {int} dark_in : 1 = dark-mode on; 0 = dark-mode off
      */
     function fDarkMode(dark_in) {
         if (dark_in !== darkMode) {
@@ -173,21 +191,28 @@
      * Hide the settings-page and return to clock-page
      */
     function fHideSettings() {
-        let red = parseInt(color.value.substring(1,3), 16);
-        let green = parseInt(color.value.substring(3,5), 16);
-        let blue = parseInt(color.value.substring(5,7), 16);
+        fUpdateParams();
         pageClock.classList.remove("swipe-out");
         pageSettings.classList.remove("swipe-in");
         pageSettings.classList.remove("swipe-out-right")
         pageClock.classList.add("swipe-out-right");
         pageSettings.classList.add("swipe-in-left");
+    }
+
+    /**
+     * Hide the settings-page and return to clock-page
+     */
+    function fUpdateParams() {
+        let red = parseInt(color.value.substring(1,3), 16);
+        let green = parseInt(color.value.substring(3,5), 16);
+        let blue = parseInt(color.value.substring(5,7), 16);
         $$$("wc_color", color.value);
         $$$("wc_rainbow", rainbow);
         $$$("wc_darkmode", darkMode);
         $$$("wc_speed", speed.value.toString());
         if (window.location.href.includes("192.168.")) {
             let xhr = new XMLHttpRequest();
-            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value, true);
+            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value + "&power=" + power, true);
             xhr.send();
         }
     }
@@ -360,6 +385,7 @@
                 fChangeColor(color.value);
                 fDarkMode(response.darkmode);
                 fRainbow(response.rainbow);
+                fSetPower(response.power);
                 speed.value = response.speed;
             }
         };
