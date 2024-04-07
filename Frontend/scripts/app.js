@@ -218,41 +218,6 @@
     }
 
     /**
-     * Scan local network for ip-address of word-clock. This function will iterate until clock is found.
-     * @param {int} ip1 : 1 = 3rd byte of ip-address to scan (0-255)
-     * @param {int} ip2 : 1 = 4th byte of ip-address to scan (0-255)
-     */
-    function fFindWordClock (ip1, ip2) {
-        // ping ip-adress to check for wordClock in local network
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState === 4) {
-                if (this.status === 200 && xhttp.responseText.startsWith("WORDCLOCK")) {
-                    $("searchLabel").innerHTML = "Ha se gfunde: http://192.168." + ip1 + "." + ip2;
-                    setTimeout(function() {
-                        window.open("http://192.168." + ip1 + "." + ip2,"_self");
-                    }, 3000);
-
-                } else {
-                    ip2++;
-                    if (ip2 === 256) {
-                        ip1++;
-                        ip2 = 0;
-                    }
-                    if (ip1 < 256) {
-                        $("searchLabel").innerHTML = "Hie isch si nid: http://192.168." + ip1 + "." + ip2;
-                        fFindWordClock(ip1, ip2);
-                    }
-                }
-            }
-        };
-        xhttp.timeout = 300;
-        //xhttp.ontimeout = function () { alert("Timed out!!!"); }
-        xhttp.open("GET", "http://192.168." + ip1 + "." + ip2 + "/ping", true);
-        xhttp.send();
-    }
-
-    /**
      * Display the snake-page
      */
     function fShowSnake() {
@@ -298,11 +263,6 @@
     $("power").addEventListener("click", fTogglePower);
     $("settings").addEventListener("click", fShowSettings);
     $("settingsClose").addEventListener("click", fHideSettings);
-    $("searchClock").addEventListener("click", (ignore) => {
-        $("searchClock").style.pointerEvents = "none";
-        // 192.168. 0.0 is the beginning of the private IP address range that includes all IP addresses through 192.168. 255.255.
-        fFindWordClock(0, 0);
-    });
 
     /**
      * Initialize application, add event-listeners
@@ -374,7 +334,6 @@
      * Load current settings from word-clock
      */
     if (window.location.href.includes("192.168.")) {
-        $("searchBody").classList.add("hide");
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (this.readyState === 4 && this.status === 200) {
