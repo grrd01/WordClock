@@ -84,17 +84,17 @@ uint32_t backgroundColor = Black;
 uint32_t wifiColor = Black;
 
 /*
-| Ä | S | U | I | S | C | H | J | F | Ü | F |
-| V | I | E | R | T | U | X | B | Z | Ä | D |
-| Z | W | Ä | N | Z | G | F | R | V | O | R |
-| R | A | B | I | H | A | U | B | I | N | S |
-| E | I | S | C | Z | W | Ö | I | D | R | Ü |
-| V | V | I | E | R | I | F | Ü | F | I | E |
-| S | Ä | C | H | S | I | S | I | B | N | I |
-| D | A | C | H | T | I | N | Ü | N | I | K |
-| N | Z | Ä | N | I | E | U | F | I | O | G |
-| S | G | Y | Z | W | Ö | U | F | I | W | N |
-| W | X | C | * | * | C | * | * | H | L | G |
+| E | S | D | I | S | C | H | W | F | Ü | F |
+| V | I | E | R | T | U | T | Z | Ä | Ä | Y |
+| Z | W | Ä | N | Z | G | Q | D | V | O | R |
+| K | A | B | D | H | A | U | B | I | T | Z |
+| E | I | S | Q | Z | W | Ö | I | D | R | Ü |
+| Z | V | I | E | R | I | F | Ü | F | I | T |
+| G | M | S | Ä | C | H | S | I | B | N | I |
+| A | C | H | T | I | N | Ü | N | I | O | F |
+| C | D | Z | Ä | N | I | X | E | U | F | I |
+| O | K | G | Z | W | Ö | U | F | I | L | X |
+| L | Y | B | ° | ° | P | ° | ° | M | K | @ |
  */
 
 static int WordEs[] = {0, 1, -1};
