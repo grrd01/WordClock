@@ -489,7 +489,7 @@ void setupWifi() {
     if (localIP[i] == '0') {
       pixels.setPixelColor(109, foregroundColor);
     } else if (localIP[i] == '.') {
-      pixels.setPixelColor(WordMinTicks[1], foregroundColor);
+      pixels.setPixelColor(WordMinTicks[0], foregroundColor);
     } else {
       lightup(WordStunden[localIP[i] - '0'], foregroundColor);
     }
