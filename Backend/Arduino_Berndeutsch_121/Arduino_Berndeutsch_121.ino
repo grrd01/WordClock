@@ -486,12 +486,12 @@ void setupWifi() {
   for (int i = 0; i < localIP.length(); i++) {
     Serial.println(localIP[i]);
     blank();
-    if (localIP[i] == "0") {
+    if (localIP[i] == '0') {
       pixels.setPixelColor(99, foregroundColor);
-    } else if (localIP[i] == ".") {
+    } else if (localIP[i] == '.') {
       pixels.setPixelColor(WordMinTicks[1], foregroundColor);
     } else {
-      lightup(atoi(localIP[i]), foregroundColor);
+      lightup(WordStunden[atoi(localIP[i])], foregroundColor);
     }
     pixels.show();
     delay(1000);
