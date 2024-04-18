@@ -481,21 +481,23 @@ void setupWifi() {
   Serial.println("Connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-  // schreib mir einen loop, der durch jeden Buchstaben des Strings WiFi.localIP() geht und den Buchstaben in den Serial Monitor schreibt
+  // Display local ip address on clockface by looping through every character.
   String localIP = WiFi.localIP().toString();
   for (int i = 0; i < localIP.length(); i++) {
     Serial.println(localIP[i]);
     blank();
     if (localIP[i] == '0') {
-      pixels.setPixelColor(99, foregroundColor);
+      pixels.setPixelColor(109, foregroundColor);
     } else if (localIP[i] == '.') {
       pixels.setPixelColor(WordMinTicks[1], foregroundColor);
     } else {
-      int ipnr = localIP[i] - '0';
-      lightup(WordStunden[ipnr], foregroundColor);
+      lightup(WordStunden[localIP[i] - '0'], foregroundColor);
     }
     pixels.show();
-    delay(1000);
+    delay(1500);
+    blank();
+    pixels.show();
+    delay(1500);
   }
   server.begin();
 }
