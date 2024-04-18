@@ -491,7 +491,8 @@ void setupWifi() {
     } else if (localIP[i] == '.') {
       pixels.setPixelColor(WordMinTicks[1], foregroundColor);
     } else {
-      lightup(WordStunden[atoi(localIP[i])], foregroundColor);
+      int ipnr = atoi(localIP[i]);
+      lightup(WordStunden[ipnr], foregroundColor);
     }
     pixels.show();
     delay(1000);
