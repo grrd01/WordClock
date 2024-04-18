@@ -481,6 +481,10 @@ void setupWifi() {
   Serial.println("Connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  // schreib mir einen loop, der durch jeden Buchstaben des Strings WiFi.localIP() geht und den Buchstaben in den Serial Monitor schreibt
+  for (int i = 0; i < WiFi.localIP().length(); i++) {
+    Serial.print(WiFi.localIP()[i]);
+  }
   server.begin();
 }
 
