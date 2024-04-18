@@ -497,7 +497,7 @@ void setupWifi() {
     delay(1500);
     blank();
     pixels.show();
-    delay(1500);
+    delay(500);
   }
   server.begin();
 }
