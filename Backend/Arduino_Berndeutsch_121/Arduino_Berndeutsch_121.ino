@@ -156,8 +156,8 @@ int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
 int snakeDir = 0; // 1=up, 2=right, 3=down, 4=left, 5=new game, 6=exit game
 int snakePrevDir = 0;
-int snakeSpeed = 40000;
-int snakeWait = 40000;
+int snakeSpeed = 20000;
+int snakeWait = 20000;
 bool inSnake = false;
 
 /**
@@ -592,7 +592,7 @@ void loop() {
                 snakeLen = 3;
                 snakeDir = 0;
                 snakeNext = -1;
-                snakeSpeed = 40000;
+                snakeSpeed = 20000;
                 blank();
                 lightup(snake, Green);
                 setSnack();
@@ -764,7 +764,7 @@ void loop() {
         snakeLen++;
         snake[snakeLen] = -1;
         setSnack();
-        snakeSpeed = snakeSpeed - 200;
+        snakeSpeed = snakeSpeed - 100;
       }
 
       if (snakeNext >= 0) {
