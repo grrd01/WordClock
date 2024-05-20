@@ -210,7 +210,7 @@
         $$$("wc_rainbow", rainbow);
         $$$("wc_darkmode", darkMode);
         $$$("wc_speed", speed.value.toString());
-        if (window.location.href.includes("192.168.")) {
+        if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
             let xhr = new XMLHttpRequest();
             xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value + "&power=" + power, true);
             xhr.send();
@@ -333,7 +333,7 @@
     /**
      * Load current settings from word-clock
      */
-    if (window.location.href.includes("192.168.")) {
+    if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (this.readyState === 4 && this.status === 200) {
