@@ -72,19 +72,19 @@ unsigned int localPort = 8888;  // local port to listen for UDP packets
 
 static uint32_t Black = Adafruit_NeoPixel::Color(0, 0, 0);
 static uint32_t White = Adafruit_NeoPixel::Color(49, 52, 34);
-static uint32_t Grey = Adafruit_NeoPixel::Color(15, 15, 10);
+static uint32_t Grey = Adafruit_NeoPixel::Color(10, 10, 7);
 static uint32_t Red = Adafruit_NeoPixel::Color(90, 0, 0);
 static uint32_t Green = Adafruit_NeoPixel::Color(10, 90, 0);
 static uint32_t Blue = Adafruit_NeoPixel::Color(0, 20, 85);
 
-static uint32_t MastermindColor1 = Adafruit_NeoPixel::Color(252, 3, 78);
-static uint32_t MastermindColor2 = Adafruit_NeoPixel::Color(252, 111, 3);
-static uint32_t MastermindColor3 = Adafruit_NeoPixel::Color(252, 206, 3);
-static uint32_t MastermindColor4 = Adafruit_NeoPixel::Color(24, 252, 3);
-static uint32_t MastermindColor5 = Adafruit_NeoPixel::Color(3, 132, 252);
-static uint32_t MastermindColor6 = Adafruit_NeoPixel::Color(248, 3, 252);
+static uint32_t MastermindColor1 = Adafruit_NeoPixel::Color(200, 0, 10);
+static uint32_t MastermindColor2 = Adafruit_NeoPixel::Color(200, 50, 0);
+static uint32_t MastermindColor3 = Adafruit_NeoPixel::Color(200, 180, 0);
+static uint32_t MastermindColor4 = Adafruit_NeoPixel::Color(20, 190, 0);
+static uint32_t MastermindColor5 = Adafruit_NeoPixel::Color(0, 80, 200);
+static uint32_t MastermindColor6 = Adafruit_NeoPixel::Color(170, 0, 200);
 
-static uint32_t *MastermindColors[] = {MastermindColor1, MastermindColor2, MastermindColor3, MastermindColor4, MastermindColor5, MastermindColor6};
+static uint32_t MastermindColors[] = {MastermindColor1, MastermindColor2, MastermindColor3, MastermindColor4, MastermindColor5, MastermindColor6};
 
 uint32_t colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
 uint32_t colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
@@ -212,8 +212,8 @@ void wipe() {
 /**
  * Moves a pixel n rows down
  */
-void down(int pixel, int rows) {
-  for (int i = 0; i < rows; ++x) {
+int down(int pixel, int rows) {
+  for (int i = 0; i < rows; i++) {
     pixel = pixel + 1 + 2 * (10 - pixel % 11);
   }
   return pixel;
@@ -575,7 +575,7 @@ void setup() {
 
   setupWifi();
   setupTime();
-  randomSeed(analogRead(0));
+  randomSeed(analogRead(A0));
 }
 
 /**
@@ -641,6 +641,7 @@ void loop() {
                 // start new mastermind game
                 wipe();
                 inMastermind = true;
+                randomSeed(micros());
                 mastermindCode[0] = random(1,7);
                 mastermindCode[1] = random(1,7);
                 mastermindCode[2] = random(1,7);
@@ -657,25 +658,28 @@ void loop() {
                 mastermindCodeTry[0] = extractParameterValue(url, "c1=");
                 mastermindPlace = 0;
                 mastermindColor = 0;
-                for (int i = 0; i > 4; i++) {
+                for (int i = 0; i < 4; i++) {
                   pixels.setPixelColor(down(i, mastermindTry), MastermindColors[mastermindCodeTry[i] - 1]);
                   mastermindCodeBackup[i] = mastermindCode[i];
                   // check right position
+                  Serial.println("CheckPlace");
+                  Serial.println(mastermindCodeBackup[i]);
+                  Serial.println(mastermindCodeTry[i]);
                   if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
                     mastermindCodeTry[i] = -1;
                     mastermindCodeBackup[i] = -2;
                     mastermindPlace ++;
-                    pixels.setPixelColor(down(i + 6, mastermindTry), White);
+                    pixels.setPixelColor(down(mastermindPlace + 6, mastermindTry), White);
                   }
                 }
-                for (int i = 0; i > 4; i++) {
-                  for (int j = 0; j > 4; j++) {
+                for (int i = 0; i < 4; i++) {
+                  for (int j = 0; j < 4; j++) {
                     // check right color
                     if (mastermindCodeTry[i] == mastermindCodeBackup[j]) {
                       mastermindCodeTry[i] = -1;
                       mastermindCodeBackup[i] = -2;
                       mastermindColor ++;
-                      pixels.setPixelColor(down(i + mastermindPlace + 6, mastermindTry), Grey);
+                      pixels.setPixelColor(down(mastermindColor + mastermindPlace + 6, mastermindTry), Grey);
                     }
                   }
                 }
@@ -683,14 +687,17 @@ void loop() {
                 mastermindTry ++;
               }
               client.println("HTTP/1.1 200 OK");
-              client.println("Content-type:text/plain");
-              client.println("Access-Control-Allow-Origin: *");
+              client.println("Content-type:application/json");
               client.println("Connection: close");
               client.println();
+              client.println("{\"place\":");
               client.println(mastermindPlace);
+              client.println(", \"color\":");
               client.println(mastermindColor);
+              client.println(", \"try\":");
               client.println(mastermindTry);
-
+              client.println("}");
+              
             } else if (header.indexOf("update_params") >= 0) {
               // Get new params from client:
               const char *url = header.c_str();
