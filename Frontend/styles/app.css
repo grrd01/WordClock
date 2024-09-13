@@ -30,7 +30,7 @@ body {
     background: linear-gradient(#444, #222);
 }
 
-#clock, #settingsTitle, #control {
+#clock, .title, #control {
     font: 6px sans-serif;
     fill: #555;
     text-shadow: none;
@@ -40,23 +40,35 @@ body {
     display: block;
 }
 
-#settingsTitle, #speedLabel {
+@media (orientation: landscape) {
+    #control {
+        width: 100%;
+        max-width: 60vh;
+    }
+}
+@media (orientation: portrait) {
+    #control {
+        width: 100%;
+    }
+}
+
+.title, .w100 {
     width: 100%;
 }
 
-.glow, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA,
+.g, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA,
 .H1 .H1, .H2 .H2, .H3 .H3, .H4 .H4, .H5 .H5, .H6 .H6, .H7 .H7, .H8 .H8, .H9 .H9, .H10 .H10, .H11 .H11, .H0 .H0,
 .M1 .M1, .M2 .M1, .M3 .M1, .M4 .M1, .M2 .M2, .M3 .M2, .M4 .M2, .M3 .M3, .M4 .M3, .M4 .M4 {
     fill: var(--main-color);
     text-shadow:0 0 10px var(--main-color);
 }
 
-.off .glow {
+.off .g {
     fill: #555;
     text-shadow: none;
 }
 
-.dark .glow, .dark .M5 .M5, .dark .M10 .M10, .dark .M15 .M15, .dark .M20 .M20, .dark .M30 .M30, .dark .MV .MV, .dark .MA .MA,
+.dark .g, .dark .M5 .M5, .dark .M10 .M10, .dark .M15 .M15, .dark .M20 .M20, .dark .M30 .M30, .dark .MV .MV, .dark .MA .MA,
 .dark .H1 .H1, .dark .H2 .H2, .dark .H3 .H3, .dark .H4 .H4, .dark .H5 .H5, .dark .H6 .H6, .dark .H7 .H7, .dark .H8 .H8, .dark .H9 .H9, .dark .H10 .H10, .dark .H11 .H11, .dark .H0 .H0,
 .dark .M1 .M1, .dark .M2 .M1, .dark .M3 .M1, .dark .M4 .M1, .dark .M2 .M2, .dark .M3 .M2, .dark .M4 .M2, .dark .M3 .M3, .dark .M4 .M3, .dark .M4 .M4 {
     filter: brightness(70%);
@@ -78,7 +90,7 @@ a:active {
     filter: brightness(125%);
 }
 
-#settings, #settingsClose, #exitSnake {
+#settings, #settingsClose, #exitSnake, #exitMastermind {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
@@ -86,11 +98,13 @@ a:active {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#scoreSnake {
+#scoreSnake, #scoreMastermind {
     position: absolute; left: 4vmin; bottom: 4vmin;
+    display: flex;
+    align-items: center;
 }
 
-.svgButton, .snakeButton {
+.svgButton, .snakeButton, .svgMsg {
     width: 4.5vmin;
     height: 4.5vmin;
     min-width: 30px;
@@ -100,9 +114,14 @@ a:active {
     stroke-linecap: round;
     stroke-width:6;
     fill:none;
+    z-index: 1000;
 }
 
-.svgButton:hover, .snakeButton:hover, .snakeButton.glow {
+circle {
+    pointer-events: none
+}
+
+.svgButton:hover, .svgButton.g, .snakeButton:hover, .snakeButton.g {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
     cursor: pointer;
@@ -113,18 +132,22 @@ a:active {
     fill-opacity: 0.01;
 }
 
-#pageSettings, #pageSnake {
+#pageSettings, #pageSnake, #pageMastermind {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;
 }
 .pageContent {
     display: block;
+    position: absolute;
+    overflow: auto;
+    top: 0;
     left: 0;
     right: 0;
-    margin: auto;
+    margin: 0 auto 0 auto;
     width: 600px;
     max-width: calc(100vw - 40px);
+    height: 100%;
 }
 .pageBody, .popup-content, .popup-content > span {
     display: flex;
@@ -166,6 +189,25 @@ a:active {
 
 .hide {
     display: none;
+}
+
+[data-num="1"] {
+    fill: #fc034e
+}
+[data-num="2"] {
+    fill: #fc6f03
+}
+[data-num="3"] {
+    fill: #fcce03
+}
+[data-num="4"] {
+    fill: #18fc03
+}
+[data-num="5"] {
+    fill: #0384fc
+}
+[data-num="6"] {
+    fill: #f803fc
 }
 
 .swipe-in {
