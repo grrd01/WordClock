@@ -24,6 +24,7 @@
     let mastermindColor = "1";
     let mastermindWeiss = 0;
     let mastermindGrau = 0;
+    let mastermindTry = 0;
     function $ (id) {
         return document.getElementById(id);
     }
@@ -305,9 +306,17 @@
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (this.readyState === 4 && this.status === 200) {
-                mastermindWeiss = parseInt(xhttp.responseText);
-                mastermindGrau = parseInt(xhttp.responseText);
-                fMastermindMessage();
+                let response = JSON.parse(xhttp.responseText);
+                mastermindWeiss = response.place;
+                mastermindGrau = response.color;
+                mastermindTry = response.try;
+                if (mastermindWeiss === 4) {
+                    fMastermindMessage("Bravo! I " + mastermindTry + " Mau usegfunde.");
+                } else if (mastermindTry === 11) {
+                    fMastermindMessage("Schad, jetz hesch verlore.");
+                } else {
+                    fMastermindMessage();
+                }
             }
         };
         xhttp.open("GET", urlparams, true);
@@ -342,7 +351,7 @@
             $("scoreMastermind").innerHTML = msg;
         } else {
             $("scoreMastermind").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
-                "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='grey'/></svg>&nbsp;di richtigi Farb";
+                "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='cornflowerblue'/></svg>&nbsp;di richtigi Farb";
         }
     }
 
@@ -455,7 +464,8 @@
         xhttp.open("GET", "get_params", true);
         xhttp.send();
     } else {
-        //todo $("snakeBody").classList.add("hide");
+        $("snakeBody").classList.add("hide");
+        $("mastermindBody").classList.add("hide");
     }
 
 }());
