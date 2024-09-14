@@ -21,6 +21,10 @@
     let rainbowBlue = 0;
     let score = 0;
     let highscore = 0;
+    let mastermindColor = "1";
+    let mastermindWeiss = 0;
+    let mastermindGrau = 0;
+    let mastermindTry = 0;
     function $ (id) {
         return document.getElementById(id);
     }
@@ -260,6 +264,97 @@
         pageSnake.classList.add("swipe-in-left");
         fSendSnake (6);
     }
+
+    /**
+     * Display the mastermind-page
+     */
+    function fShowMastermind() {
+        // Fix for Firefox OnKeydown
+        document.activeElement.blur();
+        pageSettings.classList.remove("swipe-out-right");
+        pageMastermind.classList.remove("swipe-in-left");
+        pageSettings.classList.add("swipe-out");
+        pageMastermind.classList.add("swipe-in");
+        fSendMastermind (1);
+    }
+
+    /**
+     * Send mastermind-control-input to word-clock
+     * @param {int} action : 1=new game, 2=quit game, null=send try
+     */
+    function fSendMastermind (action) {
+        let urlparams = "";
+        if (action === 1) {
+            urlparams = "mastermind?c4=0";
+            fClearMastermind();
+            fMastermindMessage();
+        } else if (action === 2) {
+            urlparams = "mastermind?c4=7"
+            fClearMastermind();
+        } else {
+            console.log(document.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length);
+            if (document.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
+                fMastermindMessage("Muesch zersch aues uswähle.");
+                return;
+            }
+            urlparams = "mastermind?c1=" + document.getElementsByClassName("codeButton")[0].getAttribute("data-num")
+                + "&c2="  + document.getElementsByClassName("codeButton")[1].getAttribute("data-num")
+                + "&c3="  + document.getElementsByClassName("codeButton")[2].getAttribute("data-num")
+                + "&c4="  + document.getElementsByClassName("codeButton")[3].getAttribute("data-num");
+            fClearMastermind();
+        }
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4 && this.status === 200) {
+                let response = JSON.parse(xhttp.responseText);
+                mastermindWeiss = response.place;
+                mastermindGrau = response.color;
+                mastermindTry = response.try;
+                if (mastermindWeiss === 4) {
+                    fMastermindMessage("Bravo! I " + mastermindTry + " Mau usegfunde.");
+                } else if (mastermindTry === 11) {
+                    fMastermindMessage("Schad, jetz hesch verlore.");
+                } else {
+                    fMastermindMessage();
+                }
+            }
+        };
+        xhttp.open("GET", urlparams, true);
+        xhttp.send();
+    }
+
+    /**
+     * Hide the mastermind-page and return to settings-page
+     */
+    function fHideMastermind() {
+        pageSettings.classList.remove("swipe-out");
+        pageMastermind.classList.remove("swipe-in");
+        pageSettings.classList.add("swipe-out-right");
+        pageMastermind.classList.add("swipe-in-left");
+        fSendMastermind (2);
+    }
+
+    /**
+     * Clear current mastermind code
+     */
+    function fClearMastermind() {
+        Array.from(document.getElementsByClassName("codeButton")).forEach(function(element) {
+            element.setAttribute("data-num", "");
+        });
+    }
+
+    /**
+     * Show messages in Mastermine
+     */
+    function fMastermindMessage(msg) {
+        if (msg) {
+            $("scoreMastermind").innerHTML = msg;
+        } else {
+            $("scoreMastermind").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
+                "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='cornflowerblue'/></svg>&nbsp;di richtigi Farb";
+        }
+    }
+
     $("power").addEventListener("click", fTogglePower);
     $("settings").addEventListener("click", fShowSettings);
     $("settingsClose").addEventListener("click", fHideSettings);
@@ -269,9 +364,27 @@
      */
     $("playSnake").addEventListener("click", fShowSnake);
     $("exitSnake").addEventListener("click", fHideSnake);
+    $("playMastermind").addEventListener("click", fShowMastermind);
+    $("exitMastermind").addEventListener("click", fHideMastermind);
+    $("sendMastermind").addEventListener("click", fSendMastermind);
     Array.from(document.getElementsByClassName("snakeButton")).forEach(function(element) {
         element.addEventListener("click", function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
+        });
+    });
+    Array.from(document.getElementsByClassName("colorButton")).forEach(function(element) {
+        element.addEventListener("click", function (e) {
+            Array.from(document.getElementsByClassName("colorButton")).forEach(function(element) {
+                element.classList.remove("g");
+            });
+            e.target.classList.add("g");
+            mastermindColor = e.target.getAttribute("data-num");
+        });
+    });
+    Array.from(document.getElementsByClassName("codeButton")).forEach(function(element) {
+        element.addEventListener("click", function (e) {
+            e.target.setAttribute("data-num",mastermindColor);
+            fMastermindMessage()
         });
     });
     function fCheckKey(e) {
@@ -292,9 +405,9 @@
         }
         if (dir) {
             fSendSnake(dir);
-            $("control").children[dir - 1].classList.add("glow");
+            $("control").children[dir - 1].classList.add("g");
             setTimeout(function() {
-                $("control").children[dir - 1].classList.remove("glow");
+                $("control").children[dir - 1].classList.remove("g");
             }, 200);
         }
     }
@@ -352,6 +465,7 @@
         xhttp.send();
     } else {
         $("snakeBody").classList.add("hide");
+        $("mastermindBody").classList.add("hide");
     }
 
 }());
