@@ -63,7 +63,7 @@ body {
     text-shadow:0 0 10px var(--main-color);
 }
 
-.off .g {
+.off .g:not(.colorButton) {
     fill: #555;
     text-shadow: none;
 }
