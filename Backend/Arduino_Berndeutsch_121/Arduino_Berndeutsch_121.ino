@@ -39,6 +39,7 @@ int rgbGreen = 255;
 int rgbBlue = 255;
 int power = 1;
 int darkMode = 1;
+int ghost = 1;
 int rainbow = 0;
 int rainbowSpeed = 200;
 int rainbowWait = 200;
@@ -179,6 +180,12 @@ int mastermindTry = 0;
 int mastermindPlace = 0;
 int mastermindColor = 0;
 bool inMastermind = false;
+
+// Ghost variables
+int ghostHour = 0;
+int ghostMinute = 0;
+static int WordGhost[] = {5, 6, 7, 17, 16, 15, 25, 26, 27, 28, 29, 40, 38, 36, 44, 47, 49, 51, 53, 54, 65, 64, 63, 62, 61, 59, 58, 57, 56, 55, 67, 68, 69, 70, 72, 73, 74, 75, 85, 84, 83, 82, 81, 80, 79, 91, 92, 93, 94, 95, 105, 104, 103, 102, 116, 117, 118, -1};
+static int WordGhostEyes[] = {39, 48, 37, 50, -1};
 
 /**
  * Runs through all pixels
@@ -735,6 +742,11 @@ void loop() {
             } else if (header.indexOf("update_params") >= 0) {
               // Get new params from client:
               const char *url = header.c_str();
+              if (extractParameterValue(url, "ghost=") == 1) {
+                ghost = 1;
+              } else if (extractParameterValue(url, "power=") == 0) {
+                ghost = 0;
+              }
               if (extractParameterValue(url, "power=") == 1) {
                 power = 1;
               } else if (extractParameterValue(url, "power=") == 0) {
@@ -799,6 +811,8 @@ void loop() {
               client.println(rainbowSpeed / 4 + 48);
               client.println(", \"power\":");
               client.println(power);
+              client.println(", \"ghost\":");
+              client.println(ghost);
               client.println("}");
             } else {
               // New connection, send web interface to client:
@@ -845,6 +859,19 @@ void loop() {
   if (power == 0) {
     delay(500);
     return;
+  }
+
+  // display ghost if enabled
+  if (ghost == 1 && ghostHour == wordClockHour && ghostMinute == wordClockMinute) {
+    blank();
+    lightup(WordGhost, White);
+    lightup(WordGhostEyes, MastermindColor1);
+    pixels.show();
+    return;
+  }
+  // hide ghost
+  if (ghost == 1 && ghostHour == wordClockHour && ghostMinute == wordClockMinute + 1) {
+    // hide ghost
   }
 
   if (inSnake) {
@@ -917,8 +944,6 @@ void loop() {
       }
 
     }
-  } else if (inSnake) {
-
   } else if (rainbow == 1) {
     if (rainbowWait > 0) {
       rainbowWait--;
