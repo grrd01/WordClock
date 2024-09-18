@@ -52,7 +52,7 @@ unsigned long previousTime = 0;
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
-int wordClockMinute = 0;
+int wordClockMinute = 62;
 int wordClockHour = 0;
 int lastMinuteWordClock = 61;
 
@@ -184,6 +184,9 @@ bool inMastermind = false;
 // Ghost variables
 int ghostHour = 0;
 int ghostMinute = 0;
+int inGhost = 0;
+int ghostStep = 0;
+int ghostChange = 1;
 static int WordGhost[] = {5, 6, 7, 17, 16, 15, 25, 26, 27, 28, 29, 40, 38, 36, 44, 47, 49, 51, 53, 54, 65, 64, 63, 62, 61, 59, 58, 57, 56, 55, 67, 68, 69, 70, 72, 73, 74, 75, 85, 84, 83, 82, 81, 80, 79, 91, 92, 93, 94, 95, 105, 104, 103, 102, 116, 117, 118, -1};
 static int WordGhostEyes[] = {39, 48, 37, 50, -1};
 
@@ -236,7 +239,6 @@ int down(int pixel, int rows) {
 void lightup(int *word, uint32_t color) {
   for (int x = 0; x < pixels.numPixels() + 1; x++) {
     if (word[x] == -1) {
-      Serial.print(" ");
       break;
     } else {
       pixels.setPixelColor(word[x], color);
@@ -378,28 +380,6 @@ void setWifiStatus(uint32_t color, int duration) {
 }
 
 /**
- * Print time via serial output
- */
-void serialTime() {
-  // digital clock display of the time
-  Serial.println("");
-  formatDigits(wordClockHour);
-  Serial.print(":");
-  formatDigits(wordClockMinute);
-  Serial.print(" - ");
-}
-
-/**
- * utility for digital clock display: prints preceding colon and leading 0
- * @param digits value to format
- */
-void formatDigits(int digits) {
-  if (digits < 10)
-    Serial.print('0');
-  Serial.print(digits);
-}
-
-/**
  * Updates the global time values with the time from the NTPClient
  */
 void getLocalTime() {
@@ -420,19 +400,13 @@ time_t getNtpTime() {
   setWifiStatus(Blue, 250);
   IPAddress ntpServerIP; // NTP server's ip address
   while (ntpUDP.parsePacket() > 0); // discard any previously received packets
-  Serial.println("");
-  Serial.println("Transmit NTP Request");
   // get a random server from the pool
   WiFi.hostByName(ntpServerName, ntpServerIP);
-  Serial.print(ntpServerName);
-  Serial.print(": ");
-  Serial.println(ntpServerIP);
   sendNTPpacket(ntpServerIP);
   uint32_t beginWait = millis();
   while (millis() - beginWait < 2500) {
     int size = ntpUDP.parsePacket();
     if (size >= NTP_PACKET_SIZE) {
-      Serial.println("Receive NTP Response");
       ntpUDP.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
       unsigned long secsSince1900;
       // convert four bytes starting at location 40 to a long integer
@@ -441,14 +415,11 @@ time_t getNtpTime() {
       secsSince1900 |= (unsigned long) packetBuffer[42] << 8;
       secsSince1900 |= (unsigned long) packetBuffer[43];
       setSyncInterval(120);
-      Serial.print("Received: ");
-      Serial.println(secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR);
       setWifiStatus(Green, 250);
       return secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
     }
   }
   setWifiStatus(Red, 500000000);
-  Serial.println("No NTP Response :-(");
   return 0; // return 0 if unable to get the time (Timelib just queries again)
 }
 
@@ -481,11 +452,7 @@ void sendNTPpacket(IPAddress &address) {
  * also makes first update to sync the time
  */
 void setupTime() {
-  Serial.println("Starting UDP");
   ntpUDP.begin(localPort);
-  Serial.print("Local port: ");
-  Serial.println(ntpUDP.localPort());
-  Serial.println("waiting for sync");
   setSyncProvider(getNtpTime);
   setSyncInterval(10);
 }
@@ -524,7 +491,6 @@ void setupWifi() {
   // Display local ip address on clockface by looping through every character.
   String localIP = WiFi.localIP().toString();
   for (int i = 0; i < localIP.length(); i++) {
-    Serial.println(localIP[i]);
     blank();
     if (localIP[i] == '0') {
       pixels.setPixelColor(109, foregroundColor);
@@ -593,9 +559,6 @@ void clearMastermind() {
  */
 void setup() {
   Serial.begin(115200);
-  Serial.println("");
-  Serial.print("Version: ");
-  Serial.println(version);
   setupDisplay();
 
   chase(Green); // run basic screen test and show success
@@ -612,7 +575,6 @@ void loop() {
   WiFiClient client = server.available();   // Listen for incoming clients
 
   if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     currentTime = millis();
     previousTime = currentTime;
@@ -686,9 +648,6 @@ void loop() {
                   pixels.setPixelColor(down(i + 1, mastermindTry), MastermindColors[mastermindCodeTry[i] - 1]);
                   mastermindCodeBackup[i] = mastermindCode[i];
                   // check right position
-                  Serial.println("CheckPlace");
-                  Serial.println(mastermindCodeBackup[i]);
-                  Serial.println(mastermindCodeTry[i]);
                   if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
                     mastermindCodeTry[i] = -1;
                     mastermindCodeBackup[i] = -2;
@@ -850,8 +809,6 @@ void loop() {
     header = "";
     // Close the connection
     client.stop();
-    Serial.println("Client disconnected.");
-    Serial.println("");
   }
   MDNS.update();
 
@@ -863,15 +820,65 @@ void loop() {
 
   // display ghost if enabled
   if (ghost == 1 && ghostHour == wordClockHour && ghostMinute == wordClockMinute) {
-    blank();
-    lightup(WordGhost, White);
-    lightup(WordGhostEyes, MastermindColor1);
-    pixels.show();
+    if (inGhost == 0) {
+      inGhost = 1;
+      // loop 11 Zeilen
+      for (int j = 11; j >= 0; j--) {
+        blank();
+        // Schleife durch das Array
+        for (int i = 0; i < 121; i++) {
+          int ghostPixel = WordGhost[i];
+          // Wenn der Wert -1 erreicht wird, die Schleife beenden
+          if (WordGhost[i] == -1) {
+            break;
+          }
+          // pixel um anzahl Zeilen nach unten verschieben
+          ghostPixel = down(ghostPixel,j);
+          pixels.setPixelColor(ghostPixel, White);
+        }
+        pixels.show();
+        delay(300);
+      }
+    } else {
+      ghostStep = ghostStep + ghostChange;
+      if (ghostStep == 100) {
+        ghostChange = -1;
+      } else if (ghostStep == 0) {
+        ghostChange = 1;
+      }
+      // Calculate the RGB values for the current step
+      int red   = (120 * ghostStep) / 100;    // Red value from 0 to 100
+      int blue  = (6 * ghostStep) / 100;      // Blue value from 0 to 5
+    
+      lightup(WordGhostEyes, pixels.Color(red, 0, blue));
+      pixels.show();
+      delay(10);  
+      getLocalTime();
+    }
+    
     return;
   }
   // hide ghost
-  if (ghost == 1 && ghostHour == wordClockHour && ghostMinute == wordClockMinute + 1) {
+  if (ghost == 1 && inGhost == 1 && ghostHour == wordClockHour && ghostMinute + 1 == wordClockMinute) {
     // hide ghost
+    inGhost = 0;
+    // loop 11 Zeilen
+      for (int j = 0; j < 11; j++) {
+        blank();
+        // Schleife durch das Array
+        for (int i = 0; i < 121; i++) {
+          int ghostPixel = WordGhost[i];
+          // Wenn der Wert -1 erreicht wird, die Schleife beenden
+          if (WordGhost[i] == -1) {
+            break;
+          }
+          // pixel um anzahl Zeilen nach unten verschieben
+          ghostPixel = down(ghostPixel,j);
+          pixels.setPixelColor(ghostPixel, White);
+        }
+        pixels.show();
+        delay(300);
+      }
   }
 
   if (inSnake) {
@@ -968,7 +975,6 @@ void loop() {
   if (timeStatus() != timeNotSet && !inSnake && !inMastermind) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
       getLocalTime();
-      serialTime();
       displayTime();
       lastMinuteWordClock = wordClockMinute;
     } else {
