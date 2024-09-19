@@ -191,22 +191,22 @@ circle {
     display: none;
 }
 
-[data-num="1"] {
+[data-num='1'] {
     fill: #fc034e
 }
-[data-num="2"] {
+[data-num='2'] {
     fill: #fc6f03
 }
-[data-num="3"] {
+[data-num='3'] {
     fill: #fcce03
 }
-[data-num="4"] {
+[data-num='4'] {
     fill: #18fc03
 }
-[data-num="5"] {
+[data-num='5'] {
     fill: #0384fc
 }
-[data-num="6"] {
+[data-num='6'] {
     fill: #f803fc
 }
 

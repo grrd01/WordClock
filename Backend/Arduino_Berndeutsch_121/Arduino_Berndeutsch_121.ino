@@ -840,6 +840,7 @@ void loop() {
         delay(300);
       }
     } else {
+      // ghost eyes
       ghostStep = ghostStep + ghostChange;
       if (ghostStep == 100) {
         ghostChange = -1;
