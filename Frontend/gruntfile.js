@@ -36,16 +36,50 @@ module.exports = function(grunt) {
                     'min.html': 'index.html'
                 }
             }
+        },
+        replace: {
+            dist: {
+                options: {
+                    patterns: [
+                        {
+                            match: /<script src='scripts\/app.js'><\/script>/,
+                            replacement: function() {
+                                return "\n<script>" + grunt.file.read('scripts/min.js') + "</script>";
+                            }
+                        }
+                    ]
+                },
+                files: {
+                    'min.html': 'min.html'
+                }
+            },
+            dist2: {
+                options: {
+                    patterns: [
+                        {
+                            match: /<link rel='stylesheet' href='styles\/app.css'>/,
+                            replacement: function () {
+                                return "\n<style>" + grunt.file.read('styles/min.css') + "</style>\n";
+                            }
+                        }
+                    ]
+                },
+                files: {
+                    'min.html': 'min.html'
+                }
+            }
         }
     });
 
     grunt.loadNpmTasks('grunt-terser');
     grunt.loadNpmTasks('grunt-contrib-cssmin');
     grunt.loadNpmTasks('grunt-contrib-htmlmin');
+    grunt.loadNpmTasks('grunt-replace');
 
     grunt.registerTask('default', [
         'terser',
         'cssmin',
-        'htmlmin'
+        'htmlmin',
+        'replace'
     ]);
 };
