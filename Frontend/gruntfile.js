@@ -67,6 +67,19 @@ module.exports = function(grunt) {
                 files: {
                     'min.html': 'min.html'
                 }
+            },
+            dist3: {
+                options: {
+                    patterns: [
+                        {
+                            match: /\\'/g,
+                            replacement: '\\\"'
+                        }
+                    ]
+                },
+                files: {
+                    'min2.html': 'min.html'
+                }
             }
         }
     });
