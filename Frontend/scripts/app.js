@@ -15,6 +15,7 @@
     let minute;
     let power = 1;
     let darkMode = 1;
+    let ghost = 1;
     let rainbow = 0;
     let rainbowRed = 255;
     let rainbowGreen = 0;
@@ -170,6 +171,18 @@
     }
 
     /**
+     * Set ghost on or off
+     * @param {int} ghost_in : 1 = ghost on; 0 = ghost off
+     */
+    function fGhost(ghost_in) {
+        if (ghost_in !== ghost) {
+            $("ghostMode").children[0].classList.toggle("hide");
+            $("ghostMode").children[1].classList.toggle("hide");
+        }
+        ghost = ghost_in;
+    }
+
+    /**
      * Set dark-mode on or off
      * @param {int} dark_in : 1 = dark-mode on; 0 = dark-mode off
      */
@@ -213,10 +226,11 @@
         $$$("wc_color", color.value);
         $$$("wc_rainbow", rainbow);
         $$$("wc_darkmode", darkMode);
+        $$$("wc_ghost", ghost);
         $$$("wc_speed", speed.value.toString());
         if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
             let xhr = new XMLHttpRequest();
-            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value + "&power=" + power, true);
+            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
             xhr.send();
         }
     }
@@ -418,6 +432,9 @@
     $("rainbowMode").addEventListener("click", (ignore) => {
         fRainbow(1 - rainbow);
     });
+    $("ghostMode").addEventListener("click", (ignore) => {
+        fGhost(1 - ghost);
+    });
     $("darkMode").addEventListener("click", (ignore) => {
         fDarkMode(1 - darkMode);
     });
@@ -431,6 +448,9 @@
     }
     if ($$("wc_rainbow")) {
         fRainbow(parseInt($$("wc_rainbow")));
+    }
+    if ($$("wc_ghost")) {
+        fGhost(parseInt($$("wc_ghost")));
     }
     if ($$("wc_darkmode")) {
         fDarkMode(parseInt($$("wc_darkmode")));
@@ -457,6 +477,7 @@
                 fChangeColor(color.value);
                 fDarkMode(response.darkmode);
                 fRainbow(response.rainbow);
+                fGhost(response.ghost);
                 fSetPower(response.power);
                 speed.value = response.speed;
             }

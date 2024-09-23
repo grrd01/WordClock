@@ -1,0 +1,19 @@
+{
+  "name": "grrds-WordClock",
+  "version": "0.1.0",
+  "description": "grrd s WordClock is a web WordClock and a user interface for the Wemos Mini D1 Lite Clock",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/grrd01/WordClock.git"
+  },
+  "devDependencies": {
+    "grunt": "^1.6.1",
+    "grunt-contrib-cssmin": "^4.0.0",
+    "grunt-contrib-htmlmin": "^3.1.0",
+    "grunt-terser": "^2.0.0",
+    "terser": "^5.33.0",
+    "load-grunt-tasks": "^5.1.0",
+    "grunt-replace": "^2.0.2"
+  }
+}
