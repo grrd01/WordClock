@@ -181,6 +181,10 @@ int mastermindPlace = 0;
 int mastermindColor = 0;
 bool inMastermind = false;
 
+// WordGuessr variables
+char* wordGuessrLetters = "ESDISCHWFÜFYÄÄZTUTREIVZWÄNZGQDVORZTIBUAHDBAKEISQZWÖIDRÜTIFÜFIREIVZGMSÄCHSIBNIFOINÜNITHCACDZÄNIXEUFIXLIFUÖWZGKOLYB..P..MK.";
+String wordGuessrWords[] = {"Haus", "Baum", "Auto", "Buch", "Stuhl", "Tisch", "Fenster", "Lampe", "Hund", "Katze"};
+
 // Ghost variables
 int ghostHour = 0;
 int ghostMinute = 0;
@@ -552,6 +556,46 @@ void setSnack() {
     }
   }
   pixels.setPixelColor(snakeSnack, Red);
+}
+
+/*
+ * find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
+ * @param letter the letter to find
+ * @param allLetters the string to search in
+ */
+int wordGuessrFindIndex(char letter, char* allLetters) {
+  int len = strlen(allLetters);
+  int indices[len];
+  int count = 0;
+  for (int i = 0; i < len; i++) {
+    if (allLetters[i] == letter) {
+      indices[count] = i;
+      count++;
+    }
+  }
+  if (count == 0) {
+    return -1;
+  }
+  int randomIndex = indices[random(0, count)];
+  char* mutableString = const_cast<char*>(allLetters);
+  mutableString[randomIndex] = '.';
+  return randomIndex;
+}
+
+/*
+ * find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
+ * @param letter the letter to find
+ * @param allLetters the string to search in
+ */
+int* createGuessWord(String allWords[]) {
+  int len = sizeof(allWords) / sizeof(allWords[0]);
+  int randomIndex = random(0, len);
+  String randomWord = allWords[randomIndex];
+  int guessWord[randomWord.length()];
+  for (int i = 0; i < randomWord.length(); i++) {
+    guessWord[i] = wordGuessrFindIndex(randomWord[i]);
+  }
+  return guessWord;
 }
 
 /*

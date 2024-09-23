@@ -90,7 +90,7 @@ a:active {
     filter: brightness(125%);
 }
 
-#settings, #settingsClose, #exitSnake, #exitMastermind {
+#settings, #settingsClose, #exitSnake, #exitMastermind, #exitWordGuessr {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
@@ -98,7 +98,7 @@ a:active {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#scoreSnake, #scoreMastermind {
+#scoreSnake, #scoreMastermind, #scoreWordGuessr {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
     align-items: center;
@@ -121,6 +121,21 @@ circle {
     pointer-events: none
 }
 
+input[type="text"] {
+    width: calc(100% - 4.5vmin - 40px);
+    border: 2px solid #555;
+    border-radius: 5px;
+    background-color: transparent;
+    color: #fff;
+    padding: 10px;
+    font-size: larger;
+}
+
+input[type="text"]:focus {
+    border: 2px solid #fff;
+    outline: none;
+}
+
 .svgButton:hover, .svgButton.g, .snakeButton:hover, .snakeButton.g {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
@@ -132,7 +147,7 @@ circle {
     fill-opacity: 0.01;
 }
 
-#pageSettings, #pageSnake, #pageMastermind {
+#pageSettings, #pageSnake, #pageMastermind, #pageWordGuessr {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;

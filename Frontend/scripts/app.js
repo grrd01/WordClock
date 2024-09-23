@@ -26,6 +26,7 @@
     let mastermindWeiss = 0;
     let mastermindGrau = 0;
     let mastermindTry = 0;
+    let wordGuessrScore = 0;
     function $ (id) {
         return document.getElementById(id);
     }
@@ -39,6 +40,8 @@
     const pageClock = $("pageClock");
     const pageSettings = $("pageSettings");
     const pageSnake = $("pageSnake");
+    const pageMastermind = $("pageMastermind");
+    const pageWordGuessr = $("pageWordGuessr");
     const color = $("color");
     const speed = $("speed");
 
@@ -369,18 +372,74 @@
         }
     }
 
-    $("power").addEventListener("click", fTogglePower);
-    $("settings").addEventListener("click", fShowSettings);
-    $("settingsClose").addEventListener("click", fHideSettings);
+    /**
+     * Display the wordguessr-page
+     */
+    function fShowWordGuessr() {
+        // Fix for Firefox OnKeydown
+        document.activeElement.blur();
+        pageSettings.classList.remove("swipe-out-right");
+        pageWordGuessr.classList.remove("swipe-in-left");
+        pageSettings.classList.add("swipe-out");
+        pageWordGuessr.classList.add("swipe-in");
+        fSendWordGuessr ("1");
+    }
+
+    /**
+     * Send wordguessr-control-input to word-clock
+     * @param {string} word : "1"=new game, "2"=quit game, "word"=send try
+     */
+    function fSendWordGuessr (word) {
+        let urlparams = "";
+        if (word === "1") {
+            urlparams = "wordguessr?new";
+        } else if (word === "2") {
+            urlparams = "wordguessr?exit"
+        } else {
+            urlparams = "wordguessr?word=" + $("wordInput").value;
+        }
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4 && this.status === 200) {
+                let response = JSON.parse(xhttp.responseText);
+                wordGuessrScore += response.score;
+                if (response.score === 0) {
+                    // wrong guess
+                } else {
+                    // correct guess
+                }
+            }
+        };
+        xhttp.open("GET", urlparams, true);
+        xhttp.send();
+    }
+
+    /**
+     * Hide the wordguessr-page and return to settings-page
+     */
+    function fHideWordGuessr() {
+        pageSettings.classList.remove("swipe-out");
+        pageWordGuessr.classList.remove("swipe-in");
+        pageSettings.classList.add("swipe-out-right");
+        pageWordGuessr.classList.add("swipe-in-left");
+        fSendWordGuessr ("2");
+    }
 
     /**
      * Initialize application, add event-listeners
      */
+    $("power").addEventListener("click", fTogglePower);
+    $("settings").addEventListener("click", fShowSettings);
+    $("settingsClose").addEventListener("click", fHideSettings);
+
     $("playSnake").addEventListener("click", fShowSnake);
     $("exitSnake").addEventListener("click", fHideSnake);
     $("playMastermind").addEventListener("click", fShowMastermind);
     $("exitMastermind").addEventListener("click", fHideMastermind);
     $("sendMastermind").addEventListener("click", fSendMastermind);
+    $("playWordGuessr").addEventListener("click", fShowWordGuessr);
+    $("exitWordGuessr").addEventListener("click", fHideWordGuessr);
+    $("sendWordGuessr").addEventListener("click", fSendWordGuessr);
     Array.from(document.getElementsByClassName("snakeButton")).forEach(function(element) {
         element.addEventListener("click", function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
@@ -416,8 +475,12 @@
             case "ArrowLeft":
                 dir = 4;
                 break;
+            case "Enter":
+                if (pageWordGuessr.classList.contains("swipe-in")) {
+                    fSendWordGuessr();
+                }
         }
-        if (dir) {
+        if (dir && pageSnake.classList.contains("swipe-in")) {
             fSendSnake(dir);
             $("control").children[dir - 1].classList.add("g");
             setTimeout(function() {
@@ -485,8 +548,9 @@
         xhttp.open("GET", "get_params", true);
         xhttp.send();
     } else {
-        $("snakeBody").classList.add("hide");
-        $("mastermindBody").classList.add("hide");
+        // todo: $("snakeBody").classList.add("hide");
+        // todo: $("mastermindBody").classList.add("hide");
+        // todo: $("wordGuessrBody").classList.add("hide");
     }
 
 }());
