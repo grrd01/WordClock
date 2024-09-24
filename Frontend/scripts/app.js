@@ -44,6 +44,7 @@
     const pageWordGuessr = $("pageWordGuessr");
     const color = $("color");
     const speed = $("speed");
+    const wordInput = $("wordInput");
 
     /**
      * Set the current time
@@ -383,6 +384,7 @@
         pageSettings.classList.add("swipe-out");
         pageWordGuessr.classList.add("swipe-in");
         fSendWordGuessr ("1");
+        wordGuessrScore = 0;
     }
 
     /**
@@ -396,17 +398,28 @@
         } else if (word === "2") {
             urlparams = "wordguessr?exit"
         } else {
-            urlparams = "wordguessr?word=" + $("wordInput").value;
+            urlparams = "wordguessr?word=" + wordInput.value;
         }
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (this.readyState === 4 && this.status === 200) {
                 let response = JSON.parse(xhttp.responseText);
-                wordGuessrScore += response.score;
                 if (response.score === 0) {
                     // wrong guess
-                } else {
+                    wordInput.classList.add("error");
+                    setTimeout(function() {
+                        wordInput.classList.remove("error");
+                        wordInput.value = "";
+                    }, 100);
+                } else if (response.score === 1){
                     // correct guess
+                    wordGuessrScore += response.score;
+                    $("scoreWordGuessr").innerHTML = wordGuessrScore + " hesch usegfunde.";
+                    wordInput.classList.add("ok");
+                    setTimeout(function() {
+                        wordInput.classList.remove("ok");
+                        wordInput.value = "";
+                    }, 100);
                 }
             }
         };

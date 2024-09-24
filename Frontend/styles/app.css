@@ -136,6 +136,13 @@ input[type="text"]:focus {
     outline: none;
 }
 
+input[type="text"].error {
+    border: 2px solid #f70562;
+}
+input[type="text"].ok {
+    border: 2px solid #059c7d;
+}
+
 .svgButton:hover, .svgButton.g, .snakeButton:hover, .snakeButton.g {
     stroke: #fff;
     text-shadow:0 0 10px #fff;

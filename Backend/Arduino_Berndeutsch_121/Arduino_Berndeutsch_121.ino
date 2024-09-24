@@ -183,7 +183,12 @@ bool inMastermind = false;
 
 // WordGuessr variables
 char* wordGuessrLetters = "ESDISCHWFÜFYÄÄZTUTREIVZWÄNZGQDVORZTIBUAHDBAKEISQZWÖIDRÜTIFÜFIREIVZGMSÄCHSIBNIFOINÜNITHCACDZÄNIXEUFIXLIFUÖWZGKOLYB..P..MK.";
-String wordGuessrWords[] = {"Haus", "Baum", "Auto", "Buch", "Stuhl", "Tisch", "Fenster", "Lampe", "Hund", "Katze"};
+char wordGuessrLettersCopy[121];
+String wordGuessrWords[] = {"HAUS", "BAUM", "AUTO", "BUCH", "STUHL", "TISCH", "FENSTER", "LAMPE", "HUND", "KATZE"};
+String wordGuessrActiveWord = "";
+int wordGuessrActiveWordIndex[20] = {}; // max 20 letters
+int wordGuessrScore = 0;
+int inWordGuessr = 0;
 
 // Ghost variables
 int ghostHour = 0;
@@ -500,8 +505,7 @@ void setupWifi() {
   connectWLAN();
 
   // fetches ssid and pass from eeprom and tries to connect
-  // if it does not connect it starts an access point with the specified name
-  // here  "WordClock"
+  // if it does not connect it starts an access point with the specified name (wordclock)
   // and goes into a blocking loop awaiting configuration
   wifiManager.autoConnect(version);
   // or use this for auto generated name ESP + ChipID
@@ -563,13 +567,12 @@ void setSnack() {
  * @param letter the letter to find
  * @param allLetters the string to search in
  */
-int wordGuessrFindIndex(char letter, char* allLetters) {
-  int len = strlen(allLetters);
-  int indices[len];
+int wordGuessrFindIndex(char letter) {
+  int indices[16]; // max 16 occurences of a letter (i has 15)
   int count = 0;
-  for (int i = 0; i < len; i++) {
-    if (allLetters[i] == letter) {
-      indices[count] = i;
+  for (int j = 0; j < 121; j++) {
+    if (wordGuessrLettersCopy[j] == letter) {
+      indices[count] = j;
       count++;
     }
   }
@@ -577,25 +580,30 @@ int wordGuessrFindIndex(char letter, char* allLetters) {
     return -1;
   }
   int randomIndex = indices[random(0, count)];
-  char* mutableString = const_cast<char*>(allLetters);
-  mutableString[randomIndex] = '.';
+  wordGuessrLettersCopy[randomIndex] = '.';
   return randomIndex;
 }
 
 /*
- * find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
- * @param letter the letter to find
- * @param allLetters the string to search in
+ * select a new word to guess
  */
-int* createGuessWord(String allWords[]) {
-  int len = sizeof(allWords) / sizeof(allWords[0]);
+void wordGuessrNewGuess() {
+  int len = sizeof(wordGuessrWords) / sizeof(wordGuessrWords[0]);
   int randomIndex = random(0, len);
-  String randomWord = allWords[randomIndex];
-  int guessWord[randomWord.length()];
-  for (int i = 0; i < randomWord.length(); i++) {
-    guessWord[i] = wordGuessrFindIndex(randomWord[i]);
+  wordGuessrActiveWord = wordGuessrWords[randomIndex];
+  Serial.print("New word to guess: ");
+  Serial.println(wordGuessrActiveWord);
+
+  // Kopiere den Inhalt von wordGuessrLetters in den neuen Array
+  strcpy(wordGuessrLettersCopy, wordGuessrLetters);
+  for (int i = 0; i < wordGuessrActiveWord.length(); i++) {
+    wordGuessrActiveWordIndex[i] = wordGuessrFindIndex(wordGuessrActiveWord[i]);
   }
-  return guessWord;
+  wordGuessrActiveWordIndex[i] = -1;
+  Serial.println(wordGuessrActiveWordIndex);
+  blank();
+  lightup(wordGuessrActiveWordIndex, foregroundColor);
+  pixels.show();
 }
 
 /*
@@ -760,7 +768,45 @@ void loop() {
               client.println(", \"try\":");
               client.println(mastermindTry);
               client.println("}");
-
+            } else if (header.indexOf("wordguessr") >= 0 && power == 1) {
+              // Client is playing wordguessr game:
+              if (header.indexOf("new") >= 0 && inWordGuessr == 0) {
+                // start new wordguessr game
+                inWordGuessr = 1;
+                wordGuessrNewGuess();
+                wordGuessrScore = -1;
+              } else if (header.indexOf("quit") >= 0 && inWordGuessr == 1) {
+                // exit current wordguessr game
+                inWordGuessr = 0;
+                lastMinuteWordClock = 61;
+                wordGuessrScore = -2;
+              } else if (inWordGuessr == 1) {
+                int start = header.indexOf("=") + 1; // Sucht die Position des ersten "="-Zeichens
+                String word = header.substring(start); // Extrahiert den Teil des Strings nach dem "="-Zeichen
+                if (word == wordGuessrWords[inWordGuessr]) {
+                  // right guess
+                  wordGuessrScore = 1;
+                  lightup(wordGuessrActiveWordIndex, Green);
+                  pixels.show();
+                  delay(100);
+                  wordGuessrNewGuess();
+                } else {
+                  // wrong guess
+                  wordGuessrScore = 0;
+                  lightup(wordGuessrActiveWordIndex, Red);
+                  pixels.show();
+                  delay(100);
+                  lightup(wordGuessrActiveWordIndex, foregroundColor);
+                  pixels.show();
+                }
+              }
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:application/json");
+              client.println("Connection: close");
+              client.println();
+              client.println("{\"score\":");
+              client.println(wordGuessrScore);
+              client.println("}");
             } else if (header.indexOf("update_params") >= 0) {
               // Get new params from client:
               const char *url = header.c_str();
@@ -1036,7 +1082,7 @@ void loop() {
     }
   }
 
-  if (timeStatus() != timeNotSet && !inSnake && !inMastermind) {
+  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
       getLocalTime();
       displayTime();
