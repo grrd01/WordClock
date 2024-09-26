@@ -52,6 +52,9 @@
     const rainbowMode =  $("rainbowMode");
     const ghostMode = $("ghostMode");
     const darkMode = $("darkMode");
+    const body = document.getElementsByTagName("body")[0];
+    const codeButtons = document.getElementsByClassName("codeButton");
+    const colorButtons = document.getElementsByClassName("colorButton");
 
     /**
      * Set the current time
@@ -59,9 +62,9 @@
     function setTime() {
         date = new Date();
         if (dark && (date.getHours() >= 22 || date.getHours() < 7)) {
-            document.getElementsByTagName("body")[0].classList.add("d");
+            body.classList.add("d");
         } else {
-            document.getElementsByTagName("body")[0].classList.remove("d");
+            body.classList.remove("d");
         }
         if (minute === date.getMinutes()) {
             return;
@@ -139,23 +142,44 @@
     function fSetPower(power_in) {
         power = power_in;
         if (power) {
-            document.getElementsByTagName("body")[0].classList.remove("off");
+            body.classList.remove("off");
         } else {
-            document.getElementsByTagName("body")[0].classList.add("off");
+            body.classList.add("off");
         }
         minute = -1;
+    }
+
+    /**
+     * Show a page
+     * @param {Element} pageShow : the page to show
+     * @param {Element} pageHide : the page to hide
+     */
+    function fShowPage(pageHide, pageShow) {
+        // Fix for Firefox OnKeydown
+        document.activeElement.blur();
+        pageHide.classList.remove("swipe-out-right");
+        pageShow.classList.remove("swipe-in-left");
+        pageHide.classList.add("swipe-out");
+        pageShow.classList.add("swipe-in");
+    }
+
+    /**
+     * Hide a page
+     * @param {Element} pageShow : the page to show
+     * @param {Element} pageHide : the page to hide
+     */
+    function fHidePage(pageShow, pageHide) {
+        pageShow.classList.remove("swipe-out");
+        pageHide.classList.remove("swipe-in");
+        pageShow.classList.add("swipe-out-right");
+        pageHide.classList.add("swipe-in-left");
     }
 
     /**
      * Display the settings-page
      */
     function fShowSettings() {
-        // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageClock.classList.remove("swipe-out-right");
-        pageSettings.classList.remove("swipe-in-left");
-        pageClock.classList.add("swipe-out");
-        pageSettings.classList.add("swipe-in");
+        fShowPage(pageClock, pageSettings);
     }
 
     /**
@@ -220,12 +244,8 @@
      * Hide the settings-page and return to clock-page
      */
     function fHideSettings() {
+        fHidePage(pageClock, pageSettings);
         fUpdateParams();
-        pageClock.classList.remove("swipe-out");
-        pageSettings.classList.remove("swipe-in");
-        pageSettings.classList.remove("swipe-out-right")
-        pageClock.classList.add("swipe-out-right");
-        pageSettings.classList.add("swipe-in-left");
     }
 
     /**
@@ -251,12 +271,7 @@
      * Display the snake-page
      */
     function fShowSnake() {
-        // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageSettings.classList.remove("swipe-out-right");
-        pageSnake.classList.remove("swipe-in-left");
-        pageSettings.classList.add("swipe-out");
-        pageSnake.classList.add("swipe-in");
+        fShowPage(pageSettings, pageSnake);
         fSendSnake(5);
     }
 
@@ -284,10 +299,7 @@
      * Hide the snake-page and return to settings-page
      */
     function fHideSnake() {
-        pageSettings.classList.remove("swipe-out");
-        pageSnake.classList.remove("swipe-in");
-        pageSettings.classList.add("swipe-out-right");
-        pageSnake.classList.add("swipe-in-left");
+        fHidePage(pageSettings, pageSnake);
         fSendSnake(6);
     }
 
@@ -295,12 +307,7 @@
      * Display the mastermind-page
      */
     function fShowMastermind() {
-        // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageSettings.classList.remove("swipe-out-right");
-        pageMastermind.classList.remove("swipe-in-left");
-        pageSettings.classList.add("swipe-out");
-        pageMastermind.classList.add("swipe-in");
+        fShowPage(pageSettings, pageMastermind);
         fSendMastermind(1);
     }
 
@@ -322,10 +329,10 @@
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
-            urlparams = "mastermind?c1=" + document.getElementsByClassName("codeButton")[0].getAttribute("data-num")
-                + "&c2=" + document.getElementsByClassName("codeButton")[1].getAttribute("data-num")
-                + "&c3=" + document.getElementsByClassName("codeButton")[2].getAttribute("data-num")
-                + "&c4=" + document.getElementsByClassName("codeButton")[3].getAttribute("data-num");
+            urlparams = "mastermind?c1=" + codeButtons[0].getAttribute("data-num")
+                + "&c2=" + codeButtons[1].getAttribute("data-num")
+                + "&c3=" + codeButtons[2].getAttribute("data-num")
+                + "&c4=" + codeButtons[3].getAttribute("data-num");
             fClearMastermind();
         }
         let xhttp = new XMLHttpRequest();
@@ -352,10 +359,7 @@
      * Hide the mastermind-page and return to settings-page
      */
     function fHideMastermind() {
-        pageSettings.classList.remove("swipe-out");
-        pageMastermind.classList.remove("swipe-in");
-        pageSettings.classList.add("swipe-out-right");
-        pageMastermind.classList.add("swipe-in-left");
+        fHidePage(pageSettings, pageMastermind);
         fSendMastermind(2);
     }
 
@@ -363,7 +367,7 @@
      * Clear current mastermind code
      */
     function fClearMastermind() {
-        Array.from(document.getElementsByClassName("codeButton")).forEach(function (element) {
+        Array.from(codeButtons).forEach(function (element) {
             element.setAttribute("data-num", "");
         });
     }
@@ -384,12 +388,7 @@
      * Display the wordguessr-page
      */
     function fShowWordGuessr() {
-        // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageSettings.classList.remove("swipe-out-right");
-        pageWordGuessr.classList.remove("swipe-in-left");
-        pageSettings.classList.add("swipe-out");
-        pageWordGuessr.classList.add("swipe-in");
+        fShowPage(pageSettings, pageWordGuessr);
         fSendWordGuessr("1");
         wordGuessrScore = 0;
     }
@@ -438,10 +437,7 @@
      * Hide the wordguessr-page and return to settings-page
      */
     function fHideWordGuessr() {
-        pageSettings.classList.remove("swipe-out");
-        pageWordGuessr.classList.remove("swipe-in");
-        pageSettings.classList.add("swipe-out-right");
-        pageWordGuessr.classList.add("swipe-in-left");
+        fHidePage(pageSettings, pageWordGuessr);
         fSendWordGuessr("2");
     }
 
@@ -465,16 +461,16 @@
             fSendSnake(e.target.getAttribute("data-num"));
         });
     });
-    Array.from(document.getElementsByClassName("colorButton")).forEach(function (element) {
+    Array.from(colorButtons).forEach(function (element) {
         element.addEventListener("click", function (e) {
-            Array.from(document.getElementsByClassName("colorButton")).forEach(function (element) {
+            Array.from(colorButtons).forEach(function (element) {
                 element.classList.remove("g");
             });
             e.target.classList.add("g");
             mastermindColor = e.target.getAttribute("data-num");
         });
     });
-    Array.from(document.getElementsByClassName("codeButton")).forEach(function (element) {
+    Array.from(codeButtons).forEach(function (element) {
         element.addEventListener("click", function (e) {
             e.target.setAttribute("data-num", mastermindColor);
             fMastermindMessage()
