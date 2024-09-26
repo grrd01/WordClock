@@ -245,6 +245,7 @@
      */
     function fHideSettings() {
         fHidePage(pageClock, pageSettings);
+        pageSettings.classList.remove("swipe-out-right");
         fUpdateParams();
     }
 
