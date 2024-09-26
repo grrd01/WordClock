@@ -16,6 +16,8 @@
 
 // Todo: Snake kann in der obersten Reihe links nicht sterben
 // Todo: In WordGuessr richtig oder falsch nicht mit delay, sondern mit millis anzeigen
+// Todo: Wordguessr auf Original-Wordclock
+// Todo: WordGuessr: ungültige Worte erkennen
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>        // v2.4.2
@@ -186,7 +188,7 @@ bool inMastermind = false;
 // WordGuessr variables
 const char* wordGuessrLetters = "ESDISCHWFuFYaaZTUTREIVZWaNZGQDVORZTIBUAHDBAKEISQZWoIDRuTIFuFIREIVZGMSaCHSIBNIFOINuNITHCACDZaNIXEUFIXLIFUoWZGKOLYB..P..MK.";
 char wordGuessrLettersCopy[121];
-String wordGuessrWords[] = {"HAUS", "BAUM", "AUTO", "BUCH", "STUHL", "TISCH", "FENSTER", "LAMPE", "HUND", "KATZE"};
+String wordGuessrWords[] = {"ABEND","ÄRGER","ALLE","AMPEL","APFEL","AUGE","AUTO","BAHN","BALL","BANDE","BARON","BEAT","BECK","BILD","BIRNE","BLUME","BOOT","BRIEF","BROT","BUND","KANONE","DAME","DART","DECKE","DING","DOLLAR","DRUCK","EIS","ENTE","ESEL","FLUSS","FORT","BERN","FRESSE","GARBE","GAST","GEIST","GLANZ","GLÜCK","GRAS","GROSS","HAUS","HUND","FROSCH","ELCH","KANTE","KARTON","KISSEN","KANTON","KOLBEN","KRAN","KREIS","KURZ","LABOR","LAND","LATERNE","LEERE","LEBEN","LIEBE","LOCH","LÖWE","MACHT","MAI","MAL","MANN","MEER","MEHL","ZITRONE","NACHT","NAME","NASE","NEBEL","NEST","NUSS","ZIRKUS","PARK","PFERD","PLAN","PULS","QUELLE","RAMPE","REGEN","RING","RAKETE","SAMSTAG","SCHLAF","SCHNEE","SCHUHE","SEE","SEITE","STERN","SÜSSE","TEIL","TIER","TISCH","TOMATE","TRAUM","TROPEN","UNGEHEUER","VEILCHEN","VERSCHLUCKEN","WALD","WAND","WASSER","WEIN","WEISS","WELT","WIND","WOLKE","WURST","ZAHN","ZELLE","ZIEGE","MONTAG","ZWEI","ZWECK","ZWERG","ABTEIL","AHNUNG","ALLEIN","ANWALT","APOTHEKE","ARBEIT","BUCH","APRIL","BEER","BERGE","STUHL","BLICK","BOCK","BRAUT","BRUST","BUS","DONNERSTAG","DRACHEN","DRUM","FENSTER","ENDE","ERDE","FAHNE","FAULTIER","FIBEL","FUNKEN","GRAU","HARMONIE","HEIM","GELB","KLEIN","KOPF","KREIS","KUSS","LEITER","MELODIE","MINUTE","SCHULE","MUND","NARBE","NEU","OBST","OLIVE","ORANGE","PFAD","QUARZ","RABE","RIESE","SAND","SCHIFF","LAMPE","SEHR","SEGEN","SINN","SOFA","SONG","SPINNE","STUNDE","TAFEL","TEE","VERKEHR","VOGEL","TRAM","WANDEL","WESEN","KATZE","WOLF","WURF","ZART","ZEBRA","ZIMMER","ZINK","ZUCCHINI","ZWEIFEL","ZWEIG","ZUFRIEDEN","ZUSAMMEN","ZUVERSICHT","ZWEITE","ZYLINDER","AKTION","ATLAS","BIER"};
 String wordGuessrActiveWord = "";
 int wordGuessrActiveWordIndex[20] = {}; // max 20 letters
 int wordGuessrScore = 0;
@@ -779,10 +781,12 @@ void loop() {
               client.println("}");
             } else if (header.indexOf("wordguessr") >= 0 && power == 1) {
               // Client is playing wordguessr game:
-              if (header.indexOf("new") >= 0 && inWordGuessr == 0) {
-                // start new wordguessr game
-                inWordGuessr = 1;
-                wordGuessrNewGuess();
+              if (header.indexOf("new") >= 0) {
+                if (inWordGuessr == 0) {
+                  // start new wordguessr game
+                  inWordGuessr = 1;
+                  wordGuessrNewGuess();
+                }
                 wordGuessrScore = -1;
               } else if (header.indexOf("exit") >= 0 && inWordGuessr == 1) {
                 // exit current wordguessr game
