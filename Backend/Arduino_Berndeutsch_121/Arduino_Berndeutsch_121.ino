@@ -14,7 +14,6 @@
 //
 /////////////////////////////////////////////
 
-// Todo: Snake kann in der obersten Reihe links nicht sterben
 // Todo: In WordGuessr richtig oder falsch nicht mit delay, sondern mit millis anzeigen
 // Todo: Wordguessr auf Original-Wordclock
 // Todo: WordGuessr: ungültige Worte erkennen
@@ -1036,7 +1035,7 @@ void loop() {
       } else if (snakeDir == 4) {
         // move snake left
         snakeNext = snake[0] - 1 + 2 * ((snake[0] / 11) % 2);
-        if (floor(snakeNext / 11) != snake[0] / 11) {
+        if (floor(snakeNext / 11) != snake[0] / 11 || snakeNext == -1) {
           snakeNext = -3;
         }
       }
