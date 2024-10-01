@@ -546,7 +546,7 @@
     $("iphone").href = $("icon").href;
 
     // generate Titles on Pages
-    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    const pageTitles = ["qwMASCHAbSdyWORDuCLOCK", "qwMASCHAbSdmSNAKExlbdk", "qwMASCHAbSdMASTERMINDk", "qwMASCHAbSdWORDbGUESSR"];
     Array.from(document.getElementsByClassName("title")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
