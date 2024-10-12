@@ -392,6 +392,7 @@
         fShowPage(pageSettings, pageWordGuessr);
         fSendWordGuessr("1");
         wordGuessrScore = 0;
+        $("scoreWordGuessr").innerHTML = "";
     }
 
     /**
