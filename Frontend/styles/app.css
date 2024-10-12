@@ -68,9 +68,9 @@ body {
     text-shadow: none;
 }
 
-.dark .g, .dark .M5 .M5, .dark .M10 .M10, .dark .M15 .M15, .dark .M20 .M20, .dark .M30 .M30, .dark .MV .MV, .dark .MA .MA,
-.dark .H1 .H1, .dark .H2 .H2, .dark .H3 .H3, .dark .H4 .H4, .dark .H5 .H5, .dark .H6 .H6, .dark .H7 .H7, .dark .H8 .H8, .dark .H9 .H9, .dark .H10 .H10, .dark .H11 .H11, .dark .H0 .H0,
-.dark .M1 .M1, .dark .M2 .M1, .dark .M3 .M1, .dark .M4 .M1, .dark .M2 .M2, .dark .M3 .M2, .dark .M4 .M2, .dark .M3 .M3, .dark .M4 .M3, .dark .M4 .M4 {
+.d .g, .d .M5 .M5, .d .M10 .M10, .d .M15 .M15, .d .M20 .M20, .d .M30 .M30, .d .MV .MV, .d .MA .MA,
+.d .H1 .H1, .d .H2 .H2, .d .H3 .H3, .d .H4 .H4, .d .H5 .H5, .d .H6 .H6, .d .H7 .H7, .d .H8 .H8, .d .H9 .H9, .d .H10 .H10, .d .H11 .H11, .d .H0 .H0,
+.d .M1 .M1, .d .M2 .M1, .d .M3 .M1, .d .M4 .M1, .d .M2 .M2, .d .M3 .M2, .d .M4 .M2, .d .M3 .M3, .d .M4 .M3, .d .M4 .M4 {
     filter: brightness(70%);
 }
 
@@ -90,7 +90,7 @@ a:active {
     filter: brightness(125%);
 }
 
-#settings, #settingsClose, #exitSnake, #exitMastermind {
+#settings, #settingsClose, #exitSnake, #exitMastermind, #exitWordGuessr {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
@@ -98,7 +98,7 @@ a:active {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#scoreSnake, #scoreMastermind {
+#scoreSnake, #scoreMastermind, #scoreWordGuessr {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
     align-items: center;
@@ -121,6 +121,28 @@ circle {
     pointer-events: none
 }
 
+input[type="text"] {
+    width: calc(100% - 4.5vmin - 40px);
+    border: 2px solid #555;
+    border-radius: 5px;
+    background-color: transparent;
+    color: #fff;
+    padding: 10px;
+    font-size: larger;
+}
+
+input[type="text"]:focus {
+    border: 2px solid #fff;
+    outline: none;
+}
+
+input[type="text"].error {
+    border: 2px solid #f70562;
+}
+input[type="text"].ok {
+    border: 2px solid #059c7d;
+}
+
 .svgButton:hover, .svgButton.g, .snakeButton:hover, .snakeButton.g {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
@@ -132,7 +154,7 @@ circle {
     fill-opacity: 0.01;
 }
 
-#pageSettings, #pageSnake, #pageMastermind {
+#pageSettings, #pageSnake, #pageMastermind, #pageWordGuessr {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;
@@ -149,7 +171,7 @@ circle {
     max-width: calc(100vw - 40px);
     height: 100%;
 }
-.pageBody, .popup-content, .popup-content > span {
+.pageBody, .content, .content > span {
     display: flex;
     flex-direction: row;
     justify-content: space-between;

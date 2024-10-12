@@ -14,7 +14,7 @@
     let hour;
     let minute;
     let power = 1;
-    let darkMode = 1;
+    let dark = 1;
     let ghost = 1;
     let rainbow = 0;
     let rainbowRed = 255;
@@ -24,33 +24,47 @@
     let highscore = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
-    let mastermindGrau = 0;
+    //let mastermindGrau = 0;
     let mastermindTry = 0;
-    function $ (id) {
+    let wordGuessrScore = 0;
+
+    function $(id) {
         return document.getElementById(id);
     }
-    function $$ (key) {
+
+    function $$(key) {
         return localStorage.getItem(key);
     }
-    function $$$ (key, value) {
+
+    function $$$(key, value) {
         return localStorage.setItem(key, value);
     }
+
     const clock = $("clock");
     const pageClock = $("pageClock");
     const pageSettings = $("pageSettings");
     const pageSnake = $("pageSnake");
+    const pageMastermind = $("pageMastermind");
+    const pageWordGuessr = $("pageWordGuessr");
     const color = $("color");
     const speed = $("speed");
+    const wordInput = $("wordInput");
+    const rainbowMode =  $("rainbowMode");
+    const ghostMode = $("ghostMode");
+    const darkMode = $("darkMode");
+    const body = document.getElementsByTagName("body")[0];
+    const codeButtons = document.getElementsByClassName("codeButton");
+    const colorButtons = document.getElementsByClassName("colorButton");
 
     /**
      * Set the current time
      */
-    function setTime () {
+    function setTime() {
         date = new Date();
-        if (darkMode && (date.getHours() >=22 || date.getHours() < 7)) {
-            document.getElementsByTagName("body")[0].classList.add("dark");
+        if (dark && (date.getHours() >= 22 || date.getHours() < 7)) {
+            body.classList.add("d");
         } else {
-            document.getElementsByTagName("body")[0].classList.remove("dark");
+            body.classList.remove("d");
         }
         if (minute === date.getMinutes()) {
             return;
@@ -91,6 +105,7 @@
         clock.classList.add("H" + hour.toString());
         clock.classList.add("M" + (minute % 5).toString());
     }
+
     setInterval(setTime, 100);
 
     /**
@@ -127,23 +142,44 @@
     function fSetPower(power_in) {
         power = power_in;
         if (power) {
-            document.getElementsByTagName("body")[0].classList.remove("off");
+            body.classList.remove("off");
         } else {
-            document.getElementsByTagName("body")[0].classList.add("off");
+            body.classList.add("off");
         }
         minute = -1;
+    }
+
+    /**
+     * Show a page
+     * @param {Element} pageShow : the page to show
+     * @param {Element} pageHide : the page to hide
+     */
+    function fShowPage(pageHide, pageShow) {
+        // Fix for Firefox OnKeydown
+        document.activeElement.blur();
+        pageHide.classList.remove("swipe-out-right");
+        pageShow.classList.remove("swipe-in-left");
+        pageHide.classList.add("swipe-out");
+        pageShow.classList.add("swipe-in");
+    }
+
+    /**
+     * Hide a page
+     * @param {Element} pageShow : the page to show
+     * @param {Element} pageHide : the page to hide
+     */
+    function fHidePage(pageShow, pageHide) {
+        pageShow.classList.remove("swipe-out");
+        pageHide.classList.remove("swipe-in");
+        pageShow.classList.add("swipe-out-right");
+        pageHide.classList.add("swipe-in-left");
     }
 
     /**
      * Display the settings-page
      */
     function fShowSettings() {
-        // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageClock.classList.remove("swipe-out-right");
-        pageSettings.classList.remove("swipe-in-left");
-        pageClock.classList.add("swipe-out");
-        pageSettings.classList.add("swipe-in");
+        fShowPage(pageClock, pageSettings);
     }
 
     /**
@@ -159,8 +195,8 @@
      */
     function fRainbow(rain_in) {
         if (rain_in !== rainbow) {
-            $("rainbowMode").children[0].classList.toggle("hide");
-            $("rainbowMode").children[1].classList.toggle("hide");
+            rainbowMode.children[0].classList.toggle("hide");
+            rainbowMode.children[1].classList.toggle("hide");
         }
         rainbow = rain_in;
         if (rainbow) {
@@ -176,8 +212,8 @@
      */
     function fGhost(ghost_in) {
         if (ghost_in !== ghost) {
-            $("ghostMode").children[0].classList.toggle("hide");
-            $("ghostMode").children[1].classList.toggle("hide");
+            ghostMode.children[0].classList.toggle("hide");
+            ghostMode.children[1].classList.toggle("hide");
         }
         ghost = ghost_in;
     }
@@ -186,12 +222,12 @@
      * Set dark-mode on or off
      * @param {int} dark_in : 1 = dark-mode on; 0 = dark-mode off
      */
-    function fDarkMode(dark_in) {
-        if (dark_in !== darkMode) {
-            $("darkMode").children[0].classList.toggle("hide");
-            $("darkMode").children[1].classList.toggle("hide");
+    function fSetDarkMode(dark_in) {
+        if (dark_in !== dark) {
+            darkMode.children[0].classList.toggle("hide");
+            darkMode.children[1].classList.toggle("hide");
         }
-        darkMode = dark_in;
+        dark = dark_in;
     }
 
     /**
@@ -208,29 +244,26 @@
      * Hide the settings-page and return to clock-page
      */
     function fHideSettings() {
+        fHidePage(pageClock, pageSettings);
+        pageSettings.classList.remove("swipe-out-right");
         fUpdateParams();
-        pageClock.classList.remove("swipe-out");
-        pageSettings.classList.remove("swipe-in");
-        pageSettings.classList.remove("swipe-out-right")
-        pageClock.classList.add("swipe-out-right");
-        pageSettings.classList.add("swipe-in-left");
     }
 
     /**
      * Hide the settings-page and return to clock-page
      */
     function fUpdateParams() {
-        let red = parseInt(color.value.substring(1,3), 16);
-        let green = parseInt(color.value.substring(3,5), 16);
-        let blue = parseInt(color.value.substring(5,7), 16);
+        let red = parseInt(color.value.substring(1, 3), 16);
+        let green = parseInt(color.value.substring(3, 5), 16);
+        let blue = parseInt(color.value.substring(5, 7), 16);
         $$$("wc_color", color.value);
         $$$("wc_rainbow", rainbow);
-        $$$("wc_darkmode", darkMode);
+        $$$("wc_dark", dark);
         $$$("wc_ghost", ghost);
         $$$("wc_speed", speed.value.toString());
         if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
             let xhr = new XMLHttpRequest();
-            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + darkMode + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
+            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
             xhr.send();
         }
     }
@@ -239,27 +272,22 @@
      * Display the snake-page
      */
     function fShowSnake() {
-        // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageSettings.classList.remove("swipe-out-right");
-        pageSnake.classList.remove("swipe-in-left");
-        pageSettings.classList.add("swipe-out");
-        pageSnake.classList.add("swipe-in");
-        fSendSnake (5);
+        fShowPage(pageSettings, pageSnake);
+        fSendSnake(5);
     }
 
     /**
      * Send snake-control-input to word-clock
      * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
      */
-    function fSendSnake (dir) {
+    function fSendSnake(dir) {
         let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
+        xhttp.onreadystatechange = function () {
             if (this.readyState === 4 && this.status === 200) {
                 score = (parseInt(xhttp.responseText) - 3) * 10;
                 if (score > highscore) {
                     highscore = score;
-                    $$$("wc_score",highscore);
+                    $$$("wc_score", highscore);
                 }
                 $("scoreSnake").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
@@ -272,31 +300,23 @@
      * Hide the snake-page and return to settings-page
      */
     function fHideSnake() {
-        pageSettings.classList.remove("swipe-out");
-        pageSnake.classList.remove("swipe-in");
-        pageSettings.classList.add("swipe-out-right");
-        pageSnake.classList.add("swipe-in-left");
-        fSendSnake (6);
+        fHidePage(pageSettings, pageSnake);
+        fSendSnake(6);
     }
 
     /**
      * Display the mastermind-page
      */
     function fShowMastermind() {
-        // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageSettings.classList.remove("swipe-out-right");
-        pageMastermind.classList.remove("swipe-in-left");
-        pageSettings.classList.add("swipe-out");
-        pageMastermind.classList.add("swipe-in");
-        fSendMastermind (1);
+        fShowPage(pageSettings, pageMastermind);
+        fSendMastermind(1);
     }
 
     /**
      * Send mastermind-control-input to word-clock
      * @param {int} action : 1=new game, 2=quit game, null=send try
      */
-    function fSendMastermind (action) {
+    function fSendMastermind(action) {
         let urlparams = "";
         if (action === 1) {
             urlparams = "mastermind?c4=0";
@@ -306,23 +326,22 @@
             urlparams = "mastermind?c4=7"
             fClearMastermind();
         } else {
-            console.log(document.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length);
             if (document.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
-            urlparams = "mastermind?c1=" + document.getElementsByClassName("codeButton")[0].getAttribute("data-num")
-                + "&c2="  + document.getElementsByClassName("codeButton")[1].getAttribute("data-num")
-                + "&c3="  + document.getElementsByClassName("codeButton")[2].getAttribute("data-num")
-                + "&c4="  + document.getElementsByClassName("codeButton")[3].getAttribute("data-num");
+            urlparams = "mastermind?c1=" + codeButtons[0].getAttribute("data-num")
+                + "&c2=" + codeButtons[1].getAttribute("data-num")
+                + "&c3=" + codeButtons[2].getAttribute("data-num")
+                + "&c4=" + codeButtons[3].getAttribute("data-num");
             fClearMastermind();
         }
         let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
+        xhttp.onreadystatechange = function () {
             if (this.readyState === 4 && this.status === 200) {
                 let response = JSON.parse(xhttp.responseText);
                 mastermindWeiss = response.place;
-                mastermindGrau = response.color;
+                //mastermindGrau = response.color;
                 mastermindTry = response.try;
                 if (mastermindWeiss === 4) {
                     fMastermindMessage("Bravo! I " + mastermindTry + " Mau usegfunde.");
@@ -341,18 +360,15 @@
      * Hide the mastermind-page and return to settings-page
      */
     function fHideMastermind() {
-        pageSettings.classList.remove("swipe-out");
-        pageMastermind.classList.remove("swipe-in");
-        pageSettings.classList.add("swipe-out-right");
-        pageMastermind.classList.add("swipe-in-left");
-        fSendMastermind (2);
+        fHidePage(pageSettings, pageMastermind);
+        fSendMastermind(2);
     }
 
     /**
      * Clear current mastermind code
      */
     function fClearMastermind() {
-        Array.from(document.getElementsByClassName("codeButton")).forEach(function(element) {
+        Array.from(codeButtons).forEach(function (element) {
             element.setAttribute("data-num", "");
         });
     }
@@ -369,38 +385,100 @@
         }
     }
 
-    $("power").addEventListener("click", fTogglePower);
-    $("settings").addEventListener("click", fShowSettings);
-    $("settingsClose").addEventListener("click", fHideSettings);
+    /**
+     * Display the wordguessr-page
+     */
+    function fShowWordGuessr() {
+        fShowPage(pageSettings, pageWordGuessr);
+        fSendWordGuessr("1");
+        wordGuessrScore = 0;
+        $("scoreWordGuessr").innerHTML = "";
+    }
+
+    /**
+     * Send wordguessr-control-input to word-clock
+     * @param {string} word : "1"=new game, "2"=quit game, "word"=send try
+     */
+    function fSendWordGuessr(word) {
+        let urlparams;
+        if (word === "1") {
+            urlparams = "wordguessr?new";
+        } else if (word === "2") {
+            urlparams = "wordguessr?exit"
+        } else {
+            urlparams = "wordguessr?word=" + wordInput.value;
+        }
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                let response = JSON.parse(xhttp.responseText);
+                if (response.score === 0) {
+                    // wrong guess
+                    wordInput.classList.add("error");
+                    setTimeout(function () {
+                        wordInput.classList.remove("error");
+                        wordInput.value = "";
+                    }, 100);
+                } else if (response.score === 1) {
+                    // correct guess
+                    wordGuessrScore += response.score;
+                    $("scoreWordGuessr").innerHTML = wordGuessrScore + " hesch usegfunde.";
+                    wordInput.classList.add("ok");
+                    setTimeout(function () {
+                        wordInput.classList.remove("ok");
+                        wordInput.value = "";
+                    }, 100);
+                }
+            }
+        };
+        xhttp.open("GET", urlparams, true);
+        xhttp.send();
+    }
+
+    /**
+     * Hide the wordguessr-page and return to settings-page
+     */
+    function fHideWordGuessr() {
+        fHidePage(pageSettings, pageWordGuessr);
+        fSendWordGuessr("2");
+    }
 
     /**
      * Initialize application, add event-listeners
      */
+    $("power").addEventListener("click", fTogglePower);
+    $("settings").addEventListener("click", fShowSettings);
+    $("settingsClose").addEventListener("click", fHideSettings);
+
     $("playSnake").addEventListener("click", fShowSnake);
     $("exitSnake").addEventListener("click", fHideSnake);
     $("playMastermind").addEventListener("click", fShowMastermind);
     $("exitMastermind").addEventListener("click", fHideMastermind);
     $("sendMastermind").addEventListener("click", fSendMastermind);
-    Array.from(document.getElementsByClassName("snakeButton")).forEach(function(element) {
+    $("playWordGuessr").addEventListener("click", fShowWordGuessr);
+    $("exitWordGuessr").addEventListener("click", fHideWordGuessr);
+    $("sendWordGuessr").addEventListener("click", fSendWordGuessr);
+    Array.from(document.getElementsByClassName("snakeButton")).forEach(function (element) {
         element.addEventListener("click", function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
         });
     });
-    Array.from(document.getElementsByClassName("colorButton")).forEach(function(element) {
+    Array.from(colorButtons).forEach(function (element) {
         element.addEventListener("click", function (e) {
-            Array.from(document.getElementsByClassName("colorButton")).forEach(function(element) {
+            Array.from(colorButtons).forEach(function (element) {
                 element.classList.remove("g");
             });
             e.target.classList.add("g");
             mastermindColor = e.target.getAttribute("data-num");
         });
     });
-    Array.from(document.getElementsByClassName("codeButton")).forEach(function(element) {
+    Array.from(codeButtons).forEach(function (element) {
         element.addEventListener("click", function (e) {
-            e.target.setAttribute("data-num",mastermindColor);
+            e.target.setAttribute("data-num", mastermindColor);
             fMastermindMessage()
         });
     });
+
     function fCheckKey(e) {
         let dir = 0;
         switch (e.key) {
@@ -416,27 +494,32 @@
             case "ArrowLeft":
                 dir = 4;
                 break;
+            case "Enter":
+                if (pageWordGuessr.classList.contains("swipe-in")) {
+                    fSendWordGuessr();
+                }
         }
-        if (dir) {
+        if (dir && pageSnake.classList.contains("swipe-in")) {
             fSendSnake(dir);
             $("control").children[dir - 1].classList.add("g");
-            setTimeout(function() {
+            setTimeout(function () {
                 $("control").children[dir - 1].classList.remove("g");
             }, 200);
         }
     }
+
     document.onkeydown = fCheckKey;
     color.addEventListener("change", (ignore) => {
         fChangeColor(color.value);
     }, false);
-    $("rainbowMode").addEventListener("click", (ignore) => {
+    rainbowMode.addEventListener("click", (ignore) => {
         fRainbow(1 - rainbow);
     });
-    $("ghostMode").addEventListener("click", (ignore) => {
+    ghostMode.addEventListener("click", (ignore) => {
         fGhost(1 - ghost);
     });
-    $("darkMode").addEventListener("click", (ignore) => {
-        fDarkMode(1 - darkMode);
+    darkMode.addEventListener("click", (ignore) => {
+        fSetDarkMode(1 - dark);
     });
 
     /**
@@ -452,8 +535,8 @@
     if ($$("wc_ghost")) {
         fGhost(parseInt($$("wc_ghost")));
     }
-    if ($$("wc_darkmode")) {
-        fDarkMode(parseInt($$("wc_darkmode")));
+    if ($$("wc_dark")) {
+        fSetDarkMode(parseInt($$("wc_dark")));
     }
     if ($$("wc_speed")) {
         speed.value = (parseInt($$("wc_speed")));
@@ -463,19 +546,37 @@
     }
     $("iphone").href = $("icon").href;
 
+    // generate Titles on Pages
+    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    Array.from(document.getElementsByClassName("title")).forEach(function (element, index) {
+        for (let step = 0; step < 22; step++) {
+            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            let letter = pageTitles[index].substring(step, step + 1);
+            let letterUpper = letter.toUpperCase();
+            textElement.setAttribute("x", (step % 11 * 10) + 7);
+            textElement.setAttribute("y", Math.ceil((step + 1) / 11) * 10);
+            textElement.textContent = letterUpper;
+            if (letter === letterUpper) {
+                textElement.setAttribute("class", "g");
+            }
+            element.appendChild(textElement);
+        }
+
+    });
+
     /**
      * Load current settings from word-clock
      */
     if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
         let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
+        xhttp.onreadystatechange = function () {
             if (this.readyState === 4 && this.status === 200) {
                 let response = JSON.parse(xhttp.responseText);
                 if (!response.rainbow) {
                     color.value = fRgb2Hex(response.red, response.green, response.blue);
                 }
                 fChangeColor(color.value);
-                fDarkMode(response.darkmode);
+                fSetDarkMode(response.darkmode);
                 fRainbow(response.rainbow);
                 fGhost(response.ghost);
                 fSetPower(response.power);
@@ -487,6 +588,7 @@
     } else {
         $("snakeBody").classList.add("hide");
         $("mastermindBody").classList.add("hide");
+        $("wordGuessrBody").classList.add("hide");
     }
 
 }());
