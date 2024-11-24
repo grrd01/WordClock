@@ -525,8 +525,21 @@ void setupWifi() {
   // if it does not connect it starts an access point with the specified name (wordclock)
   // and goes into a blocking loop awaiting configuration
   wifiManager.autoConnect(version);
+  
   // or use this for auto generated name ESP + ChipID
   //wifiManager.autoConnect();
+
+
+  // or connect to WiFi with hardcoded name/pw:
+  // WiFi.begin("WiFiName", "WiFiPassword");
+  // Serial.print("Connecting");
+  // while (WiFi.status() != WL_CONNECTED)
+  // {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+  // Serial.println();
+
 
   // if you get here you have connected to the WiFi
   Serial.println("Connected.");
