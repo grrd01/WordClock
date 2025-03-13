@@ -28,33 +28,37 @@
     let mastermindTry = 0;
     let wordGuessrScore = 0;
 
-    function $(id) {
+    function ElementById(id) {
         return document.getElementById(id);
     }
 
-    function $$(key) {
+    function ElementsByClassName(id) {
+        return document.getElementsByClassName(id);
+    }
+
+    function localStorageGet(key) {
         return localStorage.getItem(key);
     }
 
-    function $$$(key, value) {
+    function localStorageSet(key, value) {
         return localStorage.setItem(key, value);
     }
 
-    const clock = $("clock");
-    const pageClock = $("pageClock");
-    const pageSettings = $("pageSettings");
-    const pageSnake = $("pageSnake");
-    const pageMastermind = $("pageMastermind");
-    const pageWordGuessr = $("pageWordGuessr");
-    const color = $("color");
-    const speed = $("speed");
-    const wordInput = $("wordInput");
-    const rainbowMode =  $("rainbowMode");
-    const ghostMode = $("ghostMode");
-    const darkMode = $("darkMode");
+    const clock = ElementById("clock");
+    const pClock = ElementById("pClock");
+    const pSettings = ElementById("pSettings");
+    const pSnake = ElementById("pSnake");
+    const pMastermind = ElementById("pMastermind");
+    const pWordGuessr = ElementById("pWordGuessr");
+    const color = ElementById("color");
+    const speed = ElementById("speed");
+    const wordInput = ElementById("wordInput");
+    const rainbowMode =  ElementById("rainbowMode");
+    const ghostMode = ElementById("ghostMode");
+    const darkMode = ElementById("darkMode");
     const body = document.getElementsByTagName("body")[0];
-    const codeButtons = document.getElementsByClassName("codeButton");
-    const colorButtons = document.getElementsByClassName("colorButton");
+    const codeBtns = ElementsByClassName("codeBtn");
+    const colorBtns = ElementsByClassName("colorBtn");
 
     /**
      * Set the current time
@@ -179,7 +183,7 @@
      * Display the settings-page
      */
     function fShowSettings() {
-        fShowPage(pageClock, pageSettings);
+        fShowPage(pClock, pSettings);
     }
 
     /**
@@ -244,8 +248,8 @@
      * Hide the settings-page and return to clock-page
      */
     function fHideSettings() {
-        fHidePage(pageClock, pageSettings);
-        pageSettings.classList.remove("swipe-out-right");
+        fHidePage(pClock, pSettings);
+        pSettings.classList.remove("swipe-out-right");
         fUpdateParams();
     }
 
@@ -256,11 +260,11 @@
         let red = parseInt(color.value.substring(1, 3), 16);
         let green = parseInt(color.value.substring(3, 5), 16);
         let blue = parseInt(color.value.substring(5, 7), 16);
-        $$$("wc_color", color.value);
-        $$$("wc_rainbow", rainbow);
-        $$$("wc_dark", dark);
-        $$$("wc_ghost", ghost);
-        $$$("wc_speed", speed.value.toString());
+        localStorageSet("wc_color", color.value);
+        localStorageSet("wc_rainbow", rainbow);
+        localStorageSet("wc_dark", dark);
+        localStorageSet("wc_ghost", ghost);
+        localStorageSet("wc_speed", speed.value.toString());
         if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
             let xhr = new XMLHttpRequest();
             xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
@@ -272,7 +276,7 @@
      * Display the snake-page
      */
     function fShowSnake() {
-        fShowPage(pageSettings, pageSnake);
+        fShowPage(pSettings, pSnake);
         fSendSnake(5);
     }
 
@@ -287,9 +291,9 @@
                 score = (parseInt(xhttp.responseText) - 3) * 10;
                 if (score > highscore) {
                     highscore = score;
-                    $$$("wc_score", highscore);
+                    localStorageSet("wc_score", highscore);
                 }
-                $("scoreSnake").innerHTML = "Score: " + score + " / High-Score : " + highscore;
+                ElementById("scoreSnake").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
         };
         xhttp.open("GET", "snake?dir=" + dir, true);
@@ -300,7 +304,7 @@
      * Hide the snake-page and return to settings-page
      */
     function fHideSnake() {
-        fHidePage(pageSettings, pageSnake);
+        fHidePage(pSettings, pSnake);
         fSendSnake(6);
     }
 
@@ -308,7 +312,7 @@
      * Display the mastermind-page
      */
     function fShowMastermind() {
-        fShowPage(pageSettings, pageMastermind);
+        fShowPage(pSettings, pMastermind);
         fSendMastermind(1);
     }
 
@@ -330,10 +334,10 @@
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
-            urlparams = "mastermind?c1=" + codeButtons[0].getAttribute("data-num")
-                + "&c2=" + codeButtons[1].getAttribute("data-num")
-                + "&c3=" + codeButtons[2].getAttribute("data-num")
-                + "&c4=" + codeButtons[3].getAttribute("data-num");
+            urlparams = "mastermind?c1=" + codeBtns[0].getAttribute("data-num")
+                + "&c2=" + codeBtns[1].getAttribute("data-num")
+                + "&c3=" + codeBtns[2].getAttribute("data-num")
+                + "&c4=" + codeBtns[3].getAttribute("data-num");
             fClearMastermind();
         }
         let xhttp = new XMLHttpRequest();
@@ -360,7 +364,7 @@
      * Hide the mastermind-page and return to settings-page
      */
     function fHideMastermind() {
-        fHidePage(pageSettings, pageMastermind);
+        fHidePage(pSettings, pMastermind);
         fSendMastermind(2);
     }
 
@@ -368,7 +372,7 @@
      * Clear current mastermind code
      */
     function fClearMastermind() {
-        Array.from(codeButtons).forEach(function (element) {
+        Array.from(codeBtns).forEach(function (element) {
             element.setAttribute("data-num", "");
         });
     }
@@ -378,9 +382,9 @@
      */
     function fMastermindMessage(msg) {
         if (msg) {
-            $("scoreMastermind").innerHTML = msg;
+            ElementById("scoreMastermind").innerHTML = msg;
         } else {
-            $("scoreMastermind").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
+            ElementById("scoreMastermind").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
                 "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='cornflowerblue'/></svg>&nbsp;di richtigi Farb";
         }
     }
@@ -389,10 +393,10 @@
      * Display the wordguessr-page
      */
     function fShowWordGuessr() {
-        fShowPage(pageSettings, pageWordGuessr);
+        fShowPage(pSettings, pWordGuessr);
         fSendWordGuessr("1");
         wordGuessrScore = 0;
-        $("scoreWordGuessr").innerHTML = "";
+        ElementById("scoreWordGuessr").innerHTML = "";
     }
 
     /**
@@ -422,7 +426,7 @@
                 } else if (response.score === 1) {
                     // correct guess
                     wordGuessrScore += response.score;
-                    $("scoreWordGuessr").innerHTML = wordGuessrScore + " hesch usegfunde.";
+                    ElementById("scoreWordGuessr").innerHTML = wordGuessrScore + " hesch usegfunde.";
                     wordInput.classList.add("ok");
                     setTimeout(function () {
                         wordInput.classList.remove("ok");
@@ -439,44 +443,64 @@
      * Hide the wordguessr-page and return to settings-page
      */
     function fHideWordGuessr() {
-        fHidePage(pageSettings, pageWordGuessr);
+        fHidePage(pSettings, pWordGuessr);
         fSendWordGuessr("2");
     }
 
     /**
      * Initialize application, add event-listeners
      */
-    $("power").addEventListener("click", fTogglePower);
-    $("settings").addEventListener("click", fShowSettings);
-    $("settingsClose").addEventListener("click", fHideSettings);
+    ElementById("power").addEventListener("click", fTogglePower);
+    ElementById("settings").addEventListener("click", fShowSettings);
+    ElementById("xSettings").addEventListener("click", fHideSettings);
 
-    $("playSnake").addEventListener("click", fShowSnake);
-    $("exitSnake").addEventListener("click", fHideSnake);
-    $("playMastermind").addEventListener("click", fShowMastermind);
-    $("exitMastermind").addEventListener("click", fHideMastermind);
-    $("sendMastermind").addEventListener("click", fSendMastermind);
-    $("playWordGuessr").addEventListener("click", fShowWordGuessr);
-    $("exitWordGuessr").addEventListener("click", fHideWordGuessr);
-    $("sendWordGuessr").addEventListener("click", fSendWordGuessr);
-    Array.from(document.getElementsByClassName("snakeButton")).forEach(function (element) {
+    ElementById("playSnake").addEventListener("click", fShowSnake);
+    ElementById("xSnake").addEventListener("click", fHideSnake);
+    ElementById("playMastermind").addEventListener("click", fShowMastermind);
+    ElementById("xMastermind").addEventListener("click", fHideMastermind);
+    ElementById("sendMastermind").addEventListener("click", fSendMastermind);
+    ElementById("playWordGuessr").addEventListener("click", fShowWordGuessr);
+    ElementById("xWordGuessr").addEventListener("click", fHideWordGuessr);
+    ElementById("sendWordGuessr").addEventListener("click", fSendWordGuessr);
+    Array.from(ElementsByClassName("snakeBtn")).forEach(function (element) {
+        element.setAttribute("d", "M2 2 L9 7 L2 12 Z");
         element.addEventListener("click", function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
         });
     });
-    Array.from(colorButtons).forEach(function (element) {
+    // no-svg: x
+    Array.from(ElementsByClassName("n")).forEach(function (element) {
+        element.setAttribute("d", "M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z");
+        element.setAttribute("transform", "scale(0.9) translate(5,5)");
+    });
+    // yes-svg: check
+    Array.from(ElementsByClassName("y")).forEach(function (element) {
+        element.setAttribute("d", "M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z");
+        element.setAttribute("transform", "scale(0.85) translate(5,5)");
+    });
+    // play-svg: >
+    Array.from(ElementsByClassName("y")).forEach(function (element) {
+        element.setAttribute("d", "M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z");
+        element.setAttribute("transform", "scale(0.85) translate(5,5)");
+    });
+    Array.from(colorBtns).forEach(function (element) {
         element.addEventListener("click", function (e) {
-            Array.from(colorButtons).forEach(function (element) {
+            Array.from(colorBtns).forEach(function (element) {
                 element.classList.remove("g");
             });
             e.target.classList.add("g");
             mastermindColor = e.target.getAttribute("data-num");
         });
+        element.innerHTML = "<circle cx='35' cy='35' r='25'/>";
+        element.setAttribute("viewBox", "0 0 70 70");
     });
-    Array.from(codeButtons).forEach(function (element) {
+    Array.from(codeBtns).forEach(function (element) {
         element.addEventListener("click", function (e) {
             e.target.setAttribute("data-num", mastermindColor);
             fMastermindMessage()
         });
+        element.innerHTML = "<circle cx='35' cy='35' r='25'/>";
+        element.setAttribute("viewBox", "0 0 70 70");
     });
 
     function fCheckKey(e) {
@@ -495,15 +519,15 @@
                 dir = 4;
                 break;
             case "Enter":
-                if (pageWordGuessr.classList.contains("swipe-in")) {
+                if (pWordGuessr.classList.contains("swipe-in")) {
                     fSendWordGuessr();
                 }
         }
-        if (dir && pageSnake.classList.contains("swipe-in")) {
+        if (dir && pSnake.classList.contains("swipe-in")) {
             fSendSnake(dir);
-            $("control").children[dir - 1].classList.add("g");
+            ElementById("ctrl").children[dir - 1].classList.add("g");
             setTimeout(function () {
-                $("control").children[dir - 1].classList.remove("g");
+                ElementById("ctrl").children[dir - 1].classList.remove("g");
             }, 200);
         }
     }
@@ -525,30 +549,38 @@
     /**
      * Reload last settings from local storage
      */
-    if ($$("wc_color")) {
-        color.value = $$("wc_color");
+    if (localStorageGet("wc_color")) {
+        color.value = localStorageGet("wc_color");
         fChangeColor(color.value);
     }
-    if ($$("wc_rainbow")) {
-        fRainbow(parseInt($$("wc_rainbow")));
+    if (localStorageGet("wc_rainbow")) {
+        fRainbow(parseInt(localStorageGet("wc_rainbow")));
     }
-    if ($$("wc_ghost")) {
-        fGhost(parseInt($$("wc_ghost")));
+    if (localStorageGet("wc_ghost")) {
+        fGhost(parseInt(localStorageGet("wc_ghost")));
     }
-    if ($$("wc_dark")) {
-        fSetDarkMode(parseInt($$("wc_dark")));
+    if (localStorageGet("wc_dark")) {
+        fSetDarkMode(parseInt(localStorageGet("wc_dark")));
     }
-    if ($$("wc_speed")) {
-        speed.value = (parseInt($$("wc_speed")));
+    if (localStorageGet("wc_speed")) {
+        speed.value = (parseInt(localStorageGet("wc_speed")));
     }
-    if ($$("wc_score")) {
-        highscore = $$("wc_score");
+    if (localStorageGet("wc_score")) {
+        highscore = localStorageGet("wc_score");
     }
-    $("iphone").href = $("icon").href;
+    ElementById("iphone").href = ElementById("icon").href;
+
+    Array.from(clock.children).forEach(function (element, index) {
+        element.setAttribute("x", (index % 11 * 10) + 7);
+        element.setAttribute("y", Math.ceil((index + 1) / 11) * 10);
+        if ([113,114,116,117].includes(index)) {
+            element.setAttribute("y", 112.5);
+        }
+    });
 
     // generate Titles on Pages
     const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
-    Array.from(document.getElementsByClassName("title")).forEach(function (element, index) {
+    Array.from(ElementsByClassName("title")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
             let letter = pageTitles[index].substring(step, step + 1);
@@ -561,7 +593,6 @@
             }
             element.appendChild(textElement);
         }
-
     });
 
     /**
@@ -586,9 +617,8 @@
         xhttp.open("GET", "get_params", true);
         xhttp.send();
     } else {
-        $("snakeBody").classList.add("hide");
-        $("mastermindBody").classList.add("hide");
-        $("wordGuessrBody").classList.add("hide");
+        ElementById("snakeBody").classList.add("hide");
+        ElementById("mastermindBody").classList.add("hide");
+        ElementById("wordGuessrBody").classList.add("hide");
     }
-
 }());

@@ -30,7 +30,7 @@ body {
     background: linear-gradient(#444, #222);
 }
 
-#clock, .title, #control {
+#clock, .title, #ctrl {
     font: 6px sans-serif;
     fill: #555;
     text-shadow: none;
@@ -41,19 +41,23 @@ body {
 }
 
 @media (orientation: landscape) {
-    #control {
+    #ctrl {
         width: 100%;
         max-width: 60vh;
     }
 }
 @media (orientation: portrait) {
-    #control {
+    #ctrl {
         width: 100%;
     }
 }
 
 .title, .w100 {
     width: 100%;
+}
+
+.M1, .M2, .M3, .M4 {
+    font-size:8px;
 }
 
 .g, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA,
@@ -63,7 +67,7 @@ body {
     text-shadow:0 0 10px var(--main-color);
 }
 
-.off .g:not(.colorButton) {
+.off .g:not(.colorBtn) {
     fill: #555;
     text-shadow: none;
 }
@@ -90,7 +94,7 @@ a:active {
     filter: brightness(125%);
 }
 
-#settings, #settingsClose, #exitSnake, #exitMastermind, #exitWordGuessr {
+#settings, #xSettings, #xSnake, #xMastermind, #xWordGuessr {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
@@ -104,7 +108,7 @@ a:active {
     align-items: center;
 }
 
-.svgButton, .snakeButton, .svgMsg {
+.svgBtn, .snakeBtn, .svgMsg {
     width: 4.5vmin;
     height: 4.5vmin;
     min-width: 30px;
@@ -143,23 +147,23 @@ input[type="text"].ok {
     border: 2px solid #059c7d;
 }
 
-.svgButton:hover, .svgButton.g, .snakeButton:hover, .snakeButton.g {
+.svgBtn:hover, .svgBtn.g, .snakeBtn:hover, .snakeBtn.g {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
     cursor: pointer;
 }
-.snakeButton {
+.snakeBtn {
     stroke-width:1.4;
     fill: #333;
     fill-opacity: 0.01;
 }
 
-#pageSettings, #pageSnake, #pageMastermind, #pageWordGuessr {
+#pSettings, #pSnake, #pMastermind, #pWordGuessr {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;
 }
-.pageContent {
+.pContent {
     display: block;
     position: absolute;
     overflow: auto;
@@ -171,7 +175,7 @@ input[type="text"].ok {
     max-width: calc(100vw - 40px);
     height: 100%;
 }
-.pageBody, .content, .content > span {
+.pBody, .content, .content > span {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -179,7 +183,7 @@ input[type="text"].ok {
     align-items: center;
     flex-wrap: wrap;
 }
-.pageFooter {
+.pFooter {
     margin-top: 60px;
 }
 #color {

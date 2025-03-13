@@ -42,7 +42,7 @@ module.exports = function(grunt) {
                 options: {
                     patterns: [
                         {
-                            match: /<script src='scripts\/app.js'><\/script>/,
+                            match: /<script src='scripts\/app.js'\/>/,
                             replacement: function() {
                                 return "\n<script>" + grunt.file.read('scripts/min.js') + "</script>";
                             }
