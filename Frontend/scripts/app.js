@@ -50,15 +50,15 @@
     const pSnake = ElementById("pSnake");
     const pMastermind = ElementById("pMastermind");
     const pWordGuessr = ElementById("pWordGuessr");
-    const color = ElementById("color");
+    const color = ElementById("c");
     const speed = ElementById("speed");
-    const wordInput = ElementById("wordInput");
+    const wordInput = ElementById("wi");
     const rainbowMode =  ElementById("rainbowMode");
     const ghostMode = ElementById("ghostMode");
     const darkMode = ElementById("darkMode");
     const body = document.getElementsByTagName("body")[0];
     const codeBtns = ElementsByClassName("codeBtn");
-    const colorBtns = ElementsByClassName("colorBtn");
+    const colorBtns = ElementsByClassName("cb");
 
     /**
      * Set the current time
@@ -452,15 +452,15 @@
      */
     ElementById("power").addEventListener("click", fTogglePower);
     ElementById("settings").addEventListener("click", fShowSettings);
-    ElementById("xSettings").addEventListener("click", fHideSettings);
+    ElementById("xS").addEventListener("click", fHideSettings);
 
     ElementById("playSnake").addEventListener("click", fShowSnake);
     ElementById("xSnake").addEventListener("click", fHideSnake);
     ElementById("playMastermind").addEventListener("click", fShowMastermind);
-    ElementById("xMastermind").addEventListener("click", fHideMastermind);
+    ElementById("xMM").addEventListener("click", fHideMastermind);
     ElementById("sendMastermind").addEventListener("click", fSendMastermind);
     ElementById("playWordGuessr").addEventListener("click", fShowWordGuessr);
-    ElementById("xWordGuessr").addEventListener("click", fHideWordGuessr);
+    ElementById("xWG").addEventListener("click", fHideWordGuessr);
     ElementById("sendWordGuessr").addEventListener("click", fSendWordGuessr);
     Array.from(ElementsByClassName("snakeBtn")).forEach(function (element) {
         element.setAttribute("d", "M2 2 L9 7 L2 12 Z");
