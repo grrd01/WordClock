@@ -72,6 +72,10 @@
         return element.children;
     }
 
+    function fSetAttribute(element, attribute, value) {
+        element.setAttribute(attribute, value);
+    }
+
     /**
      * Set the current time
      */
@@ -385,7 +389,7 @@
      */
     function fClearMastermind() {
         Array.from(codeBtns).forEach(function (element) {
-            element.setAttribute("data-num", "");
+            fSetAttribute(element, "data-num", "");
         });
     }
 
@@ -475,20 +479,20 @@
     ElementById("xWG").addEventListener(click, fHideWordGuessr);
     ElementById("cWG").addEventListener(click, fSendWordGuessr);
     Array.from(ElementsByClassName("snb")).forEach(function (element) {
-        element.setAttribute("d", "M2 2 L9 7 L2 12 Z");
+        fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
         element.addEventListener(click, function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
         });
     });
     // no-svg: x
     Array.from(ElementsByClassName("n")).forEach(function (element) {
-        element.setAttribute("d", "M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z");
-        element.setAttribute("transform", "scale(0.9) translate(5,5)");
+        fSetAttribute(element, "d", "M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z");
+        fSetAttribute(element, "transform", "scale(0.9) translate(5,5)");
     });
     // yes-svg: check
     Array.from(ElementsByClassName("y")).forEach(function (element) {
-        element.setAttribute("d", "M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z");
-        element.setAttribute("transform", "scale(0.85) translate(5,5)");
+        fSetAttribute(element, "d", "M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z");
+        fSetAttribute(element, "transform", "scale(0.85) translate(5,5)");
     });
     // play-svg: >
     Array.from(ElementsByClassName("play")).forEach(function (element) {
@@ -503,15 +507,15 @@
             mastermindColor = e.target.getAttribute("data-num");
         });
         element.innerHTML = "<circle cx='35' cy='35' r='25'/>";
-        element.setAttribute("viewBox", "0 0 70 70");
+        fSetAttribute(element, "viewBox", "0 0 70 70");
     });
     Array.from(codeBtns).forEach(function (element) {
         element.addEventListener(click, function (e) {
-            e.target.setAttribute("data-num", mastermindColor);
+            fSetAttribute(e.target, "data-num", mastermindColor);
             fMastermindMessage()
         });
         element.innerHTML = "<circle cx='35' cy='35' r='25'/>";
-        element.setAttribute("viewBox", "0 0 70 70");
+        fSetAttribute(element, "viewBox", "0 0 70 70");
     });
 
     function fCheckKey(e) {
@@ -582,10 +586,10 @@
     ElementById("iphone").href = ElementById("icon").href;
 
     Array.from(fChildren(clock)).forEach(function (element, index) {
-        element.setAttribute("x", (index % 11 * 10) + 7);
-        element.setAttribute("y", Math.ceil((index + 1) / 11) * 10);
+        fSetAttribute(element, "x", (index % 11 * 10) + 7);
+        fSetAttribute(element, "y", Math.ceil((index + 1) / 11) * 10);
         if ([113,114,116,117].includes(index)) {
-            element.setAttribute("y", 112.5);
+            fSetAttribute(element, "y", 112.5);
         }
     });
 
@@ -596,11 +600,11 @@
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
             let letter = pageTitles[index].substring(step, step + 1);
             let letterUpper = letter.toUpperCase();
-            textElement.setAttribute("x", (step % 11 * 10) + 7);
-            textElement.setAttribute("y", Math.ceil((step + 1) / 11) * 10);
+            fSetAttribute(textElement, "x", (step % 11 * 10) + 7);
+            fSetAttribute(textElement, "y", Math.ceil((step + 1) / 11) * 10);
             textElement.textContent = letterUpper;
             if (letter === letterUpper) {
-                textElement.setAttribute("class", "g");
+                fSetAttribute(textElement, "class", "g");
             }
             element.appendChild(textElement);
         }
