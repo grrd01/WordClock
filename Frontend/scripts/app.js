@@ -11,6 +11,7 @@
     "use strict";
 
     const doc = document;
+    const windowLocationHref = window.location.href;
     const clock = ElementById("c");
     const pClock = ElementById("pC");
     const pSettings = ElementById("pS");
@@ -24,9 +25,10 @@
     const ghostMode = ElementById("gm");
     const darkMode = ElementById("dm");
     const body = doc.getElementsByTagName("body")[0];
-    const codeBtns = ElementsByClassName("codeBtn");
+    const codeBtns = ElementsByClassName("cdb");
     const colorBtns = ElementsByClassName("cb");
     const click = "click";
+    const svgCircle = "<svg class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill=";
 
     let date;
     let hour;
@@ -64,6 +66,10 @@
 
     function fClassList(element) {
         return element.classList;
+    }
+
+    function fChildren(element) {
+        return element.children;
     }
 
     /**
@@ -205,8 +211,8 @@
      */
     function fRainbow(rain_in) {
         if (rain_in !== rainbow) {
-            fClassList(rainbowMode.children[0]).toggle("h");
-            fClassList(rainbowMode.children[1]).toggle("h");
+            fClassList(fChildren(rainbowMode)[0]).toggle("h");
+            fClassList(fChildren(rainbowMode)[1]).toggle("h");
         }
         rainbow = rain_in;
         if (rainbow) {
@@ -222,8 +228,8 @@
      */
     function fGhost(ghost_in) {
         if (ghost_in !== ghost) {
-            fClassList(ghostMode.children[0]).toggle("h");
-            fClassList(ghostMode.children[1]).toggle("h");
+            fClassList(fChildren(ghostMode)[0]).toggle("h");
+            fClassList(fChildren(ghostMode)[1]).toggle("h");
         }
         ghost = ghost_in;
     }
@@ -234,8 +240,8 @@
      */
     function fSetDarkMode(dark_in) {
         if (dark_in !== dark) {
-            fClassList(darkMode.children[0]).toggle("h");
-            fClassList(darkMode.children[1]).toggle("h");
+            fClassList(fChildren(darkMode)[0]).toggle("h");
+            fClassList(fChildren(darkMode)[1]).toggle("h");
         }
         dark = dark_in;
     }
@@ -266,12 +272,12 @@
         let red = parseInt(color.value.substring(1, 3), 16);
         let green = parseInt(color.value.substring(3, 5), 16);
         let blue = parseInt(color.value.substring(5, 7), 16);
-        localStorageSet("wc_color", color.value);
-        localStorageSet("wc_rainbow", rainbow);
-        localStorageSet("wc_dark", dark);
-        localStorageSet("wc_ghost", ghost);
-        localStorageSet("wc_speed", speed.value.toString());
-        if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
+        localStorageSet("wc_c", color.value);
+        localStorageSet("wc_r", rainbow);
+        localStorageSet("wc_d", dark);
+        localStorageSet("wc_g", ghost);
+        localStorageSet("wc_s", speed.value.toString());
+        if (windowLocationHref.includes("192.168.") || windowLocationHref.includes(".local")) {
             let xhr = new XMLHttpRequest();
             xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
             xhr.send();
@@ -297,7 +303,7 @@
                 score = (parseInt(xhttp.responseText) - 3) * 10;
                 if (score > highscore) {
                     highscore = score;
-                    localStorageSet("wc_score", highscore);
+                    localStorageSet("wc_sc", highscore);
                 }
                 ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
@@ -390,8 +396,8 @@
         if (msg) {
             ElementById("sMM").innerHTML = msg;
         } else {
-            ElementById("sMM").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
-                "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='cornflowerblue'/></svg>&nbsp;di richtigi Farb";
+            ElementById("sMM").innerHTML = svgCircle + "'white'/></svg>&nbsp;am richtige Ort&nbsp;" +
+                svgCircle + "'cornflowerblue'/></svg>&nbsp;di richtigi Farb";
         }
     }
 
@@ -485,9 +491,8 @@
         element.setAttribute("transform", "scale(0.85) translate(5,5)");
     });
     // play-svg: >
-    Array.from(ElementsByClassName("y")).forEach(function (element) {
-        element.setAttribute("d", "M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z");
-        element.setAttribute("transform", "scale(0.85) translate(5,5)");
+    Array.from(ElementsByClassName("play")).forEach(function (element) {
+        element.innerHTML = "<path d=\"M2 2 L9 7 L2 12 Z\" stroke-width=\"1.4\"/>";
     });
     Array.from(colorBtns).forEach(function (element) {
         element.addEventListener(click, function (e) {
@@ -531,9 +536,9 @@
         }
         if (dir &&  fClassList(pSnake).contains("si")) {
             fSendSnake(dir);
-            fClassList(ElementById("ctrl").children[dir - 1]).add("g");
+            fClassList(fChildren(ElementById("ctrl"))[dir - 1]).add("g");
             setTimeout(function () {
-                fClassList(ElementById("ctrl").children[dir - 1]).remove("g");
+                fClassList(fChildren(ElementById("ctrl"))[dir - 1]).remove("g");
             }, 200);
         }
     }
@@ -555,28 +560,28 @@
     /**
      * Reload last settings from local storage
      */
-    if (localStorageGet("wc_color")) {
-        color.value = localStorageGet("wc_color");
+    if (localStorageGet("wc_c")) {
+        color.value = localStorageGet("wc_c");
         fChangeColor(color.value);
     }
-    if (localStorageGet("wc_rainbow")) {
-        fRainbow(parseInt(localStorageGet("wc_rainbow")));
+    if (localStorageGet("wc_r")) {
+        fRainbow(parseInt(localStorageGet("wc_r")));
     }
-    if (localStorageGet("wc_ghost")) {
-        fGhost(parseInt(localStorageGet("wc_ghost")));
+    if (localStorageGet("wc_g")) {
+        fGhost(parseInt(localStorageGet("wc_g")));
     }
-    if (localStorageGet("wc_dark")) {
-        fSetDarkMode(parseInt(localStorageGet("wc_dark")));
+    if (localStorageGet("wc_d")) {
+        fSetDarkMode(parseInt(localStorageGet("wc_d")));
     }
-    if (localStorageGet("wc_speed")) {
-        speed.value = (parseInt(localStorageGet("wc_speed")));
+    if (localStorageGet("wc_s")) {
+        speed.value = (parseInt(localStorageGet("wc_s")));
     }
-    if (localStorageGet("wc_score")) {
-        highscore = localStorageGet("wc_score");
+    if (localStorageGet("wc_sc")) {
+        highscore = localStorageGet("wc_sc");
     }
     ElementById("iphone").href = ElementById("icon").href;
 
-    Array.from(clock.children).forEach(function (element, index) {
+    Array.from(fChildren(clock)).forEach(function (element, index) {
         element.setAttribute("x", (index % 11 * 10) + 7);
         element.setAttribute("y", Math.ceil((index + 1) / 11) * 10);
         if ([113,114,116,117].includes(index)) {
@@ -604,7 +609,7 @@
     /**
      * Load current settings from word-clock
      */
-    if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
+    if (windowLocationHref.includes("192.168.") || windowLocationHref.includes(".local")) {
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function () {
             if (this.readyState === 4 && this.status === 200) {
