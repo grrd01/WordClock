@@ -76,6 +76,10 @@
         element.setAttribute(attribute, value);
     }
 
+    function fEventListener(element, event, func) {
+        element.addEventListener(event, func);
+    }
+
     /**
      * Set the current time
      */
@@ -466,21 +470,21 @@
     /**
      * Initialize application, add event-listeners
      */
-    ElementById("p").addEventListener(click, fTogglePower);
-    ElementById("s").addEventListener(click, fShowSettings);
-    ElementById("xS").addEventListener(click, fHideSettings);
+    fEventListener(ElementById("p"), click, fTogglePower);
+    fEventListener(ElementById("s"), click, fShowSettings);
+    fEventListener(ElementById("xS"), click, fHideSettings);
 
-    ElementById("SN").addEventListener(click, fShowSnake);
-    ElementById("xSN").addEventListener(click, fHideSnake);
-    ElementById("MM").addEventListener(click, fShowMastermind);
-    ElementById("xMM").addEventListener(click, fHideMastermind);
-    ElementById("cMM").addEventListener(click, fSendMastermind);
-    ElementById("WG").addEventListener(click, fShowWordGuessr);
-    ElementById("xWG").addEventListener(click, fHideWordGuessr);
-    ElementById("cWG").addEventListener(click, fSendWordGuessr);
+    fEventListener(ElementById("SN"), click, fShowSnake);
+    fEventListener(ElementById("xSN"), click, fHideSnake);
+    fEventListener(ElementById("MM"), click, fShowMastermind);
+    fEventListener(ElementById("xMM"), click, fHideMastermind);
+    fEventListener(ElementById("cMM"), click, fSendMastermind);
+    fEventListener(ElementById("WG"), click, fShowWordGuessr);
+    fEventListener(ElementById("xWG"), click, fHideWordGuessr);
+    fEventListener(ElementById("cWG"), click, fSendWordGuessr);
     Array.from(ElementsByClassName("snb")).forEach(function (element) {
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
-        element.addEventListener(click, function (e) {
+        fEventListener(element, click, function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
         });
     });
@@ -499,7 +503,7 @@
         element.innerHTML = "<path d=\"M2 2 L9 7 L2 12 Z\" stroke-width=\"1.4\"/>";
     });
     Array.from(colorBtns).forEach(function (element) {
-        element.addEventListener(click, function (e) {
+        fEventListener(element, click, function (e) {
             Array.from(colorBtns).forEach(function (element) {
                 fClassList(element).remove("g");
             });
@@ -510,7 +514,7 @@
         fSetAttribute(element, "viewBox", "0 0 70 70");
     });
     Array.from(codeBtns).forEach(function (element) {
-        element.addEventListener(click, function (e) {
+        fEventListener(element, click, function (e) {
             fSetAttribute(e.target, "data-num", mastermindColor);
             fMastermindMessage()
         });
@@ -548,16 +552,16 @@
     }
 
     doc.onkeydown = fCheckKey;
-    color.addEventListener("change", (ignore) => {
+    fEventListener(color, "change", (ignore) => {
         fChangeColor(color.value);
     }, false);
-    rainbowMode.addEventListener(click, (ignore) => {
+    fEventListener(rainbowMode, click, (ignore) => {
         fRainbow(1 - rainbow);
     });
-    ghostMode.addEventListener(click, (ignore) => {
+    fEventListener(ghostMode, click, (ignore) => {
         fGhost(1 - ghost);
     });
-    darkMode.addEventListener(click, (ignore) => {
+    fEventListener(darkMode, click, (ignore) => {
         fSetDarkMode(1 - dark);
     });
 
