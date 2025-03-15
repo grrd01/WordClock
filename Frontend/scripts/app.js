@@ -10,6 +10,24 @@
 (function () {
     "use strict";
 
+    const doc = document;
+    const clock = ElementById("c");
+    const pClock = ElementById("pC");
+    const pSettings = ElementById("pS");
+    const pSnake = ElementById("pSN");
+    const pMastermind = ElementById("pMM");
+    const pWordGuessr = ElementById("pWG");
+    const color = ElementById("co");
+    const speed = ElementById("speed");
+    const wordInput = ElementById("wi");
+    const rainbowMode =  ElementById("rm");
+    const ghostMode = ElementById("gm");
+    const darkMode = ElementById("dm");
+    const body = doc.getElementsByTagName("body")[0];
+    const codeBtns = ElementsByClassName("codeBtn");
+    const colorBtns = ElementsByClassName("cb");
+    const click = "click";
+
     let date;
     let hour;
     let minute;
@@ -29,11 +47,11 @@
     let wordGuessrScore = 0;
 
     function ElementById(id) {
-        return document.getElementById(id);
+        return doc.getElementById(id);
     }
 
     function ElementsByClassName(id) {
-        return document.getElementsByClassName(id);
+        return doc.getElementsByClassName(id);
     }
 
     function localStorageGet(key) {
@@ -44,21 +62,9 @@
         return localStorage.setItem(key, value);
     }
 
-    const clock = ElementById("clock");
-    const pClock = ElementById("pClock");
-    const pSettings = ElementById("pSettings");
-    const pSnake = ElementById("pSnake");
-    const pMastermind = ElementById("pMastermind");
-    const pWordGuessr = ElementById("pWordGuessr");
-    const color = ElementById("c");
-    const speed = ElementById("speed");
-    const wordInput = ElementById("wi");
-    const rainbowMode =  ElementById("rainbowMode");
-    const ghostMode = ElementById("ghostMode");
-    const darkMode = ElementById("darkMode");
-    const body = document.getElementsByTagName("body")[0];
-    const codeBtns = ElementsByClassName("codeBtn");
-    const colorBtns = ElementsByClassName("cb");
+    function fClassList(element) {
+        return element.classList;
+    }
 
     /**
      * Set the current time
@@ -66,48 +72,48 @@
     function setTime() {
         date = new Date();
         if (dark && (date.getHours() >= 22 || date.getHours() < 7)) {
-            body.classList.add("d");
+            fClassList(body).add("d");
         } else {
-            body.classList.remove("d");
+            fClassList(body).remove("d");
         }
         if (minute === date.getMinutes()) {
             return;
         }
         minute = date.getMinutes();
-        clock.classList.remove(...clock.classList);
+        fClassList(clock).remove(...fClassList(clock));
         if (power === 0) {
             return;
         }
         if (minute >= 55) {
-            clock.classList.add("M5", "MV");
+            fClassList(clock).add("M5", "MV");
         } else if (minute >= 50) {
-            clock.classList.add("M10", "MV");
+            fClassList(clock).add("M10", "MV");
         } else if (minute >= 45) {
-            clock.classList.add("M15", "MV");
+            fClassList(clock).add("M15", "MV");
         } else if (minute >= 40) {
-            clock.classList.add("M20", "MV");
+            fClassList(clock).add("M20", "MV");
         } else if (minute >= 35) {
-            clock.classList.add("M5", "MA", "M30");
+            fClassList(clock).add("M5", "MA", "M30");
         } else if (minute >= 30) {
-            clock.classList.add("M30");
+            fClassList(clock).add("M30");
         } else if (minute >= 25) {
-            clock.classList.add("M5", "MV", "M30");
+            fClassList(clock).add("M5", "MV", "M30");
         } else if (minute >= 20) {
-            clock.classList.add("M20", "MA");
+            fClassList(clock).add("M20", "MA");
         } else if (minute >= 15) {
-            clock.classList.add("M15", "MA");
+            fClassList(clock).add("M15", "MA");
         } else if (minute >= 10) {
-            clock.classList.add("M10", "MA");
+            fClassList(clock).add("M10", "MA");
         } else if (minute >= 5) {
-            clock.classList.add("M5", "MA");
+            fClassList(clock).add("M5", "MA");
         }
         hour = date.getHours();
         if (minute >= 25) {
             hour += 1;
         }
         hour = hour % 12;
-        clock.classList.add("H" + hour.toString());
-        clock.classList.add("M" + (minute % 5).toString());
+        fClassList(clock).add("H" + hour.toString());
+        fClassList(clock).add("M" + (minute % 5).toString());
     }
 
     setInterval(setTime, 100);
@@ -146,9 +152,9 @@
     function fSetPower(power_in) {
         power = power_in;
         if (power) {
-            body.classList.remove("off");
+            fClassList(body).remove("off");
         } else {
-            body.classList.add("off");
+            fClassList(body).add("off");
         }
         minute = -1;
     }
@@ -160,11 +166,11 @@
      */
     function fShowPage(pageHide, pageShow) {
         // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageHide.classList.remove("swipe-out-right");
-        pageShow.classList.remove("swipe-in-left");
-        pageHide.classList.add("swipe-out");
-        pageShow.classList.add("swipe-in");
+        doc.activeElement.blur();
+        fClassList(pageHide).remove("sor");
+        fClassList(pageShow).remove("sil");
+        fClassList(pageHide).add("so");
+        fClassList(pageShow).add("si");
     }
 
     /**
@@ -173,10 +179,10 @@
      * @param {Element} pageHide : the page to hide
      */
     function fHidePage(pageShow, pageHide) {
-        pageShow.classList.remove("swipe-out");
-        pageHide.classList.remove("swipe-in");
-        pageShow.classList.add("swipe-out-right");
-        pageHide.classList.add("swipe-in-left");
+        fClassList(pageShow).remove("so");
+        fClassList(pageHide).remove("si");
+        fClassList(pageShow).add("sor");
+        fClassList(pageHide).add("sil");
     }
 
     /**
@@ -190,7 +196,7 @@
      * Set all elements to selected color
      */
     function fChangeColor(color_in) {
-        document.documentElement.style.setProperty('--main-color', color_in);
+        doc.documentElement.style.setProperty('--main-color', color_in);
     }
 
     /**
@@ -199,8 +205,8 @@
      */
     function fRainbow(rain_in) {
         if (rain_in !== rainbow) {
-            rainbowMode.children[0].classList.toggle("hide");
-            rainbowMode.children[1].classList.toggle("hide");
+            fClassList(rainbowMode.children[0]).toggle("h");
+            fClassList(rainbowMode.children[1]).toggle("h");
         }
         rainbow = rain_in;
         if (rainbow) {
@@ -216,8 +222,8 @@
      */
     function fGhost(ghost_in) {
         if (ghost_in !== ghost) {
-            ghostMode.children[0].classList.toggle("hide");
-            ghostMode.children[1].classList.toggle("hide");
+            fClassList(ghostMode.children[0]).toggle("h");
+            fClassList(ghostMode.children[1]).toggle("h");
         }
         ghost = ghost_in;
     }
@@ -228,8 +234,8 @@
      */
     function fSetDarkMode(dark_in) {
         if (dark_in !== dark) {
-            darkMode.children[0].classList.toggle("hide");
-            darkMode.children[1].classList.toggle("hide");
+            fClassList(darkMode.children[0]).toggle("h");
+            fClassList(darkMode.children[1]).toggle("h");
         }
         dark = dark_in;
     }
@@ -249,7 +255,7 @@
      */
     function fHideSettings() {
         fHidePage(pClock, pSettings);
-        pSettings.classList.remove("swipe-out-right");
+        fClassList(pSettings).remove("sor");
         fUpdateParams();
     }
 
@@ -293,7 +299,7 @@
                     highscore = score;
                     localStorageSet("wc_score", highscore);
                 }
-                ElementById("scoreSnake").innerHTML = "Score: " + score + " / High-Score : " + highscore;
+                ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
         };
         xhttp.open("GET", "snake?dir=" + dir, true);
@@ -330,7 +336,7 @@
             urlparams = "mastermind?c4=7"
             fClearMastermind();
         } else {
-            if (document.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
+            if (doc.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
@@ -382,9 +388,9 @@
      */
     function fMastermindMessage(msg) {
         if (msg) {
-            ElementById("scoreMastermind").innerHTML = msg;
+            ElementById("sMM").innerHTML = msg;
         } else {
-            ElementById("scoreMastermind").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
+            ElementById("sMM").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
                 "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='cornflowerblue'/></svg>&nbsp;di richtigi Farb";
         }
     }
@@ -396,7 +402,7 @@
         fShowPage(pSettings, pWordGuessr);
         fSendWordGuessr("1");
         wordGuessrScore = 0;
-        ElementById("scoreWordGuessr").innerHTML = "";
+        ElementById("sWG").innerHTML = "";
     }
 
     /**
@@ -418,18 +424,18 @@
                 let response = JSON.parse(xhttp.responseText);
                 if (response.score === 0) {
                     // wrong guess
-                    wordInput.classList.add("error");
+                    fClassList(wordInput).add("error");
                     setTimeout(function () {
-                        wordInput.classList.remove("error");
+                        fClassList(wordInput).remove("error");
                         wordInput.value = "";
                     }, 100);
                 } else if (response.score === 1) {
                     // correct guess
                     wordGuessrScore += response.score;
-                    ElementById("scoreWordGuessr").innerHTML = wordGuessrScore + " hesch usegfunde.";
-                    wordInput.classList.add("ok");
+                    ElementById("sWG").innerHTML = wordGuessrScore + " hesch usegfunde.";
+                    fClassList(wordInput).add("ok");
                     setTimeout(function () {
-                        wordInput.classList.remove("ok");
+                        fClassList(wordInput).remove("ok");
                         wordInput.value = "";
                     }, 100);
                 }
@@ -450,21 +456,21 @@
     /**
      * Initialize application, add event-listeners
      */
-    ElementById("power").addEventListener("click", fTogglePower);
-    ElementById("settings").addEventListener("click", fShowSettings);
-    ElementById("xS").addEventListener("click", fHideSettings);
+    ElementById("p").addEventListener(click, fTogglePower);
+    ElementById("s").addEventListener(click, fShowSettings);
+    ElementById("xS").addEventListener(click, fHideSettings);
 
-    ElementById("playSnake").addEventListener("click", fShowSnake);
-    ElementById("xSnake").addEventListener("click", fHideSnake);
-    ElementById("playMastermind").addEventListener("click", fShowMastermind);
-    ElementById("xMM").addEventListener("click", fHideMastermind);
-    ElementById("sendMastermind").addEventListener("click", fSendMastermind);
-    ElementById("playWordGuessr").addEventListener("click", fShowWordGuessr);
-    ElementById("xWG").addEventListener("click", fHideWordGuessr);
-    ElementById("sendWordGuessr").addEventListener("click", fSendWordGuessr);
-    Array.from(ElementsByClassName("snakeBtn")).forEach(function (element) {
+    ElementById("SN").addEventListener(click, fShowSnake);
+    ElementById("xSN").addEventListener(click, fHideSnake);
+    ElementById("MM").addEventListener(click, fShowMastermind);
+    ElementById("xMM").addEventListener(click, fHideMastermind);
+    ElementById("cMM").addEventListener(click, fSendMastermind);
+    ElementById("WG").addEventListener(click, fShowWordGuessr);
+    ElementById("xWG").addEventListener(click, fHideWordGuessr);
+    ElementById("cWG").addEventListener(click, fSendWordGuessr);
+    Array.from(ElementsByClassName("snb")).forEach(function (element) {
         element.setAttribute("d", "M2 2 L9 7 L2 12 Z");
-        element.addEventListener("click", function (e) {
+        element.addEventListener(click, function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
         });
     });
@@ -484,18 +490,18 @@
         element.setAttribute("transform", "scale(0.85) translate(5,5)");
     });
     Array.from(colorBtns).forEach(function (element) {
-        element.addEventListener("click", function (e) {
+        element.addEventListener(click, function (e) {
             Array.from(colorBtns).forEach(function (element) {
-                element.classList.remove("g");
+                fClassList(element).remove("g");
             });
-            e.target.classList.add("g");
+            fClassList(e.target).add("g");
             mastermindColor = e.target.getAttribute("data-num");
         });
         element.innerHTML = "<circle cx='35' cy='35' r='25'/>";
         element.setAttribute("viewBox", "0 0 70 70");
     });
     Array.from(codeBtns).forEach(function (element) {
-        element.addEventListener("click", function (e) {
+        element.addEventListener(click, function (e) {
             e.target.setAttribute("data-num", mastermindColor);
             fMastermindMessage()
         });
@@ -519,30 +525,30 @@
                 dir = 4;
                 break;
             case "Enter":
-                if (pWordGuessr.classList.contains("swipe-in")) {
+                if ( fClassList(pWordGuessr).contains("si")) {
                     fSendWordGuessr();
                 }
         }
-        if (dir && pSnake.classList.contains("swipe-in")) {
+        if (dir &&  fClassList(pSnake).contains("si")) {
             fSendSnake(dir);
-            ElementById("ctrl").children[dir - 1].classList.add("g");
+            fClassList(ElementById("ctrl").children[dir - 1]).add("g");
             setTimeout(function () {
-                ElementById("ctrl").children[dir - 1].classList.remove("g");
+                fClassList(ElementById("ctrl").children[dir - 1]).remove("g");
             }, 200);
         }
     }
 
-    document.onkeydown = fCheckKey;
+    doc.onkeydown = fCheckKey;
     color.addEventListener("change", (ignore) => {
         fChangeColor(color.value);
     }, false);
-    rainbowMode.addEventListener("click", (ignore) => {
+    rainbowMode.addEventListener(click, (ignore) => {
         fRainbow(1 - rainbow);
     });
-    ghostMode.addEventListener("click", (ignore) => {
+    ghostMode.addEventListener(click, (ignore) => {
         fGhost(1 - ghost);
     });
-    darkMode.addEventListener("click", (ignore) => {
+    darkMode.addEventListener(click, (ignore) => {
         fSetDarkMode(1 - dark);
     });
 
@@ -580,9 +586,9 @@
 
     // generate Titles on Pages
     const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
-    Array.from(ElementsByClassName("title")).forEach(function (element, index) {
+    Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
-            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
             let letter = pageTitles[index].substring(step, step + 1);
             let letterUpper = letter.toUpperCase();
             textElement.setAttribute("x", (step % 11 * 10) + 7);
@@ -616,9 +622,5 @@
         };
         xhttp.open("GET", "get_params", true);
         xhttp.send();
-    } else {
-        ElementById("snakeBody").classList.add("hide");
-        ElementById("mastermindBody").classList.add("hide");
-        ElementById("wordGuessrBody").classList.add("hide");
     }
 }());
