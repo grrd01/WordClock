@@ -11,7 +11,6 @@
     "use strict";
 
     const doc = document;
-    const windowLocationHref = window.location.href;
     const clock = ElementById("c");
     const pClock = ElementById("pC");
     const pSettings = ElementById("pS");
@@ -286,11 +285,9 @@
         localStorageSet("wc_d", dark);
         localStorageSet("wc_g", ghost);
         localStorageSet("wc_s", speed.value.toString());
-        if (windowLocationHref.includes("192.168.") || windowLocationHref.includes(".local")) {
-            let xhr = new XMLHttpRequest();
-            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
-            xhr.send();
-        }
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
+        xhr.send();
     }
 
     /**
@@ -501,7 +498,7 @@
     });
     // play-svg: >
     Array.from(ElementsByClassName("play")).forEach(function (element) {
-        element.innerHTML = "<path d=\"M2 2 L9 7 L2 12 Z\" stroke-width=\"1.4\"/>";
+        element.innerHTML = "<path d='M2 2 L9 7 L2 12 Z' stroke-width='1.4'/>";
     });
     Array.from(colorBtns).forEach(function (element) {
         fEventListener(element, click, function (e) {
@@ -590,7 +587,7 @@
     }
     ElementById("iphone").href = ElementById("icon").href;
 
-    clockFace.split(/\s*,\s*/).forEach(function(element, index1) {
+    clockFace.split(",").forEach(function(element, index1) {
         const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
         fSetAttribute(textElement, "x", (index1 % 11 * 10) + 7);
         fSetAttribute(textElement, "y", Math.ceil((index1 + 1) / 11) * 10);
@@ -627,23 +624,21 @@
     /**
      * Load current settings from word-clock
      */
-    if (windowLocationHref.includes("192.168.") || windowLocationHref.includes(".local")) {
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-                let response = JSON.parse(xhttp.responseText);
-                if (!response.rainbow) {
-                    color.value = fRgb2Hex(response.red, response.green, response.blue);
-                }
-                fChangeColor(color.value);
-                fSetDarkMode(response.darkmode);
-                fRainbow(response.rainbow);
-                fGhost(response.ghost);
-                fSetPower(response.power);
-                speed.value = response.speed;
+    let xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            let response = JSON.parse(xhttp.responseText);
+            if (!response.rainbow) {
+                color.value = fRgb2Hex(response.red, response.green, response.blue);
             }
-        };
-        xhttp.open("GET", "get_params", true);
-        xhttp.send();
-    }
+            fChangeColor(color.value);
+            fSetDarkMode(response.darkmode);
+            fRainbow(response.rainbow);
+            fGhost(response.ghost);
+            fSetPower(response.power);
+            speed.value = response.speed;
+        }
+    };
+    xhttp.open("GET", "get_params", true);
+    xhttp.send();
 }());
