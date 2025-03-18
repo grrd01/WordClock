@@ -78,6 +78,27 @@ body {
     filter: brightness(70%);
 }
 
+.disconnected .connected {
+    display: none;
+}
+
+#model {
+    transform: translate(0,0) rotate(90deg);
+    transition: transform 0.5s;
+}
+#model.open {
+    transform: translate(0,0) rotate(-90deg);
+}
+#modelOptions {
+    height: 0;
+    overflow: hidden;
+    margin-left: 20px;
+    transition: height 0.5s;
+}
+#modelOptions.open {
+    height: 150px;
+}
+
 a:link {
     color: var(--main-color);
 }
@@ -121,8 +142,8 @@ a:active {
     z-index: 1000;
 }
 
-circle {
-    pointer-events: none
+circle, path {
+    pointer-events: none;
 }
 
 input[type="text"] {

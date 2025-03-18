@@ -30,6 +30,7 @@
     const svgCircle = "<svg class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill=";
     const clockFace = "E g,S g,D,I g,S g,C g,H g,W,F M5,Ü M5,F M5,V M15,I M15,E M15,R M15,T M15,U M15,T,Z M10,Ä M10,Ä M10,Y,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,U M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,Ö H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,Ü H5,F H5,I H5,T,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,U H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,U H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K";
 
+    let wordClockName = "wordclock";
     let date;
     let hour;
     let minute;
@@ -286,8 +287,33 @@
         localStorageSet("wc_g", ghost);
         localStorageSet("wc_s", speed.value.toString());
         let xhr = new XMLHttpRequest();
-        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
+        xhr.open("GET", "http://" + wordClockName +".local/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
         xhr.send();
+    }
+
+    /**
+     * Load current settings from word-clock
+     */
+    function fGetParams() {
+        fClassList(body).add("disconnected");
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                let response = JSON.parse(xhttp.responseText);
+                if (!response.rainbow) {
+                    color.value = fRgb2Hex(response.red, response.green, response.blue);
+                }
+                fChangeColor(color.value);
+                fSetDarkMode(response.darkmode);
+                fRainbow(response.rainbow);
+                fGhost(response.ghost);
+                fSetPower(response.power);
+                speed.value = response.speed;
+                fClassList(body).remove("disconnected");
+            }
+        };
+        xhttp.open("GET", "http://" + wordClockName +".local/get_params", true);
+        xhttp.send();
     }
 
     /**
@@ -314,7 +340,7 @@
                 ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
         };
-        xhttp.open("GET", "snake?dir=" + dir, true);
+        xhttp.open("GET", "http://" + wordClockName +".local/snake?dir=" + dir, true);
         xhttp.send();
     }
 
@@ -348,7 +374,7 @@
             urlparams = "mastermind?c4=7"
             fClearMastermind();
         } else {
-            if (doc.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
+            if (document.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
@@ -374,7 +400,7 @@
                 }
             }
         };
-        xhttp.open("GET", urlparams, true);
+        xhttp.open("GET", "http://" + wordClockName +".local/" + urlparams, true);
         xhttp.send();
     }
 
@@ -453,7 +479,7 @@
                 }
             }
         };
-        xhttp.open("GET", urlparams, true);
+        xhttp.open("GET", "http://" + wordClockName +".local/" + urlparams, true);
         xhttp.send();
     }
 
@@ -484,6 +510,25 @@
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
         fEventListener(element, click, function (e) {
             fSendSnake(e.target.getAttribute("data-num"));
+        });
+    });
+    fEventListener(ElementById("model"), click, (ignore) => {
+        ElementById("model").classList.toggle("open");
+        ElementById("modelOptions").classList.toggle("open");
+    });
+    Array.from(ElementsByClassName("modelOption")).forEach(function (element) {
+        fEventListener(element, click, function (e) {
+            Array.from(ElementsByClassName("modelOption")).forEach(function (element2) {
+                fClassList(fChildren(element2)[0]).remove("h");
+                fClassList(fChildren(element2)[1]).add("h");
+            });
+            fClassList(fChildren(e.target)[0]).add("h");
+            fClassList(fChildren(e.target)[1]).remove("h");
+            ElementById("selectedModel").innerHTML = e.target.previousElementSibling.innerHTML + " Istellige:";
+            wordClockName = e.target.getAttribute("data-name");
+            ElementById("model").classList.remove("open");
+            ElementById("modelOptions").classList.remove("open");
+            fGetParams();
         });
     });
     // no-svg: x
@@ -587,6 +632,7 @@
     }
     ElementById("iphone").href = ElementById("icon").href;
 
+    // generate ClockFace
     clockFace.split(",").forEach(function(element, index1) {
         const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
         fSetAttribute(textElement, "x", (index1 % 11 * 10) + 7);
@@ -621,24 +667,20 @@
         }
     });
 
+    // get current settings from word-clock
+    fGetParams();
+
     /**
-     * Load current settings from word-clock
+     * ServiceWorker initialisieren
      */
-    let xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState === 4 && this.status === 200) {
-            let response = JSON.parse(xhttp.responseText);
-            if (!response.rainbow) {
-                color.value = fRgb2Hex(response.red, response.green, response.blue);
-            }
-            fChangeColor(color.value);
-            fSetDarkMode(response.darkmode);
-            fRainbow(response.rainbow);
-            fGhost(response.ghost);
-            fSetPower(response.power);
-            speed.value = response.speed;
-        }
-    };
-    xhttp.open("GET", "get_params", true);
-    xhttp.send();
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+            navigator.serviceWorker.register("sw.js").then(function (registration) {
+                console.log("SW successful: ", registration.scope);
+            }, function (err) {
+                console.log("SW failed: ", err);
+            });
+        });
+    }
+
 }());

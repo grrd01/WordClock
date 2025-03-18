@@ -16,6 +16,19 @@ module.exports = function(grunt) {
                 files: {
                     'scripts/min.js': ['scripts/app.js']
                 }
+            },
+            two: {
+                options: {
+                    compress: true,
+                    mangle: true,
+                    format: {
+                        quote_style: 1,
+                        comments: false
+                    }
+                },
+                files: {
+                    'dist/sw.js': ['sw.js']
+                }
             }
         },
         cssmin: {
@@ -33,7 +46,7 @@ module.exports = function(grunt) {
                     quoteCharacter: "'"
                 },
                 files: {
-                    'min.html': 'index.html'
+                    'dist/index.html': 'index.html'
                 }
             }
         },
@@ -50,7 +63,7 @@ module.exports = function(grunt) {
                     ]
                 },
                 files: {
-                    'min.html': 'min.html'
+                    'dist/index.html': 'dist/index.html'
                 }
             },
             dist2: {
@@ -65,20 +78,7 @@ module.exports = function(grunt) {
                     ]
                 },
                 files: {
-                    'min.html': 'min.html'
-                }
-            },
-            dist3: {
-                options: {
-                    patterns: [
-                        {
-                            match: /\\'/g,
-                            replacement: '\\\"'
-                        }
-                    ]
-                },
-                files: {
-                    'min2.html': 'min.html'
+                    'dist/index.html': 'dist/index.html'
                 }
             }
         }
