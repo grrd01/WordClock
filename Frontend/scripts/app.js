@@ -171,6 +171,7 @@
             fClassList(body).add("off");
         }
         minute = -1;
+        setTime();
     }
 
     /**
