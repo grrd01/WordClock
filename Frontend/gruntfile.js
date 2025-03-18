@@ -27,7 +27,7 @@ module.exports = function(grunt) {
                     }
                 },
                 files: {
-                    'dist/sw.js': ['sw.js']
+                    '../docs/sw.js': ['sw.js']
                 }
             }
         },
@@ -46,7 +46,7 @@ module.exports = function(grunt) {
                     quoteCharacter: "'"
                 },
                 files: {
-                    'dist/index.html': 'index.html'
+                    '../docs/index.html': 'index.html'
                 }
             }
         },
@@ -63,7 +63,7 @@ module.exports = function(grunt) {
                     ]
                 },
                 files: {
-                    'dist/index.html': 'dist/index.html'
+                    '../docs/index.html': '../docs/index.html'
                 }
             },
             dist2: {
@@ -78,7 +78,7 @@ module.exports = function(grunt) {
                     ]
                 },
                 files: {
-                    'dist/index.html': 'dist/index.html'
+                    '../docs/index.html': '../docs/index.html'
                 }
             }
         }
