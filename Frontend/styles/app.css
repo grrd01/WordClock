@@ -20,7 +20,7 @@ body {
     height: 100%;
 }
 
-.page {
+.p {
     width: 100vw;
     position: fixed;
     top: 0;
@@ -30,7 +30,7 @@ body {
     background: linear-gradient(#444, #222);
 }
 
-#clock, .title, #control {
+#c, .t, #ctrl {
     font: 6px sans-serif;
     fill: #555;
     text-shadow: none;
@@ -41,19 +41,23 @@ body {
 }
 
 @media (orientation: landscape) {
-    #control {
+    #ctrl {
         width: 100%;
         max-width: 60vh;
     }
 }
 @media (orientation: portrait) {
-    #control {
+    #ctrl {
         width: 100%;
     }
 }
 
-.title, .w100 {
+.t, .w100 {
     width: 100%;
+}
+
+.M1, .M2, .M3, .M4 {
+    font-size:8px;
 }
 
 .g, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA,
@@ -63,7 +67,7 @@ body {
     text-shadow:0 0 10px var(--main-color);
 }
 
-.off .g:not(.colorButton) {
+.off .g:not(.colorBtn) {
     fill: #555;
     text-shadow: none;
 }
@@ -90,21 +94,21 @@ a:active {
     filter: brightness(125%);
 }
 
-#settings, #settingsClose, #exitSnake, #exitMastermind, #exitWordGuessr {
+#s, #xS, #xSN, #xMM, #xWG {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
-#power {
+#p {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#scoreSnake, #scoreMastermind, #scoreWordGuessr {
+#sSN, #sMM, #sWG {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
     align-items: center;
 }
 
-.svgButton, .snakeButton, .svgMsg {
+.sb, .snb, .svgMsg {
     width: 4.5vmin;
     height: 4.5vmin;
     min-width: 30px;
@@ -143,23 +147,23 @@ input[type="text"].ok {
     border: 2px solid #059c7d;
 }
 
-.svgButton:hover, .svgButton.g, .snakeButton:hover, .snakeButton.g {
+.sb:hover, .sb.g, .snb:hover, .snb.g {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
     cursor: pointer;
 }
-.snakeButton {
+.snb {
     stroke-width:1.4;
     fill: #333;
     fill-opacity: 0.01;
 }
 
-#pageSettings, #pageSnake, #pageMastermind, #pageWordGuessr {
+#pS, #pSN, #pMM, #pWG {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;
 }
-.pageContent {
+.pC {
     display: block;
     position: absolute;
     overflow: auto;
@@ -171,20 +175,17 @@ input[type="text"].ok {
     max-width: calc(100vw - 40px);
     height: 100%;
 }
-.pageBody, .content, .content > span {
+.pb, .c, .c > span {
     display: flex;
-    flex-direction: row;
     justify-content: space-between;
     margin-bottom: 20px;
     align-items: center;
     flex-wrap: wrap;
 }
-.pageFooter {
+.pf {
     margin-top: 60px;
 }
-#color {
-    -webkit-appearance: none;
-    -moz-appearance: none;
+#co {
     appearance: none;
     background-color: transparent;
     width: 4.5vmin;
@@ -194,22 +195,22 @@ input[type="text"].ok {
     border: none;
     cursor: pointer;
 }
-#color::-webkit-color-swatch {
+#co::-webkit-color-swatch {
     border-radius: 50%;
     border: 0.45vmin solid #555;
 }
-#color::-moz-color-swatch {
+#co::-moz-color-swatch {
     border-radius: 50%;
     border: 0.45vmin solid #555;
 }
-#color::-webkit-color-swatch:hover {
+#co::-webkit-color-swatch:hover {
     border: 0.45vmin solid #fff;
 }
-#color::-moz-color-swatch:hover {
+#co::-moz-color-swatch:hover {
     border: 0.45vmin solid #fff;
 }
 
-.hide {
+.h {
     display: none;
 }
 
@@ -232,13 +233,13 @@ input[type="text"].ok {
     fill: #f803fc
 }
 
-.swipe-in {
-    animation-name: swipe-in;
+.si {
+    animation-name: si;
     animation-fill-mode: forwards;
     animation-duration: 0.7s;
 }
 
-@keyframes swipe-in {
+@keyframes si {
     0% {
         transform: translateX(100vw);
         visibility: hidden;
@@ -256,13 +257,13 @@ input[type="text"].ok {
     }
 }
 
-.swipe-out {
-    animation-name: swipe-out;
+.so {
+    animation-name: so;
     animation-fill-mode: forwards;
     animation-duration: 0.7s;
 }
 
-@keyframes swipe-out {
+@keyframes so {
     0% {
         transform: translateX(0);
         visibility: visible;
@@ -279,13 +280,13 @@ input[type="text"].ok {
         opacity: 0;
     }
 }
-.swipe-in-left {
-    animation-name: swipe-in-left;
+.sil {
+    animation-name: sil;
     animation-fill-mode: forwards;
     animation-duration: 0.7s;
 }
 
-@keyframes swipe-in-left {
+@keyframes sil {
     0% {
         transform: translateX(0);
         visibility: visible;
@@ -303,13 +304,13 @@ input[type="text"].ok {
     }
 }
 
-.swipe-out-right {
-    animation-name: swipe-out-right;
+.sor {
+    animation-name: sor;
     animation-fill-mode: forwards;
     animation-duration: 0.7s;
 }
 
-@keyframes swipe-out-right {
+@keyframes sor {
     0% {
         transform: translateX(-100vw);
         visibility: hidden;
@@ -327,8 +328,8 @@ input[type="text"].ok {
     }
 }
 
-.slider {
-    -webkit-appearance: none;
+.sl {
+    appearance: none;
     width: 100%;
     height: 4px;
     border-radius: 2px;
@@ -338,8 +339,7 @@ input[type="text"].ok {
     border: solid calc(2px + 0.2vmin) #555;
 }
 
-.slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
+.sl::-webkit-slider-thumb {
     appearance: none;
     width: 3vmin;
     height: 3vmin;
@@ -350,11 +350,11 @@ input[type="text"].ok {
     cursor: pointer;
     outline: solid 0.45vmin #555;
 }
-.slider::-webkit-slider-thumb:hover {
+.sl::-webkit-slider-thumb:hover {
     outline: solid 0.45vmin #fff;
 }
 
-.slider::-moz-range-thumb {
+.sl::-moz-range-thumb {
     width: 3vmin;
     height: 3vmin;
     min-width: 20px;
@@ -364,6 +364,6 @@ input[type="text"].ok {
     cursor: pointer;
     outline: solid 0.45vmin #555;
 }
-.slider::-moz-range-thumb:hover {
+.sl::-moz-range-thumb:hover {
     outline: solid 0.45vmin #fff;
 }
