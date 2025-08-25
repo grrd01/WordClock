@@ -100,16 +100,16 @@ uint32_t backgroundColor = Black;
 uint32_t wifiColor = Black;
 
 /*
-| E | S | D | I | S | C | H | W | F | Ü | F |
-| V | I | E | R | T | U | T | Z | Ä | Ä | Y |
+| E | S | D | I | S | C | H | W | Z | Ä | F |
+| V | I | E | R | T | E | L | F | O | I | F |
 | Z | W | Ä | N | Z | G | Q | D | V | O | R |
-| K | A | B | D | H | A | U | B | I | T | Z |
-| E | I | S | Q | Z | W | Ö | I | D | R | Ü |
-| Z | V | I | E | R | I | F | Ü | F | I | T |
+| K | A | B | D | H | A | L | B | I | T | Z |
+| E | I | S | Q | Z | W | E | I | D | R | Ü |
+| Z | V | I | E | R | I | F | O | I | F | I |
 | G | M | S | Ä | C | H | S | I | B | N | I |
 | A | C | H | T | I | N | Ü | N | I | O | F |
-| C | D | Z | Ä | N | I | X | E | U | F | I |
-| O | K | G | Z | W | Ö | U | F | I | L | X |
+| C | D | Z | Ä | N | I | X | E | L | F | I |
+| O | K | G | Z | W | Ö | L | F | I | U | X |
 | L | Y | B | ° | ° | P | ° | ° | M | K | @ |
  */
 
@@ -131,14 +131,14 @@ static int WordStundeEins[] = {44, 45, 46, -1};                     // EIS
 static int WordStundeZwei[] = {48, 49, 50, 51, -1};                 // ZWÖI
 static int WordStundeDrei[] = {52, 53, 54, -1};                     // DRÜ
 static int WordStundeVier[] = {64, 63, 62, 61, 60, -1};             // VIERI
-static int WordStundeFuenf[] = {59, 58, 57, 56, -1};                // FÜFI
+static int WordStundeFuenf[] = {59, 58, 57, 56, 55, -1};            // FOIFI
 static int WordStundeSechs[] = {68, 69, 70, 71, 72, 73, -1};        // SÄCHSI
 static int WordStundeSieben[] = {72, 73, 74, 75, 76, -1};           // SIBNI
 static int WordStundeAcht[] = {87, 86, 85, 84, 83, -1};             // ACHTI
 static int WordStundeNeun[] = {82, 81, 80, 79, -1};                 // NÜNI
 static int WordStundeZehn[] = {90, 91, 92, 93, -1};                 // ZÄNI
-static int WordStundeElf[] = {95, 96, 97, 98, -1};                  // EUFI
-static int WordStundeZwoelf[] = {106, 105, 104, 103, 102, 101, -1}; // ZWÖUFI
+static int WordStundeElf[] = {95, 96, 97, 98, -1};                  // ELFI
+static int WordStundeZwoelf[] = {106, 105, 104, 103, 102, 101, -1}; // ZWÖLFI
 
 static int *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, WordStundeDrei, WordStundeVier,
                              WordStundeFuenf, WordStundeSechs, WordStundeSieben, WordStundeAcht, WordStundeNeun,
@@ -146,11 +146,11 @@ static int *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, W
 };
 
 // Minute
-static int WordMinFuenf[] = {8, 9, 10, -1};                   // FÜF
-static int WordMinZehn[] = {14, 13, 12, -1};                  // ZÄÄ
-static int WordMinViertel[] = {21, 20, 19, 18, 17, 16, -1};   // VIERTU
-static int WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};   // ZWÄNZG
-static int WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
+static int WordMinFuenf[] = {14, 13, 12, 11, -1};                 // FOIF
+static int WordMinZehn[] = {8, 9, -1};                            // ZÄ
+static int WordMinViertel[] = {21, 20, 19, 18, 17, 16, 15, -1};   // VIERTEL
+static int WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};       // ZWÄNZG
+static int WordMinTicks[] = {113, 114, 116, 117, -1};             // ** **
 
 static int *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
@@ -181,8 +181,7 @@ bool inMastermind = false;
 
 // WordGuessr variables
 // äöü durch aou ersetzen, damit Zugriff über Byte-Index möglich ist (äöü brauchen 2 Bytes, aou nur eins)
-// ESDISCHWFÜFYÄÄZTUTREIVZWÄNZGQDVORZTIBUAHDBAKEISQZWÖIDRÜTIFÜFIREIVZGMSÄCHSIBNIFOINÜNITHCACDZÄNIXEUFIXLIFUÖWZGKOLYB..P..MK.
-const char* wordGuessrLetters = "ESDISCHWFuFYaaZTUTREIVZWaNZGQDVORZTIBUAHDBAKEISQZWoIDRuTIFuFIREIVZGMSaCHSIBNIFOINuNITHCACDZaNIXEUFIXLIFUoWZGKOLYB..P..MK.";
+const char* wordGuessrLetters = "ESDISCHWZaFFIOFLETREIVZWaNZGQDVORZTIBLAHDBAKEISQZWEIDRuIFIOFIREIVZGMSaCHSIBNIFOINuNITHCACDZaNIXELFIXUIFLoWZGKOLYB..P..MK.";
 char wordGuessrLettersCopy[121];
 
 const char wordGuessrWords0[] PROGMEM = "AAL AARE ABEND ABENTEUER ABSCHLUSS ACHSE ACHSEL ACHT ACKER ADER ADLER ADRIA AFRIKA AGENT ÄGYPTEN AKTION ALPEN ALPHABET ALTER AMEISE AMERIKA AMOR AMT ANANAS ANFANG ANGEBOT ANGOLA ANGST ANLAGE ANTILOPE ANTWORT ANWALT ANZUG APFEL APRIKOSE APRIL ARBEIT ARCHIV ÄRGER ARM ARMBAND ARTIKEL ARZT ASPHALT ASTRONAUT ATHEN ATMEN AUGE AUGUST AUSDAUER AUSGANG AUSPUFF AUSWAHL AUTO AUTOBAHN AVOCADO BACH BACKE BADEN BADEWANNE BAHN BALL BANANE BAND BANK BÄR BART BASEL BATTERIE BAUCH BAUER BAUM BECHER BEDINGUNG BEERE BEGINN BEIL BEIN BEISPIEL BEITRAG BERATUNG BERG BERICHT BERLIN BERN BERUF BESCHWERDE BESUCH BETON BETRAG BETT BEWEIS BEWERTUNG BIBER BIBLIOTHEK BIENE BIER BILD BILLARD BILLIG"; 
