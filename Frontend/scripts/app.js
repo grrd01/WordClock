@@ -28,7 +28,7 @@
     const colorBtns = ElementsByClassName("cb");
     const click = "click";
     const svgCircle = "<svg class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill=";
-    const clockFace = "E g,S g,D,I g,S g,C g,H g,W,F M5,Ü M5,F M5,V M15,I M15,E M15,R M15,T M15,U M15,T,Z M10,Ä M10,Ä M10,Y,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,U M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,Ö H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,Ü H5,F H5,I H5,T,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,U H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,U H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K";
+    const clockFace = "E g,S g,D,I g,S g,C g,H g,W,Z M10,Ä M10,F,V M15,I M15,E M15,R M15,T M15,E M15,L M15,F M5,O M5,I M5,F M5,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,L M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,E H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,O H5,I H5,F H5,I H5,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,L H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,L H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K";
 
     let date;
     let hour;
@@ -606,7 +606,7 @@
     });
 
     // generate Titles on Pages
-    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    const pageTitles = ["HELLMIecSajnWORDuCLOCK", "HELLMIecSajmSNAKExlbdk", "HELLMIecSajMASTERMINDk", "HELLMIecSajWORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
