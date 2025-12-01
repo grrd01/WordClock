@@ -644,7 +644,7 @@
             if (!index2) {
                 textElement.textContent = element2;
             } else {
-                fSetAttribute(textElement, "class", element2);
+                fClassList(textElement).add(element2);
             }
         });
         clock.appendChild(textElement);
