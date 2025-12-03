@@ -94,7 +94,7 @@ a:active {
     filter: brightness(125%);
 }
 
-#s, #xS, #xSN, #xMM, #xWG {
+#s, #xS, #xSN, #xTE, #xMM, #xWG {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
@@ -158,7 +158,7 @@ input[type="text"].ok {
     fill-opacity: 0.01;
 }
 
-#pS, #pSN, #pMM, #pWG {
+#pS, #pSN, #pTE, #pMM, #pWG {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;

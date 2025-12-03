@@ -15,6 +15,7 @@
     const pClock = ElementById("pC");
     const pSettings = ElementById("pS");
     const pSnake = ElementById("pSN");
+    const pTetris = ElementById("pTE");
     const pMastermind = ElementById("pMM");
     const pWordGuessr = ElementById("pWG");
     const color = ElementById("co");
@@ -44,7 +45,6 @@
     let highscore = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
-    //let mastermindGrau = 0;
     let mastermindTry = 0;
     let wordGuessrScore = 0;
 
@@ -328,6 +328,43 @@
     }
 
     /**
+     * Display the tetris-page
+     */
+    function fShowTetris() {
+        fShowPage(pSettings, pTetris);
+        fSendTetris(5);
+    }
+
+    /**
+     * Send tetris-control-input to word-clock
+     * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
+     */
+    function fSendTetris(dir) {
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                score = (parseInt(xhttp.responseText) - 3) * 10;
+                if (score > highscore) {
+                    highscore = score;
+                    localStorageSet("wc_te", highscore);
+                }
+                ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscore;
+            }
+        };
+        xhttp.open("GET", "tetris?dir=" + dir, true);
+        xhttp.send();
+    }
+
+    /**
+     * Hide the snake-page and return to settings-page
+     */
+    function fHideTetris() {
+        fHidePage(pSettings, pTetris);
+        fSendSnake(6);
+    }
+
+
+    /**
      * Display the mastermind-page
      */
     function fShowMastermind() {
@@ -364,7 +401,6 @@
             if (this.readyState === 4 && this.status === 200) {
                 let response = JSON.parse(xhttp.responseText);
                 mastermindWeiss = response.place;
-                //mastermindGrau = response.color;
                 mastermindTry = response.try;
                 if (mastermindWeiss === 4) {
                     fMastermindMessage("Bravo! I " + mastermindTry + " Mau usegfunde.");
@@ -475,6 +511,8 @@
 
     fEventListener(ElementById("SN"), click, fShowSnake);
     fEventListener(ElementById("xSN"), click, fHideSnake);
+    fEventListener(ElementById("TE"), click, fShowTetris);
+    fEventListener(ElementById("xTE"), click, fHideTetris);
     fEventListener(ElementById("MM"), click, fShowMastermind);
     fEventListener(ElementById("xMM"), click, fHideMastermind);
     fEventListener(ElementById("cMM"), click, fSendMastermind);
@@ -548,6 +586,13 @@
                 fClassList(fChildren(ElementById("ctrl"))[dir - 1]).remove("g");
             }, 200);
         }
+        if (dir &&  fClassList(pTetris).contains("si")) {
+            fSendTetris(dir);
+            fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).add("g");
+            setTimeout(function () {
+                fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).remove("g");
+            }, 200);
+        }
     }
 
     doc.onkeydown = fCheckKey;
@@ -606,7 +651,7 @@
     });
 
     // generate Titles on Pages
-    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajmTETRISlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
