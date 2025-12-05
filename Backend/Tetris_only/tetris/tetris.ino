@@ -2,18 +2,16 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <Adafruit_NeoPixel.h>
+#include <WiFiManager.h>
 
-#define LED_PIN    D4
+#define LED_PIN    D7
 #define LED_COUNT  121
 #define MATRIX_WIDTH  11
 #define MATRIX_HEIGHT 11
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 ESP8266WebServer server(80);
-
-// WiFi credentials
-const char* ssid = "TetrisClock";
-const char* password = "tetris123";
+WiFiManager wifiManager;
 
 // Game variables
 uint8_t board[MATRIX_HEIGHT][MATRIX_WIDTH] = {0}; // 0 = empty, >0 = color index
@@ -85,6 +83,8 @@ const uint32_t tetrominoColors[7] = {
 
 // Current piece state
 int currentTetromino, rotation, posX, posY;
+uint8_t currentPiece[4][4]; // Store current piece with rotation applied
+bool gameOver = false;
 
 // Map (x, y) to LED index for serpentine wiring
 int xyToIndex(int x, int y) {
@@ -96,7 +96,18 @@ int xyToIndex(int x, int y) {
 }
 
 void setup() {
-  WiFi.softAP(ssid, password);
+  Serial.begin(115200);
+  delay(100);
+  Serial.println("\n\nStarting Tetris...");
+  
+  // WiFiManager initialization
+  wifiManager.autoConnect("TetrisClock");
+  
+  Serial.println("WiFi connected!");
+  IPAddress ip = WiFi.localIP();
+  Serial.print("Local IP address: ");
+  Serial.println(ip);
+  
   strip.begin();
   strip.show();
   server.on("/", handleRoot);
@@ -115,13 +126,19 @@ void spawnTetromino() {
   rotation = 0;
   posX = 3; // Centered
   posY = 0;
+  // Copy initial tetromino to current piece
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      currentPiece[i][j] = tetrominos[currentTetromino][i][j];
+    }
+  }
 }
 
 // Check collision for current piece at (x, y) with rotation
 bool checkCollision(int x, int y, int rot) {
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      if (tetrominos[currentTetromino][i][j]) {
+      if (currentPiece[i][j]) {
         int nx = x + j;
         int ny = y + i;
         if (nx < 0 || nx >= MATRIX_WIDTH || ny < 0 || ny >= MATRIX_HEIGHT) return true;
@@ -136,7 +153,7 @@ bool checkCollision(int x, int y, int rot) {
 void placeTetromino() {
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      if (tetrominos[currentTetromino][i][j]) {
+      if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
         if (nx >= 0 && nx < MATRIX_WIDTH && ny >= 0 && ny < MATRIX_HEIGHT) {
@@ -197,7 +214,7 @@ void drawBoard() {
   // Draw current piece
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      if (tetrominos[currentTetromino][i][j]) {
+      if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
         if (nx >= 0 && nx < MATRIX_WIDTH && ny >= 0 && ny < MATRIX_HEIGHT) {
@@ -214,7 +231,7 @@ void rotateTetromino() {
   uint8_t rotated[4][4];
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      rotated[j][3-i] = tetrominos[currentTetromino][i][j];
+      rotated[j][3-i] = currentPiece[i][j];
     }
   }
   // Check collision for rotated piece
@@ -232,7 +249,7 @@ void rotateTetromino() {
   // Apply rotation
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      tetrominos[currentTetromino][i][j] = rotated[i][j];
+      currentPiece[i][j] = rotated[i][j];
     }
   }
   drawBoard();
@@ -307,7 +324,6 @@ void handleDown() {
 
 unsigned long lastDrop = 0;
 const unsigned long dropInterval = 600; // ms
-bool gameOver = false;
 
 void loop() {
   server.handleClient();
