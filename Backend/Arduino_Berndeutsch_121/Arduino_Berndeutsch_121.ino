@@ -170,6 +170,92 @@ int snakeSpeed = 35000;
 int snakeWait = 35000;
 bool inSnake = false;
 
+// Tetris variables
+uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index
+int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
+int tetrisScore = 0;
+bool inTetris = false;
+unsigned long lastDrop = 0;
+const unsigned long dropInterval = 600; // ms
+
+// Tetromino definitions (4x4 matrix for each shape)
+const uint8_t tetrominos[7][4][4] = {
+  // I
+  {
+    {0,0,0,0},
+    {1,1,1,1},
+    {0,0,0,0},
+    {0,0,0,0}
+  },
+  // J
+  {
+    {1,0,0,0},
+    {1,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+  },
+  // L
+  {
+    {0,0,1,0},
+    {1,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+  },
+  // O
+  {
+    {1,1,0,0},
+    {1,1,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+  },
+  // S
+  {
+    {0,1,1,0},
+    {1,1,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+  },
+  // T
+  {
+    {0,1,0,0},
+    {1,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+  },
+  // Z
+  {
+    {1,1,0,0},
+    {0,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+  }
+};
+
+// Tetromino colors (GRB)
+const uint32_t tetrominoColors[7] = {
+  strip.Color(0,255,255), // I - cyan
+  strip.Color(0,0,255),   // J - blue
+  strip.Color(255,165,0), // L - orange
+  strip.Color(255,255,0), // O - yellow
+  strip.Color(0,255,0),   // S - green
+  strip.Color(128,0,128), // T - purple
+  strip.Color(255,0,0)    // Z - red
+};
+
+// Current piece state
+int currentTetromino, rotation, posX, posY;
+uint8_t currentPiece[4][4]; // Store current piece with rotation applied
+bool gameOver = false;
+
+// Map (x, y) to LED index for serpentine wiring
+int xyToIndex(int x, int y) {
+  if (y % 2 == 0) {
+    return y * MATRIX_WIDTH + x;
+  } else {
+    return y * MATRIX_WIDTH + (MATRIX_WIDTH - 1 - x);
+  }
+}
+
 // Mastermind variables
 int mastermindCode[4];
 int mastermindCodeBackup[4];
@@ -566,7 +652,7 @@ void setupWifi() {
 }
 
 /*
- * places a snack on an empty space in snake game
+ * Snake: places a snack on an empty space in snake game
  */
 void setSnack() {
   snakeSnack = -1;
@@ -585,8 +671,144 @@ void setSnack() {
   pixels.setPixelColor(snakeSnack, Red);
 }
 
+// Tetris: Spawn a new tetromino at the top
+void spawnTetromino() {
+  currentTetromino = random(0, 7);
+  rotation = 0;
+  posX = 3; // Centered
+  posY = 0;
+  // Copy initial tetromino to current piece
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      currentPiece[i][j] = tetrominos[currentTetromino][i][j];
+    }
+  }
+}
+
+// Tetris: Check collision for current piece at (x, y) with rotation
+bool checkCollision(int x, int y, int rot) {
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (currentPiece[i][j]) {
+        int nx = x + j;
+        int ny = y + i;
+        if (nx < 0 || nx >= MATRIX_WIDTH || ny < 0 || ny >= MATRIX_HEIGHT) return true;
+        if (board[ny][nx]) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Tetris: Place current piece on the board
+void placeTetromino() {
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (currentPiece[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx >= 0 && nx < MATRIX_WIDTH && ny >= 0 && ny < MATRIX_HEIGHT) {
+          board[ny][nx] = currentTetromino + 1;
+        }
+      }
+    }
+  }
+}
+
+// Tetris: Clear full lines and animate
+void clearLines() {
+  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+    bool full = true;
+    for (int x = 0; x < MATRIX_WIDTH; x++) {
+      if (!board[y][x]) {
+        full = false;
+        break;
+      }
+    }
+    if (full) {
+      // Animate line
+      for (int t = 0; t < 3; t++) {
+        for (int x = 0; x < MATRIX_WIDTH; x++) {
+          strip.setPixelColor(xyToIndex(x, y), strip.Color(255,255,255));
+        }
+        strip.show();
+        delay(80);
+        for (int x = 0; x < MATRIX_WIDTH; x++) {
+          strip.setPixelColor(xyToIndex(x, y), 0);
+        }
+        strip.show();
+        delay(80);
+      }
+      // Remove line and shift down
+      for (int yy = y; yy > 0; yy--) {
+        for (int x = 0; x < MATRIX_WIDTH; x++) {
+          board[yy][x] = board[yy-1][x];
+        }
+      }
+      for (int x = 0; x < MATRIX_WIDTH; x++) board[0][x] = 0;
+      tetrisScore += 10;
+    }
+  }
+}
+
+// Tetris: Draw the board and current piece
+void drawBoard() {
+  strip.clear();
+  // Draw placed blocks
+  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+    for (int x = 0; x < MATRIX_WIDTH; x++) {
+      if (board[y][x]) {
+        strip.setPixelColor(xyToIndex(x, y), tetrominoColors[board[y][x]-1]);
+      }
+    }
+  }
+  // Draw current piece
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (currentPiece[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx >= 0 && nx < MATRIX_WIDTH && ny >= 0 && ny < MATRIX_HEIGHT) {
+          strip.setPixelColor(xyToIndex(nx, ny), tetrominoColors[currentTetromino]);
+        }
+      }
+    }
+  }
+  strip.show();
+}
+
+// Tetris: Rotate tetromino (clockwise)
+void rotateTetromino() {
+  uint8_t rotated[4][4];
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      rotated[j][3-i] = currentPiece[i][j];
+    }
+  }
+  // Check collision for rotated piece
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (rotated[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx < 0 || nx >= MATRIX_WIDTH || ny < 0 || ny >= MATRIX_HEIGHT || board[ny][nx]) {
+          return; // Collision, do not rotate
+        }
+      }
+    }
+  }
+  // Apply rotation
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      currentPiece[i][j] = rotated[i][j];
+    }
+  }
+  drawBoard();
+}
+
+
 /*
- * find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
+ * Wordguessr: find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
  * @param letter the letter to find
  * @param allLetters the string to search in
  */
@@ -608,7 +830,7 @@ int wordGuessrFindIndex(char letter) {
 }
 
 /*
- * select a new word to guess
+ * Wordguessr: select a new word to guess
  */
 void wordGuessrNewGuess() {
   randomSeed(micros());
@@ -650,13 +872,14 @@ void wordGuessrNewGuess() {
 }
 
 /*
- * prepares a new mastermind game
+ * Mastermind: prepares a new mastermind game
  */
 void clearMastermind() {
   wipe();
   inMastermind = true;
   inWordGuessr = false;
   inSnake = false;
+  inTetris = false;
   randomSeed(micros());
   mastermindCode[0] = random(1,7);
   mastermindCode[1] = random(1,7);
@@ -741,6 +964,41 @@ void loop() {
               client.println(F("Connection: close"));
               client.println();
               client.println(snakeLen);
+            } else if (header.indexOf("tetris") >= 0) {
+              // Client is playing Tetris game:
+              const char *url = header.c_str();
+              if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 7) {
+                tetrisDir = extractParameterValue(url, "dir=");
+              }
+              // int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
+              if (!inTetris && tetrisDir == 5 && power == 1) {
+                // start new Tetris game
+                inTetris = true;
+                inMastermind = false;
+                inWordGuessr = false;
+                inSnake = false;
+                blank();
+                pixels.show();
+                handleRestart;
+              } else if (inTetris && tetrisDir == 1) {
+                handleRotate();
+              } else if (inTetris && tetrisDir == 2) {
+                handleRight();
+              } else if (inTetris && tetrisDir == 3) {
+                handleDown();
+              } else if (inTetris && tetrisDir == 4) {
+                handleLeft();
+              } else if (inTetris && tetrisDir == 6) {
+                // exit current Tetris game
+                inTetris = false;
+                lastMinuteWordClock = 61;
+              }
+              client.println(F("HTTP/1.1 200 OK"));
+              client.println(F("Content-type:text/plain"));
+              client.println(F("Access-Control-Allow-Origin: *"));
+              client.println(F("Connection: close"));
+              client.println();
+              client.println(TetrisScore);
             } else if (header.indexOf("mastermind") >= 0) {
               // Client is playing mastermind game:
               const char *url = header.c_str();
@@ -824,6 +1082,7 @@ void loop() {
                   // start new wordguessr game
                   inWordGuessr = true;
                   inSnake = false;
+                  inTetris = false;
                   inMastermind = false;
                   wordGuessrNewGuess();
                   wordGuessrAlert = millis();
@@ -1091,7 +1350,7 @@ void loop() {
       }
 
       if (snakeNext >= 0) {
-        // move snake on step forward
+        // move snake one step forward
         for (int i = snakeLen - 1; i > 0; i--) {
           snake[i] = snake[i-1];
         }
@@ -1109,6 +1368,21 @@ void loop() {
         lastMinuteWordClock = 61;
       }
 
+    }
+  } else if (inTetris) {
+    if (!gameOver && millis() - lastDrop > dropInterval) {
+      lastDrop = millis();
+      if (!checkCollision(posX, posY + 1, rotation)) {
+        posY++;
+      } else {
+        placeTetromino();
+        clearLines();
+        spawnTetromino();
+        if (checkCollision(posX, posY, rotation)) {
+          gameOver = true;
+        }
+      }
+      drawBoard();
     }
   } else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
