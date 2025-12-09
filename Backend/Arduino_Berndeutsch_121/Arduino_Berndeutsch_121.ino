@@ -233,13 +233,13 @@ const uint8_t tetrominos[7][4][4] = {
 
 // Tetromino colors (GRB)
 const uint32_t tetrominoColors[7] = {
-  strip.Color(0,255,255), // I - cyan
-  strip.Color(0,0,255),   // J - blue
-  strip.Color(255,165,0), // L - orange
-  strip.Color(255,255,0), // O - yellow
-  strip.Color(0,255,0),   // S - green
-  strip.Color(128,0,128), // T - purple
-  strip.Color(255,0,0)    // Z - red
+  pixels.Color(0,255,255), // I - cyan
+  pixels.Color(0,0,255),   // J - blue
+  pixels.Color(255,165,0), // L - orange
+  pixels.Color(255,255,0), // O - yellow
+  pixels.Color(0,255,0),   // S - green
+  pixels.Color(128,0,128), // T - purple
+  pixels.Color(255,0,0)    // Z - red
 };
 
 // Current piece state
@@ -250,9 +250,9 @@ bool gameOver = false;
 // Map (x, y) to LED index for serpentine wiring
 int xyToIndex(int x, int y) {
   if (y % 2 == 0) {
-    return y * MATRIX_WIDTH + x;
+    return y * 11 + x;
   } else {
-    return y * MATRIX_WIDTH + (MATRIX_WIDTH - 1 - x);
+    return y * 11 + (11 - 1 - x);
   }
 }
 
@@ -692,7 +692,7 @@ bool checkCollision(int x, int y, int rot) {
       if (currentPiece[i][j]) {
         int nx = x + j;
         int ny = y + i;
-        if (nx < 0 || nx >= MATRIX_WIDTH || ny < 0 || ny >= MATRIX_HEIGHT) return true;
+        if (nx < 0 || nx >= 11 || ny < 0 || ny >= 11) return true;
         if (board[ny][nx]) return true;
       }
     }
@@ -707,7 +707,7 @@ void placeTetromino() {
       if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
-        if (nx >= 0 && nx < MATRIX_WIDTH && ny >= 0 && ny < MATRIX_HEIGHT) {
+        if (nx >= 0 && nx < 11 && ny >= 0 && ny < 11) {
           board[ny][nx] = currentTetromino + 1;
         }
       }
@@ -717,9 +717,9 @@ void placeTetromino() {
 
 // Tetris: Clear full lines and animate
 void clearLines() {
-  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+  for (int y = 0; y < 11; y++) {
     bool full = true;
-    for (int x = 0; x < MATRIX_WIDTH; x++) {
+    for (int x = 0; x < 11; x++) {
       if (!board[y][x]) {
         full = false;
         break;
@@ -728,24 +728,24 @@ void clearLines() {
     if (full) {
       // Animate line
       for (int t = 0; t < 3; t++) {
-        for (int x = 0; x < MATRIX_WIDTH; x++) {
-          strip.setPixelColor(xyToIndex(x, y), strip.Color(255,255,255));
+        for (int x = 0; x < 11; x++) {
+          pixels.setPixelColor(xyToIndex(x, y), pixels.Color(255,255,255));
         }
-        strip.show();
+        pixels.show();
         delay(80);
-        for (int x = 0; x < MATRIX_WIDTH; x++) {
-          strip.setPixelColor(xyToIndex(x, y), 0);
+        for (int x = 0; x < 11; x++) {
+          pixels.setPixelColor(xyToIndex(x, y), 0);
         }
-        strip.show();
+        pixels.show();
         delay(80);
       }
       // Remove line and shift down
       for (int yy = y; yy > 0; yy--) {
-        for (int x = 0; x < MATRIX_WIDTH; x++) {
+        for (int x = 0; x < 11; x++) {
           board[yy][x] = board[yy-1][x];
         }
       }
-      for (int x = 0; x < MATRIX_WIDTH; x++) board[0][x] = 0;
+      for (int x = 0; x < 11; x++) board[0][x] = 0;
       tetrisScore += 10;
     }
   }
@@ -753,12 +753,12 @@ void clearLines() {
 
 // Tetris: Draw the board and current piece
 void drawBoard() {
-  strip.clear();
+  pixels.clear();
   // Draw placed blocks
-  for (int y = 0; y < MATRIX_HEIGHT; y++) {
-    for (int x = 0; x < MATRIX_WIDTH; x++) {
+  for (int y = 0; y < 11; y++) {
+    for (int x = 0; x < 11; x++) {
       if (board[y][x]) {
-        strip.setPixelColor(xyToIndex(x, y), tetrominoColors[board[y][x]-1]);
+        pixels.setPixelColor(xyToIndex(x, y), tetrominoColors[board[y][x]-1]);
       }
     }
   }
@@ -768,13 +768,13 @@ void drawBoard() {
       if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
-        if (nx >= 0 && nx < MATRIX_WIDTH && ny >= 0 && ny < MATRIX_HEIGHT) {
-          strip.setPixelColor(xyToIndex(nx, ny), tetrominoColors[currentTetromino]);
+        if (nx >= 0 && nx < 11 && ny >= 0 && ny < 11) {
+          pixels.setPixelColor(xyToIndex(nx, ny), tetrominoColors[currentTetromino]);
         }
       }
     }
   }
-  strip.show();
+  pixels.show();
 }
 
 // Tetris: Rotate tetromino (clockwise)
@@ -791,7 +791,7 @@ void rotateTetromino() {
       if (rotated[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
-        if (nx < 0 || nx >= MATRIX_WIDTH || ny < 0 || ny >= MATRIX_HEIGHT || board[ny][nx]) {
+        if (nx < 0 || nx >= 11 || ny < 0 || ny >= 11 || board[ny][nx]) {
           return; // Collision, do not rotate
         }
       }
@@ -801,6 +801,51 @@ void rotateTetromino() {
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
       currentPiece[i][j] = rotated[i][j];
+    }
+  }
+  drawBoard();
+}
+
+// Tetris: Handle restart
+void handleRestart() {
+  memset(board, 0, sizeof(board));
+  tetrisScore = 0;
+  gameOver = false;
+  spawnTetromino();
+  drawBoard();
+}
+
+// Tetris: Handle left movement
+void handleLeft() {
+  if (!checkCollision(posX - 1, posY, rotation)) {
+    posX--;
+    drawBoard();
+  }
+}
+
+// Tetris: Handle right movement
+void handleRight() {
+  if (!checkCollision(posX + 1, posY, rotation)) {
+    posX++;
+    drawBoard();
+  }
+}
+
+// Tetris: Handle rotation
+void handleRotate() {
+  rotateTetromino();
+}
+
+// Tetris: Handle down movement
+void handleDown() {
+  if (!checkCollision(posX, posY + 1, rotation)) {
+    posY++;
+  } else {
+    placeTetromino();
+    clearLines();
+    spawnTetromino();
+    if (checkCollision(posX, posY, rotation)) {
+      gameOver = true;
     }
   }
   drawBoard();
@@ -941,6 +986,7 @@ void loop() {
                 inSnake = true;
                 inMastermind = false;
                 inWordGuessr = false;
+                inTetris = false;
                 snake[0] = 49;
                 snake[1] = 60;
                 snake[2] = 71;
@@ -979,7 +1025,7 @@ void loop() {
                 inSnake = false;
                 blank();
                 pixels.show();
-                handleRestart;
+                handleRestart();
               } else if (inTetris && tetrisDir == 1) {
                 handleRotate();
               } else if (inTetris && tetrisDir == 2) {
@@ -998,7 +1044,7 @@ void loop() {
               client.println(F("Access-Control-Allow-Origin: *"));
               client.println(F("Connection: close"));
               client.println();
-              client.println(TetrisScore);
+              client.println(tetrisScore);
             } else if (header.indexOf("mastermind") >= 0) {
               // Client is playing mastermind game:
               const char *url = header.c_str();
@@ -1380,6 +1426,10 @@ void loop() {
         spawnTetromino();
         if (checkCollision(posX, posY, rotation)) {
           gameOver = true;
+          delay(500);
+          chase(Red);
+          inTetris = false;
+          lastMinuteWordClock = 61;
         }
       }
       drawBoard();
@@ -1426,7 +1476,7 @@ void loop() {
     }
   }
 
-  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr) {
+  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
       getLocalTime();
       displayTime();
