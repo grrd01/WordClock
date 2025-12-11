@@ -676,13 +676,14 @@ void spawnTetromino() {
   currentTetromino = random(0, 7);
   rotation = 0;
   posX = 3; // Centered
-  posY = 0;
+  posY = -1;  // Spawn one line above visible area
   // Copy initial tetromino to current piece
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
       currentPiece[i][j] = tetrominos[currentTetromino][i][j];
     }
   }
+  lastDrop = millis();  // Reset timer so piece has time to display before first drop
 }
 
 // Tetris: Check collision for current piece at (x, y) with rotation
@@ -692,8 +693,10 @@ bool checkCollision(int x, int y, int rot) {
       if (currentPiece[i][j]) {
         int nx = x + j;
         int ny = y + i;
-        if (nx < 0 || nx >= 11 || ny < 0 || ny >= 11) return true;
-        if (board[ny][nx]) return true;
+        // Only check collisions with boundaries and board for visible area
+        if (nx < 0 || nx >= 11) return true;
+        if (ny >= 11) return true;  // Piece hit bottom
+        if (ny >= 0 && board[ny][nx]) return true;  // Only check board collision if visible
       }
     }
   }
@@ -714,6 +717,7 @@ void placeTetromino() {
     }
   }
 }
+
 
 // Tetris: Clear full lines and animate
 void clearLines() {
@@ -806,7 +810,7 @@ void rotateTetromino() {
   drawBoard();
 }
 
-// Tetris: Handle restart
+// Tetris: Restart the game
 void handleRestart() {
   memset(board, 0, sizeof(board));
   tetrisScore = 0;
@@ -1432,7 +1436,9 @@ void loop() {
           lastMinuteWordClock = 61;
         }
       }
-      drawBoard();
+       if (!gameOver) {
+        drawBoard();
+      }
     }
   } else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
