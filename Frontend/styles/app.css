@@ -102,7 +102,7 @@ a:active {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#sSN, #sMM, #sWG {
+#sSN, #sMM, #sWG , #sTE {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
     align-items: center;

@@ -43,6 +43,7 @@
     let rainbowBlue = 0;
     let score = 0;
     let highscore = 0;
+    let highscoreTe = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
     let mastermindTry = 0;
@@ -344,11 +345,11 @@
         xhttp.onreadystatechange = function () {
             if (this.readyState === 4 && this.status === 200) {
                 score = (parseInt(xhttp.responseText) - 3) * 10;
-                if (score > highscore) {
-                    highscore = score;
-                    localStorageSet("wc_te", highscore);
+                if (score > highscoreTe) {
+                    highscoreTe = score;
+                    localStorageSet("wc_te", highscoreTe);
                 }
-                ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscore;
+                ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscoreTe;
             }
         };
         xhttp.open("GET", "tetris?dir=" + dir, true);
@@ -637,6 +638,9 @@
     }
     if (localStorageGet("wc_sc")) {
         highscore = localStorageGet("wc_sc");
+    }
+    if (localStorageGet("wc_te")) {
+        highscoreTe = localStorageGet("wc_te");
     }
     ElementById("iphone").href = ElementById("icon").href;
 
