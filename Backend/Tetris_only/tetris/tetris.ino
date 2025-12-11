@@ -85,6 +85,8 @@ const uint32_t tetrominoColors[7] = {
 int currentTetromino, rotation, posX, posY;
 uint8_t currentPiece[4][4]; // Store current piece with rotation applied
 bool gameOver = false;
+unsigned long lastDrop = 0;
+const unsigned long dropInterval = 600; // ms
 
 // Map (x, y) to LED index for serpentine wiring
 int xyToIndex(int x, int y) {
@@ -118,6 +120,7 @@ void setup() {
   server.on("/restart", handleRestart);
   server.begin();
   spawnTetromino();
+  drawBoard();  // Draw the initial piece before game loop starts
 }
 
 // Spawn a new tetromino at the top
@@ -125,13 +128,14 @@ void spawnTetromino() {
   currentTetromino = random(0, 7);
   rotation = 0;
   posX = 3; // Centered
-  posY = 0;
+  posY = -1;  // Spawn one line above visible area
   // Copy initial tetromino to current piece
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
       currentPiece[i][j] = tetrominos[currentTetromino][i][j];
     }
   }
+  lastDrop = millis();  // Reset timer so piece has time to display before first drop
 }
 
 // Check collision for current piece at (x, y) with rotation
@@ -141,8 +145,10 @@ bool checkCollision(int x, int y, int rot) {
       if (currentPiece[i][j]) {
         int nx = x + j;
         int ny = y + i;
-        if (nx < 0 || nx >= MATRIX_WIDTH || ny < 0 || ny >= MATRIX_HEIGHT) return true;
-        if (board[ny][nx]) return true;
+        // Only check collisions with boundaries and board for visible area
+        if (nx < 0 || nx >= MATRIX_WIDTH) return true;
+        if (ny >= MATRIX_HEIGHT) return true;  // Piece hit bottom
+        if (ny >= 0 && board[ny][nx]) return true;  // Only check board collision if visible
       }
     }
   }
@@ -321,9 +327,6 @@ void handleDown() {
   drawBoard();
   server.send(200, "text/plain", "OK");
 }
-
-unsigned long lastDrop = 0;
-const unsigned long dropInterval = 600; // ms
 
 void loop() {
   server.handleClient();
