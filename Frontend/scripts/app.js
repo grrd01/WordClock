@@ -360,7 +360,7 @@
      */
     function fHideTetris() {
         fHidePage(pSettings, pTetris);
-        fSendSnake(6);
+        fSendTetris(6);
     }
 
 
@@ -519,11 +519,18 @@
     fEventListener(ElementById("WG"), click, fShowWordGuessr);
     fEventListener(ElementById("xWG"), click, fHideWordGuessr);
     fEventListener(ElementById("cWG"), click, fSendWordGuessr);
-    Array.from(ElementsByClassName("snb")).forEach(function (element) {
+    Array.from(ElementsByClassName("snb")).forEach(function (element, index) {
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
-        fEventListener(element, click, function (e) {
-            fSendSnake(e.target.getAttribute("data-num"));
-        });
+        if (index < 4) {
+            fEventListener(element, click, function (e) {
+                fSendSnake(e.target.getAttribute("data-num"));
+            });
+        } else {
+            fEventListener(element, click, function (e) {
+                fSendTetris(e.target.getAttribute("data-num"));
+            });
+        }
+
     });
     // no-svg: x
     Array.from(ElementsByClassName("n")).forEach(function (element) {
