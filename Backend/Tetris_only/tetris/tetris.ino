@@ -342,7 +342,9 @@ void loop() {
         gameOver = true;
       }
     }
-    drawBoard();
+    if (!gameOver) {
+      drawBoard();
+    }
   }
   delay(10);
 }
