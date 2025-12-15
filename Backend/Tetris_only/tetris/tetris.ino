@@ -246,7 +246,7 @@ void rotateTetromino() {
       if (rotated[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
-        if (nx < 0 || nx >= MATRIX_WIDTH || ny < 0 || ny >= MATRIX_HEIGHT || board[ny][nx]) {
+        if (nx < 0 || nx >= MATRIX_WIDTH || ny >= MATRIX_HEIGHT || board[ny][nx]) {
           return; // Collision, do not rotate
         }
       }

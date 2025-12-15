@@ -76,19 +76,16 @@ unsigned int localPort = 8888;  // local port to listen for UDP packets
 static uint32_t Black = Adafruit_NeoPixel::Color(0, 0, 0);
 static uint32_t White = Adafruit_NeoPixel::Color(49, 52, 34);
 static uint32_t Grey = Adafruit_NeoPixel::Color(3, 3, 3);
-static uint32_t Red = Adafruit_NeoPixel::Color(90, 0, 0);
-static uint32_t Green = Adafruit_NeoPixel::Color(10, 90, 0);
-static uint32_t Blue = Adafruit_NeoPixel::Color(0, 20, 85);
 static uint32_t Cornflower = Adafruit_NeoPixel::Color(8, 7, 16);
+static uint32_t Red = Adafruit_NeoPixel::Color(100, 0, 5);
+static uint32_t Orange = Adafruit_NeoPixel::Color(100, 25, 0);
+static uint32_t Yellow = Adafruit_NeoPixel::Color(100, 90, 0);
+static uint32_t Green = Adafruit_NeoPixel::Color(10, 95, 0);
+static uint32_t Blue = Adafruit_NeoPixel::Color(0, 20, 85);
+static uint32_t Purple = Adafruit_NeoPixel::Color(85, 0, 100);
+static uint32_t Cyan = Adafruit_NeoPixel::Color(00, 100, 100);
 
-static uint32_t MastermindColor1 = Adafruit_NeoPixel::Color(100, 0, 5);
-static uint32_t MastermindColor2 = Adafruit_NeoPixel::Color(100, 25, 0);
-static uint32_t MastermindColor3 = Adafruit_NeoPixel::Color(100, 90, 0);
-static uint32_t MastermindColor4 = Adafruit_NeoPixel::Color(10, 95, 0);
-static uint32_t MastermindColor5 = Adafruit_NeoPixel::Color(0, 40, 100);
-static uint32_t MastermindColor6 = Adafruit_NeoPixel::Color(85, 0, 100);
-
-static uint32_t MastermindColors[] = {MastermindColor1, MastermindColor2, MastermindColor3, MastermindColor4, MastermindColor5, MastermindColor6};
+static uint32_t GameColors[] = {Red, Orange, Yellow, Green, Blue, Purple, Cyan};
 
 uint32_t colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
 uint32_t colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
@@ -229,17 +226,6 @@ const uint8_t tetrominos[7][4][4] = {
     {0,0,0,0},
     {0,0,0,0}
   }
-};
-
-// Tetromino colors (GRB)
-const uint32_t tetrominoColors[7] = {
-  pixels.Color(0,255,255), // I - cyan
-  pixels.Color(0,0,255),   // J - blue
-  pixels.Color(255,165,0), // L - orange
-  pixels.Color(255,255,0), // O - yellow
-  pixels.Color(0,255,0),   // S - green
-  pixels.Color(128,0,128), // T - purple
-  pixels.Color(255,0,0)    // Z - red
 };
 
 // Current piece state
@@ -732,7 +718,7 @@ void clearLines() {
       // Animate line
       for (int t = 0; t < 3; t++) {
         for (int x = 0; x < 11; x++) {
-          pixels.setPixelColor(xyToIndex(x, y), pixels.Color(255,255,255));
+          pixels.setPixelColor(xyToIndex(x, y), White);
         }
         pixels.show();
         delay(80);
@@ -761,7 +747,7 @@ void drawBoard() {
   for (int y = 0; y < 11; y++) {
     for (int x = 0; x < 11; x++) {
       if (board[y][x]) {
-        pixels.setPixelColor(xyToIndex(x, y), tetrominoColors[board[y][x]-1]);
+        pixels.setPixelColor(xyToIndex(x, y), GameColors[board[y][x]-1]);
       }
     }
   }
@@ -772,7 +758,7 @@ void drawBoard() {
         int nx = posX + j;
         int ny = posY + i;
         if (nx >= 0 && nx < 11 && ny >= 0 && ny < 11) {
-          pixels.setPixelColor(xyToIndex(nx, ny), tetrominoColors[currentTetromino]);
+          pixels.setPixelColor(xyToIndex(nx, ny), GameColors[currentTetromino]);
         }
       }
     }
@@ -794,7 +780,7 @@ void rotateTetromino() {
       if (rotated[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
-        if (nx < 0 || nx >= 11 || ny < 0 || ny >= 11 || board[ny][nx]) {
+        if (nx < 0 || nx >= 11 || ny >= 11 || board[ny][nx]) {
           return; // Collision, do not rotate
         }
       }
@@ -1074,7 +1060,7 @@ void loop() {
                 mastermindPlace = 0;
                 mastermindColor = 0;
                 for (int i = 0; i < 4; i++) {
-                  pixels.setPixelColor(down(i + 1, mastermindTry), MastermindColors[mastermindCodeTry[i] - 1]);
+                  pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
                   mastermindCodeBackup[i] = mastermindCode[i];
                   // check right position
                   if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
@@ -1316,10 +1302,10 @@ void loop() {
         ghostChange = 1;
       }
       // Calculate the RGB values for the current step
-      int red   = (120 * ghostStep) / 100;    // Red value from 0 to 100
-      int blue  = (6 * ghostStep) / 100;      // Blue value from 0 to 5
+      int tempRed   = (120 * ghostStep) / 100;    // Red value from 0 to 100
+      int tempBlue  = (6 * ghostStep) / 100;      // Blue value from 0 to 5
     
-      lightup(WordGhostEyes, pixels.Color(red, 0, blue));
+      lightup(WordGhostEyes, pixels.Color(tempRed, 0, tempBlue));
       pixels.show();
       delay(10);  
       getLocalTime();
