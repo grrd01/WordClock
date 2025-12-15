@@ -621,8 +621,7 @@ void setupWifi() {
 
 
   // if you get here you have connected to the WiFi
-  Serial.println(F("Connected."));
-  Serial.println(F("IP address: "));
+  Serial.println(F("Connected. IP address: "));
   Serial.println(WiFi.localIP());
   // Display local ip address on clockface by looping through every character.
   String localIP = WiFi.localIP().toString();
@@ -902,8 +901,8 @@ void wordGuessrNewGuess() {
 
   int randomIndex = random(wordCount);
   wordGuessrActiveWord = wordGuessrWords[randomIndex];
-  Serial.print(F("New word to guess: "));
-  Serial.println(wordGuessrActiveWord);
+  //Serial.print(F("New word to guess: "));
+  //Serial.println(wordGuessrActiveWord);
 
   // Erzeuge eine Kopie
   String wordGuessrDecodeWord = wordGuessrActiveWord;
@@ -974,7 +973,7 @@ void loop() {
       currentTime = millis();
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
+        //Serial.write(c);                    // print it out the serial monitor
         header += c;
         if (c == '\n') {                    // if the byte is a newline character
           // if the current line is blank, you got two newline characters in a row.
