@@ -342,7 +342,9 @@ void handleDown() {
       gameOver = true;
     }
   }
-  drawBoard();
+  if (!gameOver) {
+    drawBoard();
+  }
   server.send(200, "text/plain", "OK");
 }
 
@@ -364,5 +366,4 @@ void loop() {
       drawBoard();
     }
   }
-  delay(10);
 }

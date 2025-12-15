@@ -852,7 +852,9 @@ void handleDown() {
       gameOver = true;
     }
   }
-  drawBoard();
+  if (!gameOver) {
+    drawBoard();
+  }
 }
 
 
@@ -1430,15 +1432,17 @@ void loop() {
         spawnTetromino();
         if (checkCollision(posX, posY, rotation)) {
           gameOver = true;
-          delay(500);
-          chase(Red);
-          inTetris = false;
-          lastMinuteWordClock = 61;
         }
       }
-       if (!gameOver) {
+      if (!gameOver) {
         drawBoard();
       }
+    }
+    if (gameOver) {
+      delay(500);
+      chase(Red);
+      inTetris = false;
+      lastMinuteWordClock = 61;
     }
   } else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
