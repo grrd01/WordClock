@@ -270,11 +270,29 @@ void handleRoot() {
     html += "<h2>Game Over!</h2>";
     html += "<button onclick=\"fetch('/restart')\">Restart</button> ";
   } else {
+    // keep buttons for mouse/touch users
+    html += "<div>";
     html += "<button onclick=\"fetch('/left')\">Left</button> ";
     html += "<button onclick=\"fetch('/right')\">Right</button> ";
     html += "<button onclick=\"fetch('/rotate')\">Rotate</button> ";
     html += "<button onclick=\"fetch('/down')\">Down</button> ";
+    html += "<button onclick=\"fetch('/restart')\">Restart</button> ";
+    html += "</div>";
   }
+
+  // Add keyboard handlers: Arrow keys map to the same endpoints
+  html += "<script>";
+  html += "document.addEventListener('keydown', function(e) {";
+  html += "  if (e.repeat) return;";
+  html += "  switch (e.key) {";
+  html += "    case 'ArrowLeft': fetch('/left'); e.preventDefault(); break;";
+  html += "    case 'ArrowRight': fetch('/right'); e.preventDefault(); break;";
+  html += "    case 'ArrowUp': fetch('/rotate'); e.preventDefault(); break;";
+  html += "    case 'ArrowDown': fetch('/down'); e.preventDefault(); break;";
+  html += "  }";
+  html += "});";
+  html += "</script>";
+
   html += "</body></html>";
   server.send(200, "text/html", html);
 }
