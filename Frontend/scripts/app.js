@@ -344,7 +344,7 @@
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function () {
             if (this.readyState === 4 && this.status === 200) {
-                score = (parseInt(xhttp.responseText) - 3) * 10;
+                score = parseInt(xhttp.responseText);
                 if (score > highscoreTe) {
                     highscoreTe = score;
                     localStorageSet("wc_te", highscoreTe);
