@@ -4,6 +4,8 @@
 
 html {
     height: 100%;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -94,7 +96,7 @@ a:active {
     filter: brightness(125%);
 }
 
-#s, #xS, #xSN, #xMM, #xWG {
+#s, #xS, #xSN, #xTE, #xMM, #xWG {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
@@ -102,7 +104,7 @@ a:active {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#sSN, #sMM, #sWG {
+#sSN, #sMM, #sWG , #sTE {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
     align-items: center;
@@ -152,13 +154,13 @@ input[type="text"].ok {
     text-shadow:0 0 10px #fff;
     cursor: pointer;
 }
-.snb {
+path.snb {
     stroke-width:1.4;
     fill: #333;
     fill-opacity: 0.01;
 }
 
-#pS, #pSN, #pMM, #pWG {
+#pS, #pSN, #pTE, #pMM, #pWG {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;
@@ -214,7 +216,7 @@ input[type="text"].ok {
     display: none;
 }
 
-[data-num='1'] {
+svg[data-num='1'] {
     fill: #fc034e
 }
 [data-num='2'] {
