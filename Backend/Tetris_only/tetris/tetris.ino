@@ -3,6 +3,7 @@
 #include <ESP8266WebServer.h>
 #include <Adafruit_NeoPixel.h>
 #include <WiFiManager.h>
+#include <WebSocketsServer.h>
 
 #define LED_PIN    D7
 #define LED_COUNT  121
@@ -12,6 +13,10 @@
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 ESP8266WebServer server(80);
 WiFiManager wifiManager;
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+// forward declarations
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length);
 
 // Game variables
 uint8_t board[MATRIX_HEIGHT][MATRIX_WIDTH] = {0}; // 0 = empty, >0 = color index
@@ -28,44 +33,44 @@ const uint8_t tetrominos[7][4][4] = {
   },
   // J
   {
-    {1,0,0,0},
-    {1,1,1,0},
     {0,0,0,0},
+    {0,1,0,0},
+    {0,1,1,1},
     {0,0,0,0}
   },
   // L
   {
+    {0,0,0,0},
     {0,0,1,0},
     {1,1,1,0},
-    {0,0,0,0},
     {0,0,0,0}
   },
   // O
   {
-    {1,1,0,0},
-    {1,1,0,0},
     {0,0,0,0},
+    {0,1,1,0},
+    {0,1,1,0},
     {0,0,0,0}
   },
   // S
   {
+    {0,0,0,0},
     {0,1,1,0},
     {1,1,0,0},
-    {0,0,0,0},
     {0,0,0,0}
   },
   // T
   {
+    {0,0,0,0},
     {0,1,0,0},
     {1,1,1,0},
-    {0,0,0,0},
     {0,0,0,0}
   },
   // Z
   {
+    {0,0,0,0},
     {1,1,0,0},
     {0,1,1,0},
-    {0,0,0,0},
     {0,0,0,0}
   }
 };
@@ -113,14 +118,19 @@ void setup() {
   strip.begin();
   strip.show();
   server.on("/", handleRoot);
-  server.on("/left", handleLeft);
-  server.on("/right", handleRight);
-  server.on("/rotate", handleRotate);
-  server.on("/down", handleDown);
   server.on("/restart", handleRestart);
   server.begin();
   spawnTetromino();
   drawBoard();  // Draw the initial piece before game loop starts
+  // Start WebSocket server for low-latency controls and score updates
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+}
+
+// Send current score to all connected WebSocket clients
+void sendScoreToClients() {
+  String msg = "score:" + String(score);
+  webSocket.broadcastTXT(msg);
 }
 
 // Spawn a new tetromino at the top
@@ -128,7 +138,7 @@ void spawnTetromino() {
   currentTetromino = random(0, 7);
   rotation = 0;
   posX = 3; // Centered
-  posY = -1;  // Spawn one line above visible area
+  posY = -2;  // Spawn one line above visible area
   // Copy initial tetromino to current piece
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
@@ -202,6 +212,7 @@ void clearLines() {
       }
       for (int x = 0; x < MATRIX_WIDTH; x++) board[0][x] = 0;
       score += 10;
+      sendScoreToClients();
     }
   }
 }
@@ -246,7 +257,7 @@ void rotateTetromino() {
       if (rotated[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
-        if (nx < 0 || nx >= MATRIX_WIDTH || ny >= MATRIX_HEIGHT || board[ny][nx]) {
+        if (nx < 0 || nx >= MATRIX_WIDTH || ny >= MATRIX_HEIGHT || (ny >= 0 && board[ny][nx])) {
           return; // Collision, do not rotate
         }
       }
@@ -261,36 +272,91 @@ void rotateTetromino() {
   drawBoard();
 }
 
+// WebSocket event handler: receive control commands from client
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+  if (type == WStype_CONNECTED) {
+    // send current score on new connection
+    sendScoreToClients();
+    return;
+  }
+  if (type != WStype_TEXT) return;
+  String msg = String((char*)payload);
+  if (msg == "left") {
+    if (!checkCollision(posX - 1, posY, rotation)) { posX--; if(!gameOver) drawBoard(); }
+  } else if (msg == "right") {
+    if (!checkCollision(posX + 1, posY, rotation)) { posX++; if(!gameOver) drawBoard(); }
+  } else if (msg == "rotate") {
+    rotateTetromino();
+  } else if (msg == "down") {
+    if (!checkCollision(posX, posY + 1, rotation)) {
+      posY++;
+    } else {
+      if (posY < 0) {
+        gameOver = true;
+      } else {
+        placeTetromino();
+        clearLines();
+        spawnTetromino();
+        if (checkCollision(posX, posY, rotation)) gameOver = true;
+      }
+    }
+    if (!gameOver) drawBoard();
+  } else if (msg == "restart") {
+    handleRestart();
+    sendScoreToClients();
+  }
+}
+
 // Enhanced root handler with score and controls
 void handleRoot() {
   String html = "<html><head><title>Tetris ESP8266</title></head><body>";
   html += "<h1>Tetris for ESP8266</h1>";
-  html += "<p>Score: " + String(score) + "</p>";
+  html += "<p>Score: <span id=\"score\">" + String(score) + "</span></p>";
   if (gameOver) {
     html += "<h2>Game Over!</h2>";
-    html += "<button onclick=\"fetch('/restart')\">Restart</button> ";
+    html += "<button onclick=\"sendCmd('restart')\">Restart</button> ";
   } else {
-    // keep buttons for mouse/touch users
+    // keep buttons for mouse/touch users (use sendCmd which prefers WS)
     html += "<div>";
-    html += "<button onclick=\"fetch('/left')\">Left</button> ";
-    html += "<button onclick=\"fetch('/right')\">Right</button> ";
-    html += "<button onclick=\"fetch('/rotate')\">Rotate</button> ";
-    html += "<button onclick=\"fetch('/down')\">Down</button> ";
-    html += "<button onclick=\"fetch('/restart')\">Restart</button> ";
+    html += "<button onclick=\"sendCmd('left')\">Left</button> ";
+    html += "<button onclick=\"sendCmd('right')\">Right</button> ";
+    html += "<button onclick=\"sendCmd('rotate')\">Rotate</button> ";
+    html += "<button onclick=\"sendCmd('down')\">Down</button> ";
+    html += "<button onclick=\"sendCmd('restart')\">Restart</button> ";
     html += "</div>";
   }
 
-  // Add keyboard handlers: Arrow keys map to the same endpoints
+  // WebSocket client + keyboard handling (uses WS when available, else falls back to HTTP)
   html += "<script>";
+  html += "var ws = null;";
+  html += "try {";
+  html += "  ws = new WebSocket('ws://' + location.hostname + ':81/');";
+  html += "  ws.onopen = function(){ console.log('ws open'); };";
+  html += "  ws.onmessage = function(e) {";
+  html += "    if (e.data && e.data.indexOf('score:') === 0) {";
+  html += "      document.getElementById('score').innerText = e.data.split(':')[1];";
+  html += "    }";
+  html += "  };";
+  html += "  ws.onclose = function(){ console.log('ws closed'); };";
+  html += "  ws.onerror = function(e){ console.log('ws error', e); };";
+  html += "} catch(e) { console.log('ws init failed'); }";
+
+  html += "function sendCmd(cmd) {";
+  html += "  if (ws && ws.readyState === 1) {";
+  html += "    ws.send(cmd);";
+  html += "  }";
+  html += "}";
+
   html += "document.addEventListener('keydown', function(e) {";
   html += "  if (e.repeat) return;";
   html += "  switch (e.key) {";
-  html += "    case 'ArrowLeft': fetch('/left'); e.preventDefault(); break;";
-  html += "    case 'ArrowRight': fetch('/right'); e.preventDefault(); break;";
-  html += "    case 'ArrowUp': fetch('/rotate'); e.preventDefault(); break;";
-  html += "    case 'ArrowDown': fetch('/down'); e.preventDefault(); break;";
+  html += "    case 'ArrowLeft': sendCmd('left'); e.preventDefault(); break;";
+  html += "    case 'ArrowRight': sendCmd('right'); e.preventDefault(); break;";
+  html += "    case 'ArrowUp': sendCmd('rotate'); e.preventDefault(); break;";
+  html += "    case 'ArrowDown': sendCmd('down'); e.preventDefault(); break;";
   html += "  }";
   html += "});";
+
   html += "</script>";
 
   html += "</body></html>";
@@ -303,53 +369,13 @@ void handleRestart() {
   gameOver = false;
   spawnTetromino();
   drawBoard();
-  server.send(200, "text/plain", "OK");
-}
-
-// Handle left movement
-void handleLeft() {
-  if (!checkCollision(posX - 1, posY, rotation)) {
-    posX--;
-    drawBoard();
-  }
-  server.send(200, "text/plain", "OK");
-}
-
-// Handle right movement
-void handleRight() {
-  if (!checkCollision(posX + 1, posY, rotation)) {
-    posX++;
-    drawBoard();
-  }
-  server.send(200, "text/plain", "OK");
-}
-
-// Handle rotation
-void handleRotate() {
-  rotateTetromino();
-  server.send(200, "text/plain", "OK");
-}
-
-// Handle down movement
-void handleDown() {
-  if (!checkCollision(posX, posY + 1, rotation)) {
-    posY++;
-  } else {
-    placeTetromino();
-    clearLines();
-    spawnTetromino();
-    if (checkCollision(posX, posY, rotation)) {
-      gameOver = true;
-    }
-  }
-  if (!gameOver) {
-    drawBoard();
-  }
+  sendScoreToClients();
   server.send(200, "text/plain", "OK");
 }
 
 void loop() {
   server.handleClient();
+  webSocket.loop();
   if (!gameOver && millis() - lastDrop > dropInterval) {
     lastDrop = millis();
     if (!checkCollision(posX, posY + 1, rotation)) {
