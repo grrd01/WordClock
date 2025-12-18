@@ -492,7 +492,7 @@
     fEventListener(ElementById("WG"), click, fShowWordGuessr);
     fEventListener(ElementById("xWG"), click, fHideWordGuessr);
     fEventListener(ElementById("cWG"), click, fSendWordGuessr);
-    Array.from(ElementsByClassName("snb")).forEach(function (element, index) {
+    Array.from(ElementsByClassName("snb")).forEach(function (element) {
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
         fEventListener(element, click, function (e) {
             fSendControls(e.target.getAttribute("data-dir"));
@@ -659,7 +659,7 @@
                     ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscoreTe;
                 }
             }
-        };
+        }
         webSocket.onclose = function(){ console.log('webSocket closed'); };
         webSocket.onerror = function(e){ console.log('webSocket error', e); };
     } catch(e) { console.log('webSocket init failed'); }
@@ -684,4 +684,4 @@
     };
     xhttp.open("GET", "get_params", true);
     xhttp.send();
-}());
+}())

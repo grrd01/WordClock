@@ -6,7 +6,7 @@
 // neotrace https://www.instructables.com/id/WORK-IN-PROGRESS-Ribba-Word-Clock-With-Wemos-D1-Mi/
 // and others
 //
-// Kurt Meister, 2018-12-24 | Edit: 2023-04-29 
+// Kurt Meister, 2018-12-24 | Edit: 2023-04-29
 // Thanks to Manuel Meister for refactoring and adding automated summertime conversion.
 //
 // Gérard Tyedmers, 2024-01-15 
@@ -642,7 +642,7 @@ void setupWifi() {
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
   if (type == WStype_CONNECTED) {
     // send current score on new connection
-    sendScoreToClients();
+    sendScoreToClients(0);
     return;
   }
   if (type != WStype_TEXT) return;
@@ -675,7 +675,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     blank();
     pixels.show();
     handleRestart();
-    sendScoreToClients();
+    sendScoreToClients(tetrisScore);
   } else if (msg == "snake") {
     // Snake start
     inSnake = true;
@@ -723,8 +723,8 @@ void setSnack() {
 }
 
 // Tetris: Send current score to all connected WebSocket clients
-void sendScoreToClients() {
-  String msg = "score:" + String(tetrisScore);
+void sendScoreToClients(score) {
+  String msg = "score:" + String(score);
   webSocket.broadcastTXT(msg);
 }
 
@@ -1340,6 +1340,7 @@ void loop() {
       if (snakeNext == snakeSnack) {
         // found snack
         snakeLen++;
+        sendScoreToClients(snakeLen);
         snake[snakeLen] = -1;
         setSnack();
         snakeSpeed = snakeSpeed - 175;
