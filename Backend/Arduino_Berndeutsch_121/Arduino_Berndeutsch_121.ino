@@ -163,8 +163,8 @@ int snake[120];
 int snakeLen = 3;
 int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
-char snakeDir[5] = ""; // snake, up, right, down, left, stop
-int snakePrevDir = 0;
+String snakeDir = ""; // snake, up, right, down, left, stop
+String snakePrevDir = "";
 int snakeSpeed = 35000;
 int snakeWait = 35000;
 bool inSnake = false;
@@ -723,7 +723,7 @@ void setSnack() {
 }
 
 // Tetris: Send current score to all connected WebSocket clients
-void sendScoreToClients(score) {
+void sendScoreToClients(int score) {
   String msg = "score:" + String(score);
   webSocket.broadcastTXT(msg);
 }
