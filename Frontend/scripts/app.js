@@ -42,12 +42,13 @@
     let rainbowGreen = 0;
     let rainbowBlue = 0;
     let score = 0;
-    let highscore = 0;
+    let highscoreSn = 0;
     let highscoreTe = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
     let mastermindTry = 0;
     let wordGuessrScore = 0;
+    let webSocket = null;
 
     function ElementById(id) {
         return doc.getElementById(id);
@@ -293,31 +294,22 @@
     }
 
     /**
+     * Send game-control-input to word-clock
+     * @param {string} cmd : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
+     */
+    function fSendControls(cmd) {
+        console.log(cmd);
+        if (webSocket && webSocket.readyState === 1) {
+            webSocket.send(cmd);
+        }
+    }
+
+    /**
      * Display the snake-page
      */
     function fShowSnake() {
         fShowPage(pSettings, pSnake);
-        fSendSnake(5);
-    }
-
-    /**
-     * Send snake-control-input to word-clock
-     * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
-     */
-    function fSendSnake(dir) {
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-                score = (parseInt(xhttp.responseText) - 3) * 10;
-                if (score > highscore) {
-                    highscore = score;
-                    localStorageSet("wc_sc", highscore);
-                }
-                ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscore;
-            }
-        };
-        xhttp.open("GET", "snake?dir=" + dir, true);
-        xhttp.send();
+        fSendControls("snake");
     }
 
     /**
@@ -325,7 +317,7 @@
      */
     function fHideSnake() {
         fHidePage(pSettings, pSnake);
-        fSendSnake(6);
+        fSendControls("stop");
     }
 
     /**
@@ -333,27 +325,7 @@
      */
     function fShowTetris() {
         fShowPage(pSettings, pTetris);
-        fSendTetris(5);
-    }
-
-    /**
-     * Send tetris-control-input to word-clock
-     * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
-     */
-    function fSendTetris(dir) {
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-                score = parseInt(xhttp.responseText);
-                if (score > highscoreTe) {
-                    highscoreTe = score;
-                    localStorageSet("wc_te", highscoreTe);
-                }
-                ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscoreTe;
-            }
-        };
-        xhttp.open("GET", "tetris?dir=" + dir, true);
-        xhttp.send();
+        fSendControls("tetris");
     }
 
     /**
@@ -361,7 +333,7 @@
      */
     function fHideTetris() {
         fHidePage(pSettings, pTetris);
-        fSendTetris(6);
+        fSendControls("stop");
     }
 
 
@@ -522,16 +494,9 @@
     fEventListener(ElementById("cWG"), click, fSendWordGuessr);
     Array.from(ElementsByClassName("snb")).forEach(function (element, index) {
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
-        if (index < 4) {
-            fEventListener(element, click, function (e) {
-                fSendSnake(e.target.getAttribute("data-num"));
-            });
-        } else {
-            fEventListener(element, click, function (e) {
-                fSendTetris(e.target.getAttribute("data-num"));
-            });
-        }
-
+        fEventListener(element, click, function (e) {
+            fSendControls(e.target.getAttribute("data-dir"));
+        });
     });
     // no-svg: x
     Array.from(ElementsByClassName("n")).forEach(function (element) {
@@ -568,37 +533,32 @@
     });
 
     function fCheckKey(e) {
-        let dir = 0;
+        let dir = "";
         switch (e.key) {
             case "ArrowUp":
-                dir = 1;
+                dir = "up";
                 break;
             case "ArrowRight":
-                dir = 2;
+                dir = "right";
                 break;
             case "ArrowDown":
-                dir = 3;
+                dir = "down";
                 break;
             case "ArrowLeft":
-                dir = 4;
+                dir = "left";
                 break;
             case "Enter":
                 if ( fClassList(pWordGuessr).contains("si")) {
                     fSendWordGuessr();
                 }
         }
-        if (dir &&  fClassList(pSnake).contains("si")) {
-            fSendSnake(dir);
-            fClassList(fChildren(ElementById("ctrl"))[dir - 1]).add("g");
+        if (dir) {
+            fSendControls(dir);
+            fClassList(ElementById("ctrlt" + dir)).add("g");
+            fClassList(ElementById("ctrl" + dir)).add("g");
             setTimeout(function () {
-                fClassList(fChildren(ElementById("ctrl"))[dir - 1]).remove("g");
-            }, 200);
-        }
-        if (dir &&  fClassList(pTetris).contains("si")) {
-            fSendTetris(dir);
-            fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).add("g");
-            setTimeout(function () {
-                fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).remove("g");
+                fClassList(ElementById("ctrlt" + dir)).remove("g");
+                fClassList(ElementById("ctrl" + dir)).remove("g");
             }, 200);
         }
     }
@@ -637,7 +597,7 @@
         speed.value = (parseInt(localStorageGet("wc_s")));
     }
     if (localStorageGet("wc_sc")) {
-        highscore = localStorageGet("wc_sc");
+        highscoreSn = localStorageGet("wc_sc");
     }
     if (localStorageGet("wc_te")) {
         highscoreTe = localStorageGet("wc_te");
@@ -677,6 +637,32 @@
             element.appendChild(textElement);
         }
     });
+
+    // initialize websocket connection for game controls
+    try {
+        webSocket = new WebSocket('ws://' + location.hostname + ':81/');
+        webSocket.onopen = function(){ console.log('webSocket open'); };
+        webSocket.onmessage = function(e) {
+            if (e.data && e.data.indexOf('score:') === 0) {
+                score = parseInt(e.data.split(':')[1]);
+                if (fClassList(pSnake).contains("si")) {
+                    if (score > highscoreSn) {
+                        highscoreSn = score;
+                        localStorageSet("wc_te", highscoreSn);
+                    }
+                    ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscoreSn;
+                } else {
+                    if (score > highscoreTe) {
+                        highscoreTe = score;
+                        localStorageSet("wc_te", highscoreTe);
+                    }
+                    ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscoreTe;
+                }
+            }
+        };
+        webSocket.onclose = function(){ console.log('webSocket closed'); };
+        webSocket.onerror = function(e){ console.log('webSocket error', e); };
+    } catch(e) { console.log('webSocket init failed'); }
 
     /**
      * Load current settings from word-clock

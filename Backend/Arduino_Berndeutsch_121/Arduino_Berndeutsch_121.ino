@@ -21,6 +21,7 @@
 #include <ESP8266mDNS.h>
 #include <WiFiManager.h>        // v2.0.17
 #include <WiFiUdp.h>
+#include <WebSocketsServer.h>   // v2.7.1
 #include <TimeLib.h>            // v1.6.1
 #include <Timezone.h>           // v1.2.6
 #include <Adafruit_NeoPixel.h>  // v1.15.2
@@ -29,8 +30,9 @@
 // set name for access-point and mdns-server
 const char* version = "wordclock";
 
-// Set web server port number to 80
+// Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
 
 // Variable to store the HTTP request
 String header;
@@ -161,7 +163,7 @@ int snake[120];
 int snakeLen = 3;
 int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
-int snakeDir = 0; // 1=up, 2=right, 3=down, 4=left, 5=new game, 6=exit game
+char snakeDir[5] = ""; // snake, up, right, down, left, stop
 int snakePrevDir = 0;
 int snakeSpeed = 35000;
 int snakeWait = 35000;
@@ -472,14 +474,6 @@ void displayTime() {
 }
 
 /**
- * Initialize the display
- */
-void setupDisplay() {
-  pixels.begin();
-  wipe();
-}
-
-/**
  * Displays the status of the wifi
  * @param color Adafruit_NeoPixel-Color to display those pixels
  * @param duration milliseconds to display the status
@@ -637,7 +631,75 @@ void setupWifi() {
   }
 
   server.begin();
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
   chase(Green);
+}
+
+/*
+ * WebSocket event handler: receive control commands from client
+ */
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+  if (type == WStype_CONNECTED) {
+    // send current score on new connection
+    sendScoreToClients();
+    return;
+  }
+  if (type != WStype_TEXT) return;
+  String msg = String((char*)payload);
+  if (inSnake) {
+    snakePrevDir = snakeDir;
+    snakeDir = msg;
+  } else if (msg == "left") {
+    if (!checkCollision(posX - 1, posY, rotation)) { posX--; if(!gameOver) drawBoard(); }
+  } else if (msg == "right") {
+    if (!checkCollision(posX + 1, posY, rotation)) { posX++; if(!gameOver) drawBoard(); }
+  } else if (msg == "up") {
+    rotateTetromino();
+  } else if (msg == "down") {
+    if (!checkCollision(posX, posY + 1, rotation)) {
+      posY++;
+    } else {
+      placeTetromino();
+      clearLines();
+      spawnTetromino();
+      if (checkCollision(posX, posY, rotation)) gameOver = true;
+    }
+    if (!gameOver) drawBoard();
+  } else if (msg == "tetris") {
+    // Tetris start
+    inTetris = true;
+    inMastermind = false;
+    inWordGuessr = false;
+    inSnake = false;
+    blank();
+    pixels.show();
+    handleRestart();
+    sendScoreToClients();
+  } else if (msg == "snake") {
+    // Snake start
+    inSnake = true;
+    inMastermind = false;
+    inWordGuessr = false;
+    inTetris = false;
+    snake[0] = 49;
+    snake[1] = 60;
+    snake[2] = 71;
+    snake[3] = -1;
+    snakeLen = 3;
+    snakeDir = "";
+    snakeNext = -1;
+    snakeSpeed = 35000;
+    blank();
+    lightup(snake, Green);
+    setSnack();
+    pixels.show();
+  } else if (msg == "stop") {
+     // Tetris or Snake exit
+    inTetris = false;
+    inSnake = false;
+    lastMinuteWordClock = 61;
+  }
 }
 
 /*
@@ -658,6 +720,12 @@ void setSnack() {
     }
   }
   pixels.setPixelColor(snakeSnack, Red);
+}
+
+// Tetris: Send current score to all connected WebSocket clients
+void sendScoreToClients() {
+  String msg = "score:" + String(tetrisScore);
+  webSocket.broadcastTXT(msg);
 }
 
 // Tetris: Spawn a new tetromino at the top
@@ -807,44 +875,6 @@ void handleRestart() {
   drawBoard();
 }
 
-// Tetris: Handle left movement
-void handleLeft() {
-  if (!checkCollision(posX - 1, posY, rotation)) {
-    posX--;
-    drawBoard();
-  }
-}
-
-// Tetris: Handle right movement
-void handleRight() {
-  if (!checkCollision(posX + 1, posY, rotation)) {
-    posX++;
-    drawBoard();
-  }
-}
-
-// Tetris: Handle rotation
-void handleRotate() {
-  rotateTetromino();
-}
-
-// Tetris: Handle down movement
-void handleDown() {
-  if (!checkCollision(posX, posY + 1, rotation)) {
-    posY++;
-  } else {
-    placeTetromino();
-    clearLines();
-    spawnTetromino();
-    if (checkCollision(posX, posY, rotation)) {
-      gameOver = true;
-    }
-  }
-  if (!gameOver) {
-    drawBoard();
-  }
-}
-
 /*
  * Wordguessr: find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
  * @param letter the letter to find
@@ -938,7 +968,8 @@ void clearMastermind() {
  */
 void setup() {
   Serial.begin(115200);
-  setupDisplay();
+  pixels.begin();
+  wipe();
 
   chase(Green); // run basic screen test and show success
 
@@ -967,78 +998,7 @@ void loop() {
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
-            if (header.indexOf("snake") >= 0) {
-              // Client is playing snake game:
-              const char *url = header.c_str();
-              if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 7) {
-                snakePrevDir = snakeDir;
-                snakeDir = extractParameterValue(url, "dir=");
-              }
-              if (!inSnake && snakeDir == 5 && power == 1) {
-                // start new snake game
-                inSnake = true;
-                inMastermind = false;
-                inWordGuessr = false;
-                inTetris = false;
-                snake[0] = 49;
-                snake[1] = 60;
-                snake[2] = 71;
-                snake[3] = -1;
-                snakeLen = 3;
-                snakeDir = 0;
-                snakeNext = -1;
-                snakeSpeed = 35000;
-                blank();
-                lightup(snake, Green);
-                setSnack();
-                pixels.show();
-              } else if (inSnake && snakeDir == 6) {
-                // exit current snake game
-                inSnake = false;
-                lastMinuteWordClock = 61;
-              }
-              client.println(F("HTTP/1.1 200 OK"));
-              client.println(F("Content-type:text/plain"));
-              client.println(F("Access-Control-Allow-Origin: *"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(snakeLen);
-            } else if (header.indexOf("tetris") >= 0) {
-              // Client is playing Tetris game:
-              const char *url = header.c_str();
-              if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 7) {
-                tetrisDir = extractParameterValue(url, "dir=");
-              }
-              // int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
-              if (!inTetris && tetrisDir == 5 && power == 1) {
-                // start new Tetris game
-                inTetris = true;
-                inMastermind = false;
-                inWordGuessr = false;
-                inSnake = false;
-                blank();
-                pixels.show();
-                handleRestart();
-              } else if (inTetris && tetrisDir == 1) {
-                handleRotate();
-              } else if (inTetris && tetrisDir == 2) {
-                handleRight();
-              } else if (inTetris && tetrisDir == 3) {
-                handleDown();
-              } else if (inTetris && tetrisDir == 4) {
-                handleLeft();
-              } else if (inTetris && tetrisDir == 6) {
-                // exit current Tetris game
-                inTetris = false;
-                lastMinuteWordClock = 61;
-              }
-              client.println(F("HTTP/1.1 200 OK"));
-              client.println(F("Content-type:text/plain"));
-              client.println(F("Access-Control-Allow-Origin: *"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(tetrisScore);
-            } else if (header.indexOf("mastermind") >= 0) {
+            if (header.indexOf("mastermind") >= 0) {
               // Client is playing mastermind game:
               const char *url = header.c_str();
 
@@ -1344,25 +1304,22 @@ void loop() {
     } else {
       snakeNext = -1;
       snakeWait = snakeSpeed;
-      if (snakeDir == 1) {
-        // move snake up
+      if (snakeDir == "up") {
         snakeNext = snake[0] - 1 - 2 * (snake[0] % 11);
         if (snakeNext < 0) {
           snakeNext = -3;
         }
-      } else if (snakeDir == 2) {
-        // move snake right
+      } else if (snakeDir == "right") {
         snakeNext = snake[0] + 1 - 2 * ((snake[0] / 11) % 2);
         if (floor(snakeNext / 11) != snake[0] / 11) {
           snakeNext = -3;
         }
-      } else if (snakeDir == 3) {
-        // move snake down
+      } else if (snakeDir == "down") {
         snakeNext = snake[0] + 1 + 2 * (10 - snake[0] % 11);
         if (snakeNext > 120) {
           snakeNext = -3;
         }
-      } else if (snakeDir == 4) {
+      } else if (snakeDir == "left") {
         // move snake left
         snakeNext = snake[0] - 1 + 2 * ((snake[0] / 11) % 2);
         if (floor(snakeNext / 11) != snake[0] / 11 || snakeNext == -1) {
