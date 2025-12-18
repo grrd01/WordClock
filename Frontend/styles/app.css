@@ -216,7 +216,7 @@ path.snb {
     display: none;
 }
 
-svg[data-num='1'] {
+[data-num='1'] {
     fill: #fc034e
 }
 [data-num='2'] {
