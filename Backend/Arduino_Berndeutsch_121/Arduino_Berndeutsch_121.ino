@@ -186,44 +186,44 @@ const uint8_t tetrominos[7][4][4] = {
   },
   // J
   {
-    {1,0,0,0},
-    {1,1,1,0},
     {0,0,0,0},
+    {0,1,0,0},
+    {0,1,1,1},
     {0,0,0,0}
   },
   // L
   {
+    {0,0,0,0},
     {0,0,1,0},
     {1,1,1,0},
-    {0,0,0,0},
     {0,0,0,0}
   },
   // O
   {
-    {1,1,0,0},
-    {1,1,0,0},
     {0,0,0,0},
+    {0,1,1,0},
+    {0,1,1,0},
     {0,0,0,0}
   },
   // S
   {
+    {0,0,0,0},
     {0,1,1,0},
     {1,1,0,0},
-    {0,0,0,0},
     {0,0,0,0}
   },
   // T
   {
+    {0,0,0,0},
     {0,1,0,0},
     {1,1,1,0},
-    {0,0,0,0},
     {0,0,0,0}
   },
   // Z
   {
+    {0,0,0,0},
     {1,1,0,0},
     {0,1,1,0},
-    {0,0,0,0},
     {0,0,0,0}
   }
 };
@@ -339,6 +339,8 @@ void wipe() {
 
 /**
  * Moves a pixel n rows down
+ * @param pixel int id of the pixel to move down
+ * @param rows int number of rows to move donw
  */
 int down(int pixel, int rows) {
   for (int i = 0; i < rows; i++) {
@@ -364,26 +366,28 @@ void lightup(int *word, uint32_t color) {
 }
 
 /**
- * Get the value of a URL-Parameter
+ * Get the numeric value of a URL-Parameter
+ * @param url char url-string
+ * @param paramName char name of parameter to search
  */
 int extractParameterValue(const char *url, const char *paramName) {
-    // Finden der Position von paramName=
-    char *paramStart = strstr(url, paramName);
-    // Wenn paramName gefunden wurde
-    if (paramStart != NULL) {
-        // Extrahieren des Substrings, der mit paramName= beginnt
-        char *paramSubstring = paramStart + strlen(paramName);
-        // Finden der Position des nächsten '&' oder das Ende der Zeichenkette
-        char *ampersandPos = strchr(paramSubstring, '&');
-        // Wenn '&' gefunden wurde, setzen wir das Ende des Substrings darauf
-        if (ampersandPos != NULL) {
-            *ampersandPos = '\0';
-        }
-        // Konvertieren des Substrings in eine Ganzzahl und Rückgabe des Werts
-        return atoi(paramSubstring);
-    } else {
-        return -1;
+  // Finden der Position von paramName=
+  char *paramStart = strstr(url, paramName);
+  // Wenn paramName gefunden wurde
+  if (paramStart != NULL) {
+    // Extrahieren des Substrings, der mit paramName= beginnt
+    char *paramSubstring = paramStart + strlen(paramName);
+    // Finden der Position des nächsten '&' oder das Ende der Zeichenkette
+    char *ampersandPos = strchr(paramSubstring, '&');
+    // Wenn '&' gefunden wurde, setzen wir das Ende des Substrings darauf
+    if (ampersandPos != NULL) {
+        *ampersandPos = '\0';
     }
+    // Konvertieren des Substrings in eine Ganzzahl und Rückgabe des Werts
+    return atoi(paramSubstring);
+  } else {
+    return -1;
+  }
 }
 
 /**
@@ -661,7 +665,7 @@ void spawnTetromino() {
   currentTetromino = random(0, 7);
   rotation = 0;
   posX = 3; // Centered
-  posY = -1;  // Spawn one line above visible area
+  posY = -2;  // Spawn above visible area
   // Copy initial tetromino to current piece
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
@@ -702,7 +706,6 @@ void placeTetromino() {
     }
   }
 }
-
 
 // Tetris: Clear full lines and animate
 void clearLines() {
@@ -780,7 +783,7 @@ void rotateTetromino() {
       if (rotated[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
-        if (nx < 0 || nx >= 11 || ny >= 11 || board[ny][nx]) {
+        if (nx < 0 || nx >= 11 || ny >= 11 || (ny >= 0 && board[ny][nx])) {
           return; // Collision, do not rotate
         }
       }
@@ -841,7 +844,6 @@ void handleDown() {
     drawBoard();
   }
 }
-
 
 /*
  * Wordguessr: find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
