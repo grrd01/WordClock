@@ -17,13 +17,13 @@
 // ToDo: WordGuessr: ungültige Worte in der Wortliste erkennen
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>        // v2.4.2
+#include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
-#include <WiFiManager.h>        // v2.0.3-alpha
+#include <WiFiManager.h>        // v2.0.17
 #include <WiFiUdp.h>
 #include <TimeLib.h>            // v1.6.1
-#include <Timezone.h>           // v1.2.4
-#include <Adafruit_NeoPixel.h>  // v1.10.4
+#include <Timezone.h>           // v1.2.6
+#include <Adafruit_NeoPixel.h>  // v1.15.2
 #include <pgmspace.h>
 
 // set name for access-point and mdns-server
