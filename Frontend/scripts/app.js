@@ -387,7 +387,7 @@
             urlparams = "mastermind?c4=7"
             fClearMastermind();
         } else {
-            if (doc.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
+            if (doc.querySelectorAll(".cdb[data-num='1'], .cdb[data-num='2'], .cdb[data-num='3'], .cdb[data-num='4'], .cdb[data-num='5'], .cdb[data-num='6']").length < 4) {
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
