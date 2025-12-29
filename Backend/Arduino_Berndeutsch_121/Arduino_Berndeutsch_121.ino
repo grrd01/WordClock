@@ -17,13 +17,13 @@
 // ToDo: WordGuessr: ungültige Worte in der Wortliste erkennen
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>        // v2.4.2
+#include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
-#include <WiFiManager.h>        // v2.0.3-alpha
+#include <WiFiManager.h>        // v2.0.17
 #include <WiFiUdp.h>
 #include <TimeLib.h>            // v1.6.1
-#include <Timezone.h>           // v1.2.4
-#include <Adafruit_NeoPixel.h>  // v1.10.4
+#include <Timezone.h>           // v1.2.6
+#include <Adafruit_NeoPixel.h>  // v1.15.2
 #include <pgmspace.h>
 
 // set name for access-point and mdns-server
@@ -76,19 +76,16 @@ unsigned int localPort = 8888;  // local port to listen for UDP packets
 static uint32_t Black = Adafruit_NeoPixel::Color(0, 0, 0);
 static uint32_t White = Adafruit_NeoPixel::Color(49, 52, 34);
 static uint32_t Grey = Adafruit_NeoPixel::Color(3, 3, 3);
-static uint32_t Red = Adafruit_NeoPixel::Color(90, 0, 0);
-static uint32_t Green = Adafruit_NeoPixel::Color(10, 90, 0);
-static uint32_t Blue = Adafruit_NeoPixel::Color(0, 20, 85);
 static uint32_t Cornflower = Adafruit_NeoPixel::Color(8, 7, 16);
+static uint32_t Red = Adafruit_NeoPixel::Color(100, 0, 5);
+static uint32_t Orange = Adafruit_NeoPixel::Color(100, 25, 0);
+static uint32_t Yellow = Adafruit_NeoPixel::Color(100, 90, 0);
+static uint32_t Green = Adafruit_NeoPixel::Color(10, 95, 0);
+static uint32_t Blue = Adafruit_NeoPixel::Color(0, 20, 85);
+static uint32_t Purple = Adafruit_NeoPixel::Color(85, 0, 100);
+static uint32_t Cyan = Adafruit_NeoPixel::Color(00, 100, 100);
 
-static uint32_t MastermindColor1 = Adafruit_NeoPixel::Color(100, 0, 5);
-static uint32_t MastermindColor2 = Adafruit_NeoPixel::Color(100, 25, 0);
-static uint32_t MastermindColor3 = Adafruit_NeoPixel::Color(100, 90, 0);
-static uint32_t MastermindColor4 = Adafruit_NeoPixel::Color(10, 95, 0);
-static uint32_t MastermindColor5 = Adafruit_NeoPixel::Color(0, 40, 100);
-static uint32_t MastermindColor6 = Adafruit_NeoPixel::Color(85, 0, 100);
-
-static uint32_t MastermindColors[] = {MastermindColor1, MastermindColor2, MastermindColor3, MastermindColor4, MastermindColor5, MastermindColor6};
+static uint32_t GameColors[] = {Red, Orange, Yellow, Green, Blue, Purple, Cyan};
 
 uint32_t colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
 uint32_t colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
@@ -169,6 +166,81 @@ int snakePrevDir = 0;
 int snakeSpeed = 35000;
 int snakeWait = 35000;
 bool inSnake = false;
+
+// Tetris variables
+uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index
+int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
+int tetrisScore = 0;
+bool inTetris = false;
+unsigned long lastDrop = 0;
+const unsigned long dropInterval = 600; // ms
+
+// Tetromino definitions (4x4 matrix for each shape)
+const uint8_t tetrominos[7][4][4] = {
+  // I
+  {
+    {0,0,0,0},
+    {1,1,1,1},
+    {0,0,0,0},
+    {0,0,0,0}
+  },
+  // J
+  {
+    {0,0,0,0},
+    {0,1,0,0},
+    {0,1,1,1},
+    {0,0,0,0}
+  },
+  // L
+  {
+    {0,0,0,0},
+    {0,0,1,0},
+    {1,1,1,0},
+    {0,0,0,0}
+  },
+  // O
+  {
+    {0,0,0,0},
+    {0,1,1,0},
+    {0,1,1,0},
+    {0,0,0,0}
+  },
+  // S
+  {
+    {0,0,0,0},
+    {0,1,1,0},
+    {1,1,0,0},
+    {0,0,0,0}
+  },
+  // T
+  {
+    {0,0,0,0},
+    {0,1,0,0},
+    {1,1,1,0},
+    {0,0,0,0}
+  },
+  // Z
+  {
+    {0,0,0,0},
+    {1,1,0,0},
+    {0,1,1,0},
+    {0,0,0,0}
+  }
+};
+
+// Current piece state
+int currentTetromino, rotation, posX, posY;
+uint8_t currentPiece[4][4]; // Store current piece with rotation applied
+bool gameOver = false;
+
+// Map (x, y) to LED index for serpentine wiring
+int xyToIndex(int x, int y) {
+  if (y % 2 == 0) {
+    return y * 11 + x;
+  } else {
+    return y * 11 + (11 - 1 - x);
+  }
+}
 
 // Mastermind variables
 int mastermindCode[4];
@@ -267,6 +339,8 @@ void wipe() {
 
 /**
  * Moves a pixel n rows down
+ * @param pixel int id of the pixel to move down
+ * @param rows int number of rows to move donw
  */
 int down(int pixel, int rows) {
   for (int i = 0; i < rows; i++) {
@@ -292,35 +366,28 @@ void lightup(int *word, uint32_t color) {
 }
 
 /**
- * Displays that wifi needs to be configured (select wlan access point wordclock)
- */
-void connectWLAN() {
-  lightup(WordFix, White);
-  lightup(WordWifi, Blue);
-  pixels.show();
-}
-
-/**
- * Get the value of a URL-Parameter
+ * Get the numeric value of a URL-Parameter
+ * @param url char url-string
+ * @param paramName char name of parameter to search
  */
 int extractParameterValue(const char *url, const char *paramName) {
-    // Finden der Position von paramName=
-    char *paramStart = strstr(url, paramName);
-    // Wenn paramName gefunden wurde
-    if (paramStart != NULL) {
-        // Extrahieren des Substrings, der mit paramName= beginnt
-        char *paramSubstring = paramStart + strlen(paramName);
-        // Finden der Position des nächsten '&' oder das Ende der Zeichenkette
-        char *ampersandPos = strchr(paramSubstring, '&');
-        // Wenn '&' gefunden wurde, setzen wir das Ende des Substrings darauf
-        if (ampersandPos != NULL) {
-            *ampersandPos = '\0';
-        }
-        // Konvertieren des Substrings in eine Ganzzahl und Rückgabe des Werts
-        return atoi(paramSubstring);
-    } else {
-        return -1;
+  // Finden der Position von paramName=
+  char *paramStart = strstr(url, paramName);
+  // Wenn paramName gefunden wurde
+  if (paramStart != NULL) {
+    // Extrahieren des Substrings, der mit paramName= beginnt
+    char *paramSubstring = paramStart + strlen(paramName);
+    // Finden der Position des nächsten '&' oder das Ende der Zeichenkette
+    char *ampersandPos = strchr(paramSubstring, '&');
+    // Wenn '&' gefunden wurde, setzen wir das Ende des Substrings darauf
+    if (ampersandPos != NULL) {
+        *ampersandPos = '\0';
     }
+    // Konvertieren des Substrings in eine Ganzzahl und Rückgabe des Werts
+    return atoi(paramSubstring);
+  } else {
+    return -1;
+  }
 }
 
 /**
@@ -519,18 +586,32 @@ void setupWifi() {
   //wifiManager.setAPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
 
   // Displays Wifi Connect screen
-  connectWLAN();
+  lightup(WordFix, White);
+  lightup(WordWifi, Blue);
+  pixels.show();
 
   // fetches ssid and pass from eeprom and tries to connect
   // if it does not connect it starts an access point with the specified name (wordclock)
   // and goes into a blocking loop awaiting configuration
   wifiManager.autoConnect(version);
+
   // or use this for auto generated name ESP + ChipID
   //wifiManager.autoConnect();
 
+
+  // or connect to WiFi with hardcoded name/pw:
+  // WiFi.begin("WiFiName", "WiFiPassword");
+  // Serial.print(F("Connecting"));
+  // while (WiFi.status() != WL_CONNECTED)
+  // {
+  //   delay(500);
+  //   Serial.print(F("."));
+  // }
+  // Serial.println();
+
+
   // if you get here you have connected to the WiFi
-  Serial.println(F("Connected."));
-  Serial.println(F("IP address: "));
+  Serial.println(F("Connected. IP address: "));
   Serial.println(WiFi.localIP());
   // Display local ip address on clockface by looping through every character.
   String localIP = WiFi.localIP().toString();
@@ -560,7 +641,7 @@ void setupWifi() {
 }
 
 /*
- * places a snack on an empty space in snake game
+ * Snake: places a snack on an empty space in snake game
  */
 void setSnack() {
   snakeSnack = -1;
@@ -579,8 +660,193 @@ void setSnack() {
   pixels.setPixelColor(snakeSnack, Red);
 }
 
+// Tetris: Spawn a new tetromino at the top
+void spawnTetromino() {
+  currentTetromino = random(0, 7);
+  rotation = 0;
+  posX = 3; // Centered
+  posY = -2;  // Spawn above visible area
+  // Copy initial tetromino to current piece
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      currentPiece[i][j] = tetrominos[currentTetromino][i][j];
+    }
+  }
+  lastDrop = millis();  // Reset timer so piece has time to display before first drop
+}
+
+// Tetris: Check collision for current piece at (x, y) with rotation
+bool checkCollision(int x, int y, int rot) {
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (currentPiece[i][j]) {
+        int nx = x + j;
+        int ny = y + i;
+        // Only check collisions with boundaries and board for visible area
+        if (nx < 0 || nx >= 11) return true;
+        if (ny >= 11) return true;  // Piece hit bottom
+        if (ny >= 0 && board[ny][nx]) return true;  // Only check board collision if visible
+      }
+    }
+  }
+  return false;
+}
+
+// Tetris: Place current piece on the board
+void placeTetromino() {
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (currentPiece[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx >= 0 && nx < 11 && ny >= 0 && ny < 11) {
+          board[ny][nx] = currentTetromino + 1;
+        }
+      }
+    }
+  }
+}
+
+// Tetris: Clear full lines and animate
+void clearLines() {
+  for (int y = 0; y < 11; y++) {
+    bool full = true;
+    for (int x = 0; x < 11; x++) {
+      if (!board[y][x]) {
+        full = false;
+        break;
+      }
+    }
+    if (full) {
+      // Animate line
+      for (int t = 0; t < 3; t++) {
+        for (int x = 0; x < 11; x++) {
+          pixels.setPixelColor(xyToIndex(x, y), White);
+        }
+        pixels.show();
+        delay(80);
+        for (int x = 0; x < 11; x++) {
+          pixels.setPixelColor(xyToIndex(x, y), 0);
+        }
+        pixels.show();
+        delay(80);
+      }
+      // Remove line and shift down
+      for (int yy = y; yy > 0; yy--) {
+        for (int x = 0; x < 11; x++) {
+          board[yy][x] = board[yy-1][x];
+        }
+      }
+      for (int x = 0; x < 11; x++) board[0][x] = 0;
+      tetrisScore += 10;
+    }
+  }
+}
+
+// Tetris: Draw the board and current piece
+void drawBoard() {
+  pixels.clear();
+  // Draw placed blocks
+  for (int y = 0; y < 11; y++) {
+    for (int x = 0; x < 11; x++) {
+      if (board[y][x]) {
+        pixels.setPixelColor(xyToIndex(x, y), GameColors[board[y][x]-1]);
+      }
+    }
+  }
+  // Draw current piece
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (currentPiece[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx >= 0 && nx < 11 && ny >= 0 && ny < 11) {
+          pixels.setPixelColor(xyToIndex(nx, ny), GameColors[currentTetromino]);
+        }
+      }
+    }
+  }
+  pixels.show();
+}
+
+// Tetris: Rotate tetromino (clockwise)
+void rotateTetromino() {
+  uint8_t rotated[4][4];
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      rotated[j][3-i] = currentPiece[i][j];
+    }
+  }
+  // Check collision for rotated piece
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (rotated[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx < 0 || nx >= 11 || ny >= 11 || (ny >= 0 && board[ny][nx])) {
+          return; // Collision, do not rotate
+        }
+      }
+    }
+  }
+  // Apply rotation
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      currentPiece[i][j] = rotated[i][j];
+    }
+  }
+  drawBoard();
+}
+
+// Tetris: Restart the game
+void handleRestart() {
+  memset(board, 0, sizeof(board));
+  tetrisScore = 0;
+  gameOver = false;
+  spawnTetromino();
+  drawBoard();
+}
+
+// Tetris: Handle left movement
+void handleLeft() {
+  if (!checkCollision(posX - 1, posY, rotation)) {
+    posX--;
+    drawBoard();
+  }
+}
+
+// Tetris: Handle right movement
+void handleRight() {
+  if (!checkCollision(posX + 1, posY, rotation)) {
+    posX++;
+    drawBoard();
+  }
+}
+
+// Tetris: Handle rotation
+void handleRotate() {
+  rotateTetromino();
+}
+
+// Tetris: Handle down movement
+void handleDown() {
+  if (!checkCollision(posX, posY + 1, rotation)) {
+    posY++;
+  } else {
+    placeTetromino();
+    clearLines();
+    spawnTetromino();
+    if (checkCollision(posX, posY, rotation)) {
+      gameOver = true;
+    }
+  }
+  if (!gameOver) {
+    drawBoard();
+  }
+}
+
 /*
- * find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
+ * Wordguessr: find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
  * @param letter the letter to find
  * @param allLetters the string to search in
  */
@@ -602,7 +868,7 @@ int wordGuessrFindIndex(char letter) {
 }
 
 /*
- * select a new word to guess
+ * Wordguessr: select a new word to guess
  */
 void wordGuessrNewGuess() {
   randomSeed(micros());
@@ -623,8 +889,8 @@ void wordGuessrNewGuess() {
 
   int randomIndex = random(wordCount);
   wordGuessrActiveWord = wordGuessrWords[randomIndex];
-  Serial.print(F("New word to guess: "));
-  Serial.println(wordGuessrActiveWord);
+  //Serial.print(F("New word to guess: "));
+  //Serial.println(wordGuessrActiveWord);
 
   // Erzeuge eine Kopie
   String wordGuessrDecodeWord = wordGuessrActiveWord;
@@ -644,13 +910,14 @@ void wordGuessrNewGuess() {
 }
 
 /*
- * prepares a new mastermind game
+ * Mastermind: prepares a new mastermind game
  */
 void clearMastermind() {
   wipe();
   inMastermind = true;
   inWordGuessr = false;
   inSnake = false;
+  inTetris = false;
   randomSeed(micros());
   mastermindCode[0] = random(1,7);
   mastermindCode[1] = random(1,7);
@@ -694,7 +961,7 @@ void loop() {
       currentTime = millis();
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
+        //Serial.write(c);                    // print it out the serial monitor
         header += c;
         if (c == '\n') {                    // if the byte is a newline character
           // if the current line is blank, you got two newline characters in a row.
@@ -703,12 +970,6 @@ void loop() {
             if (header.indexOf("snake") >= 0) {
               // Client is playing snake game:
               const char *url = header.c_str();
-              client.println(F("HTTP/1.1 200 OK"));
-              client.println(F("Content-type:text/plain"));
-              client.println(F("Access-Control-Allow-Origin: *"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(snakeLen);
               if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 7) {
                 snakePrevDir = snakeDir;
                 snakeDir = extractParameterValue(url, "dir=");
@@ -718,6 +979,7 @@ void loop() {
                 inSnake = true;
                 inMastermind = false;
                 inWordGuessr = false;
+                inTetris = false;
                 snake[0] = 49;
                 snake[1] = 60;
                 snake[2] = 71;
@@ -735,6 +997,47 @@ void loop() {
                 inSnake = false;
                 lastMinuteWordClock = 61;
               }
+              client.println(F("HTTP/1.1 200 OK"));
+              client.println(F("Content-type:text/plain"));
+              client.println(F("Access-Control-Allow-Origin: *"));
+              client.println(F("Connection: close"));
+              client.println();
+              client.println(snakeLen);
+            } else if (header.indexOf("tetris") >= 0) {
+              // Client is playing Tetris game:
+              const char *url = header.c_str();
+              if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 7) {
+                tetrisDir = extractParameterValue(url, "dir=");
+              }
+              // int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
+              if (!inTetris && tetrisDir == 5 && power == 1) {
+                // start new Tetris game
+                inTetris = true;
+                inMastermind = false;
+                inWordGuessr = false;
+                inSnake = false;
+                blank();
+                pixels.show();
+                handleRestart();
+              } else if (inTetris && tetrisDir == 1) {
+                handleRotate();
+              } else if (inTetris && tetrisDir == 2) {
+                handleRight();
+              } else if (inTetris && tetrisDir == 3) {
+                handleDown();
+              } else if (inTetris && tetrisDir == 4) {
+                handleLeft();
+              } else if (inTetris && tetrisDir == 6) {
+                // exit current Tetris game
+                inTetris = false;
+                lastMinuteWordClock = 61;
+              }
+              client.println(F("HTTP/1.1 200 OK"));
+              client.println(F("Content-type:text/plain"));
+              client.println(F("Access-Control-Allow-Origin: *"));
+              client.println(F("Connection: close"));
+              client.println();
+              client.println(tetrisScore);
             } else if (header.indexOf("mastermind") >= 0) {
               // Client is playing mastermind game:
               const char *url = header.c_str();
@@ -759,7 +1062,7 @@ void loop() {
                 mastermindPlace = 0;
                 mastermindColor = 0;
                 for (int i = 0; i < 4; i++) {
-                  pixels.setPixelColor(down(i + 1, mastermindTry), MastermindColors[mastermindCodeTry[i] - 1]);
+                  pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
                   mastermindCodeBackup[i] = mastermindCode[i];
                   // check right position
                   if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
@@ -818,6 +1121,7 @@ void loop() {
                   // start new wordguessr game
                   inWordGuessr = true;
                   inSnake = false;
+                  inTetris = false;
                   inMastermind = false;
                   wordGuessrNewGuess();
                   wordGuessrAlert = millis();
@@ -942,14 +1246,7 @@ void loop() {
               client.println();
 
               // Display the HTML web page
-              // Head
-              client.println(F("<!doctype html><html lang='en'><head><meta charset='utf-8'><title>grrd s WordClock</title><link id='icon' rel='icon' href='data:image/png;base64,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'><meta name='description' content='grrd s WordClock is a web WordClock and a user interface for the Wemos Mini D1 Lite Clock'><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='theme-color' content='#444'><meta name='apple-mobile-web-app-title' content='WordClock'><link id='iphone' rel='apple-touch-icon'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black'>"));
-              // Styles
-              client.println(F("<style>:root{--main-color:#878ade}html{height:100%;user-select:none}body{background:linear-gradient(#444,#222);min-width:100vw;margin:0;position:fixed;overflow:hidden;font-family:Arial,sans-serif;font-size:large;color:#fff;text-shadow:1px 1px 2px #000;height:100%}.page{width:100vw;position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(#444,#222)}#clock,#control,.title{font:6px sans-serif;fill:#555;text-shadow:none;text-anchor:middle;width:100vmin;margin:auto;display:block}@media (orientation:landscape){#control{width:100%;max-width:60vh}}@media (orientation:portrait){#control{width:100%}}.title,.w100{width:100%}.H0 .H0,.H1 .H1,.H10 .H10,.H11 .H11,.H2 .H2,.H3 .H3,.H4 .H4,.H5 .H5,.H6 .H6,.H7 .H7,.H8 .H8,.H9 .H9,.M1 .M1,.M10 .M10,.M15 .M15,.M2 .M1,.M2 .M2,.M20 .M20,.M3 .M1,.M3 .M2,.M3 .M3,.M30 .M30,.M4 .M1,.M4 .M2,.M4 .M3,.M4 .M4,.M5 .M5,.MA .MA,.MV .MV,.g{fill:var(--main-color);text-shadow:0 0 10px var(--main-color)}.off .g:not(.colorButton){fill:#555;text-shadow:none}.d .H0 .H0,.d .H1 .H1,.d .H10 .H10,.d .H11 .H11,.d .H2 .H2,.d .H3 .H3,.d .H4 .H4,.d .H5 .H5,.d .H6 .H6,.d .H7 .H7,.d .H8 .H8,.d .H9 .H9,.d .M1 .M1,.d .M10 .M10,.d .M15 .M15,.d .M2 .M1,.d .M2 .M2,.d .M20 .M20,.d .M3 .M1,.d .M3 .M2,.d .M3 .M3,.d .M30 .M30,.d .M4 .M1,.d .M4 .M2,.d .M4 .M3,.d .M4 .M4,.d .M5 .M5,.d .MA .MA,.d .MV .MV,.d .g{filter:brightness(70%)}a:link{color:var(--main-color)}a:visited{color:var(--main-color);filter:brightness(85%)}a:focus,a:hover{color:var(--main-color);filter:brightness(125%)}a:active{color:var(--main-color);filter:brightness(125%)}#exitMastermind,#exitSnake,#exitWordGuessr,#settings,#settingsClose{position:absolute;right:4vmin;bottom:4vmin}#power{position:absolute;left:4vmin;bottom:4vmin}#scoreMastermind,#scoreSnake,#scoreWordGuessr{position:absolute;left:4vmin;bottom:4vmin;display:flex;align-items:center}.snakeButton,.svgButton,.svgMsg{width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;stroke:#555;stroke-linejoin:round;stroke-linecap:round;stroke-width:6;fill:none;z-index:1000}circle{pointer-events:none}input[type=text]{width:calc(100% - 4.5vmin - 40px);border:2px solid #555;border-radius:5px;background-color:transparent;color:#fff;padding:10px;font-size:larger}input[type=text]:focus{border:2px solid #fff;outline:0}input[type=text].error{border:2px solid #f70562}input[type=text].ok{border:2px solid #059c7d}.snakeButton.g,.snakeButton:hover,.svgButton.g,.svgButton:hover{stroke:#fff;text-shadow:0 0 10px #fff;cursor:pointer}.snakeButton{stroke-width:1.4;fill:#333;fill-opacity:0.01}#pageMastermind,#pageSettings,#pageSnake,#pageWordGuessr{transform:translateX(100vw);visibility:hidden;opacity:0}.pageContent{display:block;position:absolute;overflow:auto;top:0;left:0;right:0;margin:0 auto 0 auto;width:600px;max-width:calc(100vw - 40px);height:100%}.content,.content>span,.pageBody{display:flex;flex-direction:row;justify-content:space-between;margin-bottom:20px;align-items:center;flex-wrap:wrap}.pageFooter{margin-top:60px}#color{-webkit-appearance:none;-moz-appearance:none;appearance:none;background-color:transparent;width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;border:none;cursor:pointer}#color::-webkit-color-swatch{border-radius:50%;border:.45vmin solid #555}#color::-moz-color-swatch{border-radius:50%;border:.45vmin solid #555}#color::-webkit-color-swatch:hover{border:.45vmin solid #fff}#color::-moz-color-swatch:hover{border:.45vmin solid #fff}.hide{display:none}[data-num='1']{fill:#fc034e}[data-num='2']{fill:#fc6f03}[data-num='3']{fill:#fcce03}[data-num='4']{fill:#18fc03}[data-num='5']{fill:#0384fc}[data-num='6']{fill:#f803fc}.swipe-in{animation-name:swipe-in;animation-fill-mode:forwards;animation-duration:.7s}@keyframes swipe-in{0%{transform:translateX(100vw);visibility:hidden;opacity:0}1%{transform:translateX(100vw);visibility:visible;opacity:1}100%{transform:translateX(0);visibility:visible;opacity:1}}.swipe-out{animation-name:swipe-out;animation-fill-mode:forwards;animation-duration:.7s}@keyframes swipe-out{0%{transform:translateX(0);visibility:visible;opacity:1}99%{transform:translateX(-100vw);visibility:visible;opacity:1}100%{transform:translateX(-100vw);visibility:hidden;opacity:0}}.swipe-in-left{animation-name:swipe-in-left;animation-fill-mode:forwards;animation-duration:.7s}@keyframes swipe-in-left{0%{transform:translateX(0);visibility:visible;opacity:1}99%{transform:translateX(100vw);visibility:visible;opacity:1}100%{transform:translateX(100vw);visibility:hidden;opacity:0}}.swipe-out-right{animation-name:swipe-out-right;animation-fill-mode:forwards;animation-duration:.7s}@keyframes swipe-out-right{0%{transform:translateX(-100vw);visibility:hidden;opacity:0}1%{transform:translateX(-100vw);visibility:visible;opacity:1}100%{transform:translateX(0);visibility:visible;opacity:1}}.slider{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:0 0;margin:10px 0;direction:rtl;border:solid calc(2px + .2vmin) #555}.slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.slider::-webkit-slider-thumb:hover{outline:solid .45vmin #fff}.slider::-moz-range-thumb{width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.slider::-moz-range-thumb:hover{outline:solid .45vmin #fff}</style>"));
-              // Body
-              client.println(F("</head><body><div id='pageClock' class='page'><svg id='clock' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><text x='07' y='10' class='g'>E</text><text x='17' y='10' class='g'>S</text><text x='27' y='10'>D</text><text x='37' y='10' class='g'>I</text><text x='47' y='10' class='g'>S</text><text x='57' y='10' class='g'>C</text><text x='67' y='10' class='g'>H</text><text x='77' y='10'>W</text><text x='87' y='10' class='M5'>F</text><text x='97' y='10' class='M5'>Ü</text><text x='107' y='10' class='M5'>F</text><text x='07' y='20' class='M15'>V</text><text x='17' y='20' class='M15'>I</text><text x='27' y='20' class='M15'>E</text><text x='37' y='20' class='M15'>R</text><text x='47' y='20' class='M15'>T</text><text x='57' y='20' class='M15'>U</text><text x='67' y='20'>T</text><text x='77' y='20' class='M10'>Z</text><text x='87' y='20' class='M10'>Ä</text><text x='97' y='20' class='M10'>Ä</text><text x='107' y='20'>Y</text><text x='07' y='30' class='M20'>Z</text><text x='17' y='30' class='M20'>W</text><text x='27' y='30' class='M20'>Ä</text><text x='37' y='30' class='M20'>N</text><text x='47' y='30' class='M20'>Z</text><text x='57' y='30' class='M20'>G</text><text x='67' y='30'>Q</text><text x='77' y='30'>D</text><text x='87' y='30' class='MV'>V</text><text x='97' y='30' class='MV'>O</text><text x='107' y='30' class='MV'>R</text><text x='07' y='40'>K</text><text x='17' y='40' class='MA'>A</text><text x='27' y='40' class='MA'>B</text><text x='37' y='40'>D</text><text x='47' y='40' class='M30'>H</text><text x='57' y='40' class='M30'>A</text><text x='67' y='40' class='M30'>U</text><text x='77' y='40' class='M30'>B</text><text x='87' y='40' class='M30'>I</text><text x='97' y='40'>T</text><text x='107' y='40'>Z</text><text x='07' y='50' class='H1'>E</text><text x='17' y='50' class='H1'>I</text><text x='27' y='50' class='H1'>S</text><text x='37' y='50'>Q</text><text x='47' y='50' class='H2'>Z</text><text x='57' y='50' class='H2'>W</text><text x='67' y='50' class='H2'>Ö</text><text x='77' y='50' class='H2'>I</text><text x='87' y='50' class='H3'>D</text><text x='97' y='50' class='H3'>R</text><text x='107' y='50' class='H3'>Ü</text><text x='07' y='60'>Z</text><text x='17' y='60' class='H4'>V</text><text x='27' y='60' class='H4'>I</text><text x='37' y='60' class='H4'>E</text><text x='47' y='60' class='H4'>R</text><text x='57' y='60' class='H4'>I</text><text x='67' y='60' class='H5'>F</text><text x='77' y='60' class='H5'>Ü</text><text x='87' y='60' class='H5'>F</text><text x='97' y='60' class='H5'>I</text><text x='107' y='60'>T</text><text x='07' y='70'>G</text><text x='17' y='70'>M</text><text x='27' y='70' class='H6'>S</text><text x='37' y='70' class='H6'>Ä</text><text x='47' y='70' class='H6'>C</text><text x='57' y='70' class='H6'>H</text><text x='67' y='70' class='H6 H7'>S</text><text x='77' y='70' class='H6 H7'>I</text><text x='87' y='70' class='H7'>B</text><text x='97' y='70' class='H7'>N</text><text x='107' y='70' class='H7'>I</text><text x='07' y='80' class='H8'>A</text><text x='17' y='80' class='H8'>C</text><text x='27' y='80' class='H8'>H</text><text x='37' y='80' class='H8'>T</text><text x='47' y='80' class='H8'>I</text><text x='57' y='80' class='H9'>N</text><text x='67' y='80' class='H9'>Ü</text><text x='77' y='80' class='H9'>N</text><text x='87' y='80' class='H9'>I</text><text x='97' y='80'>O</text><text x='107' y='80'>F</text><text x='07' y='90'>C</text><text x='17' y='90'>D</text><text x='27' y='90' class='H10'>Z</text><text x='37' y='90' class='H10'>Ä</text><text x='47' y='90' class='H10'>N</text><text x='57' y='90' class='H10'>I</text><text x='67' y='90'>X</text><text x='77' y='90' class='H11'>E</text><text x='87' y='90' class='H11'>U</text><text x='97' y='90' class='H11'>F</text><text x='107' y='90' class='H11'>I</text><text x='07' y='100'>O</text><text x='17' y='100'>K</text><text x='27' y='100'>G</text><text x='37' y='100' class='H0'>Z</text><text x='47' y='100' class='H0'>W</text><text x='57' y='100' class='H0'>Ö</text><text x='67' y='100' class='H0'>U</text><text x='77' y='100' class='H0'>F</text><text x='87' y='100' class='H0'>I</text><text x='97' y='100'>L</text><text x='107' y='100'>X</text><text x='07' y='110'>L</text><text x='17' y='110'>Y</text><text x='27' y='110'>B</text><text x='37' y='112.5' class='M1' font-size='8'>°</text><text x='47' y='112.5' class='M2' font-size='8'>°</text><text x='57' y='110'>P</text><text x='67' y='112.5' class='M3' font-size='8'>°</text><text x='77' y='112.5' class='M4' font-size='8'>°</text><text x='87' y='110'>M</text><text x='97' y='110'>K</text><g stroke='#555' fill='none' stroke-width='0.7'><path d='M 106 109.8 Q 106 106.4 109.4 106.4'/><path d='M 107.2 109.8 Q 107.2 107.8 109.4 107.8'/></g><circle cx='108.8' cy='109.5' r='0.6' fill='#555'/></svg> <svg id='power' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 74 74'><line x1='37' y1='15' x2='37' y2='27'/><circle cx='37' cy='37' r='33'/><path d='M 48 22 A 18 18 0 1 1 26 22'/></svg> <svg id='settings' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 74 74'><path d='M30 3 A 37 37 0 0 1 44 3 L 44 13 A 25 25 0 0 1 54.5 20 L 63 14 A 37 37 0 0 1 70 25.5 L 61 31 A 25 25 0 0 1 61 42.5 L 70 48.5 A 37 37 0 0 1 63 60 L 54.5 54 A 25 25 0 0 1 44 61 L 44 71 A 37 37 0 0 1 30 71 L 30 61 A 25 25 0 0 1 19.5 54 L 11 60 A 37 37 0 0 1 4 48.5 L 13 42.5 A 25 25 0 0 1 13 31 L 4 25.5 A 37 37 0 0 1 11 14 L 19.5 20 A 25 25 0 0 1 30 13 Z'/><circle cx='37' cy='37' r='12'/></svg></div><div id='pageSettings' class='page'><div class='pageContent'><div class='pageHead'><svg class='title' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><div class='pageBody'><label for='color'>Weli Farb wosch?</label> <input type='color' id='color' name='head' value='#ffffff'></div><div class='pageBody'><label>Cha mi nid entscheide. Chli vo auem.</label> <svg id='rainbowMode' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path transform='scale(0.9) translate(5,5)' d='M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'/><path class='hide' transform='scale(0.85) translate(5,5)' d='M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'/></svg></div><div class='pageBody'><label class='w100' for='speed'>Wie schnäu?</label> <input type='range' id='speed' class='slider' min='50' max='2000'> <label>gmüetlech</label> <label>jufle</label></div><div class='pageBody'><label>Ir Nacht chli weniger häu.</label> <svg id='darkMode' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path class='hide' transform='scale(0.9) translate(5,5)' d='M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'/><path transform='scale(0.85) translate(5,5)' d='M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'/></svg></div><div class='pageBody'><label>I ha ke Angst vor Gspängster.</label> <svg id='ghostMode' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path class='hide' transform='scale(0.9) translate(5,5)' d='M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'/><path transform='scale(0.85) translate(5,5)' d='M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'/></svg></div><div id='snakeBody' class='pageBody'><label>Schnäu e Rundi Snake spile.</label> <svg id='playSnake' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='-2 -1 12 16'><path d='M2 2 L9 7 L2 12 Z' stroke-width='1.4'/></svg></div><div id='mastermindBody' class='pageBody'><label>Oder hurti es Mastermind.</label> <svg id='playMastermind' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='-2 -1 12 16'><path d='M2 2 L9 7 L2 12 Z' stroke-width='1.4'/></svg></div><div id='wordGuessrBody' class='pageBody'><label>Es paar Wörtli errate.</label> <svg id='playWordGuessr' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='-2 -1 12 16'><path d='M2 2 L9 7 L2 12 Z' stroke-width='1.4'/></svg></div><div class='pageFooter'><p class='content'>Handgmachti Software us Bärn</p><p class='content'><span>Gérard&nbsp;Tyedmers</span> <span><svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 -5 160 170' stroke='#fff' fill='none' stroke-width='10'><circle cx='80' cy='80' r='70'/><path d='M27 32c7 20 93 43 121 28M13 60c-3 30 117 60 135 35M16 106c16 19 84 39 112 24M100 13C34 3 10 130 65 148M100 13C70 33 45 118 65 148M100 13c13 22 5 112-35 135M100 13c60 35 20 147-35 135'/></svg>&nbsp; <a href='https://grrd.ch'>grrd.ch</a> </span><span><svg xmlns='http://www.w3.org/2000/svg' width='30px' height='24px' viewBox='0 0 222 179' stroke='#fff' fill='none' stroke-width='10' stroke-linecap='round'><g transform='translate(-10,10) rotate(-6)'><rect x='15' y='25' rx='10' ry='10' width='192' height='129'/><path d='M15 40 C131 125, 91 125, 207 40'/><line x1='15' y1='134' x2='77' y2='90'/><line x1='207' y1='134' x2='145' y2='90'/></g></svg>&nbsp; <a href='mailto:grrd@gmx.net'>grrd@gmx.net</a></span></p></div></div><svg id='settingsClose' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path transform='scale(0.85) translate(5,5)' d='M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'/></svg></div><div id='pageSnake' class='page'><div class='pageContent'><div class='pageHead'><svg class='title' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><svg id='control' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><path data-num='1' class='snakeButton' transform='scale(3.8) translate(8,10) rotate(270)' d='M2 2 L9 7 L2 12 Z'/><path data-num='2' class='snakeButton' transform='scale(3.8) translate(20,7.5)' d='M2 2 L9 7 L2 12 Z'/><path data-num='3' class='snakeButton' transform='scale(3.8) translate(22,19) rotate(90)' d='M2 2 L9 7 L2 12 Z'/><path data-num='4' class='snakeButton' transform='scale(3.8) translate(10,21.5) rotate(180)' d='M2 2 L9 7 L2 12 Z'/></svg></div><svg id='exitSnake' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path transform='scale(0.9) translate(5,5)' d='M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'/></svg> <span id='scoreSnake'></span></div><div id='pageMastermind' class='page'><div class='pageContent'><div class='pageHead'><svg class='title' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label class='content'>Hie chasch d Farb useläse:</label> <span class='content'><svg xmlns='http://www.w3.org/2000/svg' class='svgButton colorButton' data-num='1' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton colorButton' data-num='2' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton colorButton' data-num='3' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton colorButton' data-num='4' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton colorButton' data-num='5' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton colorButton' data-num='6' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> </span><label class='content'>Hie muesch di Versuech iigäh:</label> <span class='content'><svg xmlns='http://www.w3.org/2000/svg' class='svgButton codeButton' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton codeButton' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton codeButton' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg xmlns='http://www.w3.org/2000/svg' class='svgButton codeButton' viewBox='0 0 70 70'><circle cx='35' cy='35' r='25'/></svg> <svg id='sendMastermind' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path transform='scale(0.85) translate(5,5)' d='M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'/></svg></span></div><svg id='exitMastermind' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path transform='scale(0.9) translate(5,5)' d='M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'/></svg> <span id='scoreMastermind'></span></div><div id='pageWordGuessr' class='page'><div class='pageContent'><div class='pageHead'><svg class='title' viewBox='4 0 106 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label for='wordInput' class='content'><br>Weles isch ds gsuechte Wort:</label> <span class='content'><input type='text' id='wordInput' maxlength='20' oninput='this.value = this.value.toUpperCase().replace(/[^A-ZÄÖÜ]/g, &#39;&#39;)' spellcheck='false' autocomplete='off'> <svg id='sendWordGuessr' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path transform='scale(0.85) translate(5,5)' d='M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'/></svg></span></div><svg id='exitWordGuessr' class='svgButton' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path transform='scale(0.9) translate(5,5)' d='M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'/></svg> <span id='scoreWordGuessr'></span></div>"));
-              // Script
-              client.println(F("<script>!function(){'use strict';let e,t,s,n=1,a=1,i=1,c=0,r=255,o=0,d=0,l=0,u=0,g='1',f=0,w=0,m=0;function L(e){return document.getElementById(e)}function h(e){return localStorage.getItem(e)}function p(e,t){return localStorage.setItem(e,t)}const v=L('clock'),M=L('pageClock'),k=L('pageSettings'),E=L('pageSnake'),b=L('pageMastermind'),y=L('pageWordGuessr'),S=L('color'),A=L('speed'),_=L('wordInput'),T=L('rainbowMode'),x=L('ghostMode'),R=L('darkMode'),G=document.getElementsByTagName('body')[0],B=document.getElementsByClassName('codeButton'),I=document.getElementsByClassName('colorButton');function H(){c&&(r&&!d?(r-=1,o+=1):o?(o-=1,d+=1):(d-=1,r+=1),W('rgb('+r+', '+o+', '+d+')'),setTimeout(H,A.value/10))}function C(e){n=e,n?G.classList.remove('off'):G.classList.add('off'),s=-1}function N(e,t){document.activeElement.blur(),e.classList.remove('swipe-out-right'),t.classList.remove('swipe-in-left'),e.classList.add('swipe-out'),t.classList.add('swipe-in')}function D(e,t){e.classList.remove('swipe-out'),t.classList.remove('swipe-in'),e.classList.add('swipe-out-right'),t.classList.add('swipe-in-left')}function W(e){document.documentElement.style.setProperty('--main-color',e)}function O(e){e!==c&&(T.children[0].classList.toggle('hide'),T.children[1].classList.toggle('hide')),c=e,c?H():W(S.value)}function q(e){e!==i&&(x.children[0].classList.toggle('hide'),x.children[1].classList.toggle('hide')),i=e}function j(e){e!==a&&(R.children[0].classList.toggle('hide'),R.children[1].classList.toggle('hide')),a=e}function V(){let e=parseInt(S.value.substring(1,3),16),t=parseInt(S.value.substring(3,5),16),s=parseInt(S.value.substring(5,7),16);if(p('wc_color',S.value),p('wc_rainbow',c),p('wc_dark',a),p('wc_ghost',i),p('wc_speed',A.value.toString()),window.location.href.includes('192.168.')||window.location.href.includes('.local')){let r=new XMLHttpRequest;r.open('GET','/update_params?red='+e+'&green='+t+'&blue='+s+'&rainbow='+c+'&darkmode='+a+'&speed='+A.value+'&power='+n+'&ghost='+i,!0),r.send()}}function X(e){let t=new XMLHttpRequest;t.onreadystatechange=function(){4===this.readyState&&200===this.status&&(l=10*(parseInt(t.responseText)-3),l>u&&(u=l,p('wc_score',u)),L('scoreSnake').innerHTML='Score: '+l+' / High-Score : '+u)},t.open('GET','snake?dir='+e,!0),t.send()}function J(e){let t='';if(1===e)t='mastermind?c4=0',U(),z();else if(2===e)t='mastermind?c4=7',U();else{if(document.querySelectorAll('[data-num=\"1\"], [data-num=\"2\"], [data-num=\"3\"], [data-num=\"4\"], [data-num=\"5\"], [data-num=\"6\"]').length<14)return void z('Muesch zersch aues uswähle.');t='mastermind?c1='+B[0].getAttribute('data-num')+'&c2='+B[1].getAttribute('data-num')+'&c3='+B[2].getAttribute('data-num')+'&c4='+B[3].getAttribute('data-num'),U()}let s=new XMLHttpRequest;s.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(s.responseText);f=e.place,w=e.try,4===f?z('Bravo! I '+w+' Mau usegfunde.'):11===w?z('Schad, jetz hesch verlore.'):z()}},s.open('GET',t,!0),s.send()}function U(){Array.from(B).forEach((function(e){e.setAttribute('data-num','')}))}function z(e){L('scoreMastermind').innerHTML=e||'<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"svgMsg\" viewBox=\"0 0 70 70\"> <circle cx=\"35\" cy=\"35\" r=\"25\" fill=\"white\"/></svg>&nbsp;am richtige Ort&nbsp;<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"svgMsg\" viewBox=\"0 0 70 70\"> <circle cx=\"35\" cy=\"35\" r=\"25\" fill=\"cornflowerblue\"/></svg>&nbsp;di richtigi Farb'}function K(e){let t;t='1'===e?'wordguessr?new':'2'===e?'wordguessr?exit':'wordguessr?word='+_.value;let s=new XMLHttpRequest;s.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(s.responseText);0===e.score?(_.classList.add('error'),setTimeout((function(){_.classList.remove('error'),_.value=''}),100)):1===e.score&&(m+=e.score,L('scoreWordGuessr').innerHTML=m+' hesch usegfunde.',_.classList.add('ok'),setTimeout((function(){_.classList.remove('ok'),_.value=''}),100))}},s.open('GET',t,!0),s.send()}setInterval((function(){e=new Date,a&&(e.getHours()>=22||e.getHours()<7)?G.classList.add('d'):G.classList.remove('d'),s!==e.getMinutes()&&(s=e.getMinutes(),v.classList.remove(...v.classList),0!==n&&(s>=55?v.classList.add('M5','MV'):s>=50?v.classList.add('M10','MV'):s>=45?v.classList.add('M15','MV'):s>=40?v.classList.add('M20','MV'):s>=35?v.classList.add('M5','MA','M30'):s>=30?v.classList.add('M30'):s>=25?v.classList.add('M5','MV','M30'):s>=20?v.classList.add('M20','MA'):s>=15?v.classList.add('M15','MA'):s>=10?v.classList.add('M10','MA'):s>=5&&v.classList.add('M5','MA'),t=e.getHours(),s>=25&&(t+=1),t%=12,v.classList.add('H'+t.toString()),v.classList.add('M'+(s%5).toString())))}),100),L('power').addEventListener('click',(function(){C(1-n),V()})),L('settings').addEventListener('click',(function(){N(M,k)})),L('settingsClose').addEventListener('click',(function(){D(M,k),k.classList.remove('swipe-out-right'),V()})),L('playSnake').addEventListener('click',(function(){N(k,E),X(5)})),L('exitSnake').addEventListener('click',(function(){D(k,E),X(6)})),L('playMastermind').addEventListener('click',(function(){N(k,b),J(1)})),L('exitMastermind').addEventListener('click',(function(){D(k,b),J(2)})),L('sendMastermind').addEventListener('click',J),L('playWordGuessr').addEventListener('click',(function(){N(k,y),K('1'),m=0,L('scoreWordGuessr').innerHTML=''})),L('exitWordGuessr').addEventListener('click',(function(){D(k,y),K('2')})),L('sendWordGuessr').addEventListener('click',K),Array.from(document.getElementsByClassName('snakeButton')).forEach((function(e){e.addEventListener('click',(function(e){X(e.target.getAttribute('data-num'))}))})),Array.from(I).forEach((function(e){e.addEventListener('click',(function(e){Array.from(I).forEach((function(e){e.classList.remove('g')})),e.target.classList.add('g'),g=e.target.getAttribute('data-num')}))})),Array.from(B).forEach((function(e){e.addEventListener('click',(function(e){e.target.setAttribute('data-num',g),z()}))})),document.onkeydown=function(e){let t=0;switch(e.key){case'ArrowUp':t=1;break;case'ArrowRight':t=2;break;case'ArrowDown':t=3;break;case'ArrowLeft':t=4;break;case'Enter':y.classList.contains('swipe-in')&&K()}t&&E.classList.contains('swipe-in')&&(X(t),L('control').children[t-1].classList.add('g'),setTimeout((function(){L('control').children[t-1].classList.remove('g')}),200))},S.addEventListener('change',(e=>{W(S.value)}),!1),T.addEventListener('click',(e=>{O(1-c)})),x.addEventListener('click',(e=>{q(1-i)})),R.addEventListener('click',(e=>{j(1-a)})),h('wc_color')&&(S.value=h('wc_color'),W(S.value)),h('wc_rainbow')&&O(parseInt(h('wc_rainbow'))),h('wc_ghost')&&q(parseInt(h('wc_ghost'))),h('wc_dark')&&j(parseInt(h('wc_dark'))),h('wc_speed')&&(A.value=parseInt(h('wc_speed'))),h('wc_score')&&(u=h('wc_score')),L('iphone').href=L('icon').href;const F=['ewfGRRDcSajnWORDuCLOCK','ewfGRRDcSajmSNAKExlbdk','ewfGRRDcSajMASTERMINDk','ewfGRRDcSajWORDbGUESSR'];if(Array.from(document.getElementsByClassName('title')).forEach((function(e,t){for(let s=0;s<22;s++){const n=document.createElementNS('http://www.w3.org/2000/svg','text');let a=F[t].substring(s,s+1),i=a.toUpperCase();n.setAttribute('x',s%11*10+7),n.setAttribute('y',10*Math.ceil((s+1)/11)),n.textContent=i,a===i&&n.setAttribute('class','g'),e.appendChild(n)}})),window.location.href.includes('192.168.')||window.location.href.includes('.local')){let e=new XMLHttpRequest;e.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let a=JSON.parse(e.responseText);a.rainbow||(S.value=(t=a.red,s=a.green,n=a.blue,'#'+(1<<24|t<<16|s<<8|n).toString(16).slice(1))),W(S.value),j(a.darkmode),O(a.rainbow),q(a.ghost),C(a.power),A.value=a.speed}var t,s,n},e.open('GET','get_params',!0),e.send()}else L('snakeBody').classList.add('hide'),L('mastermindBody').classList.add('hide'),L('wordGuessrBody').classList.add('hide')}();</script></body></html>"));
+              client.println(F("<!doctype html><html lang='en'><head><meta charset='utf-8'><title>grrd s WordClock</title><link id='icon' rel='icon' href='data:image/png;base64,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'><meta name='description' content='grrd s WordClock is a web WordClock and a user interface for the Wemos Mini D1 Lite Clock'><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'><meta name='theme-color' content='#444'><meta name='apple-mobile-web-app-title' content='WordClock'><link id='iphone' rel='apple-touch-icon'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black'><style>:root{--main-color:#878ade}html{height:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}body{background:linear-gradient(#444,#222);min-width:100vw;margin:0;position:fixed;overflow:hidden;font-family:Arial,sans-serif;font-size:large;color:#fff;text-shadow:1px 1px 2px #000;height:100%}.p{width:100vw;position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(#444,#222)}#c,#ctrl,#ctrlt,.t{font:6px sans-serif;fill:#555;text-shadow:none;text-anchor:middle;width:100vmin;margin:auto;display:block}@media (orientation:landscape){#ctrl,#ctrlt{width:100%;max-width:60vh}}@media (orientation:portrait){#ctrl,#ctrlt{width:100%}}.t,.w100{width:100%}.M1,.M2,.M3,.M4{font-size:8px}.H0 .H0,.H1 .H1,.H10 .H10,.H11 .H11,.H2 .H2,.H3 .H3,.H4 .H4,.H5 .H5,.H6 .H6,.H7 .H7,.H8 .H8,.H9 .H9,.M1 .M1,.M10 .M10,.M15 .M15,.M2 .M1,.M2 .M2,.M20 .M20,.M3 .M1,.M3 .M2,.M3 .M3,.M30 .M30,.M4 .M1,.M4 .M2,.M4 .M3,.M4 .M4,.M5 .M5,.MA .MA,.MV .MV,.g{fill:var(--main-color);text-shadow:0 0 10px var(--main-color)}.off .g:not(.colorBtn){fill:#555;text-shadow:none}.d .H0 .H0,.d .H1 .H1,.d .H10 .H10,.d .H11 .H11,.d .H2 .H2,.d .H3 .H3,.d .H4 .H4,.d .H5 .H5,.d .H6 .H6,.d .H7 .H7,.d .H8 .H8,.d .H9 .H9,.d .M1 .M1,.d .M10 .M10,.d .M15 .M15,.d .M2 .M1,.d .M2 .M2,.d .M20 .M20,.d .M3 .M1,.d .M3 .M2,.d .M3 .M3,.d .M30 .M30,.d .M4 .M1,.d .M4 .M2,.d .M4 .M3,.d .M4 .M4,.d .M5 .M5,.d .MA .MA,.d .MV .MV,.d .g{filter:brightness(70%)}a:link{color:var(--main-color)}a:visited{color:var(--main-color);filter:brightness(85%)}a:focus,a:hover{color:var(--main-color);filter:brightness(125%)}a:active{color:var(--main-color);filter:brightness(125%)}#s,#xMM,#xS,#xSN,#xTE,#xWG{position:absolute;right:4vmin;bottom:4vmin}#p{position:absolute;left:4vmin;bottom:4vmin}#sMM,#sSN,#sTE,#sWG{position:absolute;left:4vmin;bottom:4vmin;display:flex;align-items:center}.sb,.snb,.svgMsg{width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;stroke:#555;stroke-linejoin:round;stroke-linecap:round;stroke-width:6;fill:none;z-index:1000}circle{pointer-events:none}input[type=text]{width:calc(100% - 4.5vmin - 40px);border:2px solid #555;border-radius:5px;background-color:transparent;color:#fff;padding:10px;font-size:larger}input[type=text]:focus{border:2px solid #fff;outline:0}input[type=text].error{border:2px solid #f70562}input[type=text].ok{border:2px solid #059c7d}.sb.g,.sb:hover,.snb.g,.snb:hover{stroke:#fff;text-shadow:0 0 10px #fff;cursor:pointer}path.snb{stroke-width:1.4;fill:#333;fill-opacity:0.01}#pMM,#pS,#pSN,#pTE,#pWG{transform:translateX(100vw);visibility:hidden;opacity:0}.pC{display:block;position:absolute;overflow:auto;top:0;left:0;right:0;margin:0 auto 0 auto;width:600px;max-width:calc(100vw - 40px);height:100%}.c,.c>span,.pb{display:flex;justify-content:space-between;margin-bottom:20px;align-items:center;flex-wrap:wrap}.pf{margin-top:60px}#co{appearance:none;background-color:transparent;width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;border:none;cursor:pointer}#co::-webkit-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-moz-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-webkit-color-swatch:hover{border:.45vmin solid #fff}#co::-moz-color-swatch:hover{border:.45vmin solid #fff}.h{display:none}svg[data-num='1']{fill:#fc034e}[data-num='2']{fill:#fc6f03}[data-num='3']{fill:#fcce03}[data-num='4']{fill:#18fc03}[data-num='5']{fill:#0384fc}[data-num='6']{fill:#f803fc}.si{animation-name:si;animation-fill-mode:forwards;animation-duration:.7s}@keyframes si{0%{transform:translateX(100vw);visibility:hidden;opacity:0}1%{transform:translateX(100vw);visibility:visible;opacity:1}100%{transform:translateX(0);visibility:visible;opacity:1}}.so{animation-name:so;animation-fill-mode:forwards;animation-duration:.7s}@keyframes so{0%{transform:translateX(0);visibility:visible;opacity:1}99%{transform:translateX(-100vw);visibility:visible;opacity:1}100%{transform:translateX(-100vw);visibility:hidden;opacity:0}}.sil{animation-name:sil;animation-fill-mode:forwards;animation-duration:.7s}@keyframes sil{0%{transform:translateX(0);visibility:visible;opacity:1}99%{transform:translateX(100vw);visibility:visible;opacity:1}100%{transform:translateX(100vw);visibility:hidden;opacity:0}}.sor{animation-name:sor;animation-fill-mode:forwards;animation-duration:.7s}@keyframes sor{0%{transform:translateX(-100vw);visibility:hidden;opacity:0}1%{transform:translateX(-100vw);visibility:visible;opacity:1}100%{transform:translateX(0);visibility:visible;opacity:1}}.sl{appearance:none;width:100%;height:4px;border-radius:2px;background:0 0;margin:10px 0;direction:rtl;border:solid calc(2px + .2vmin) #555}.sl::-webkit-slider-thumb{appearance:none;width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-webkit-slider-thumb:hover{outline:solid .45vmin #fff}.sl::-moz-range-thumb{width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-moz-range-thumb:hover{outline:solid .45vmin #fff}</style></head><body><div id='pC' class='p'><svg id='c' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><g stroke='#555' fill='none' stroke-width='0.7'><path d='M 106 109.8 Q 106 106.4 109.4 106.4'/><path d='M 107.2 109.8 Q 107.2 107.8 109.4 107.8'/></g><circle cx='108.8' cy='109.5' r='0.6' fill='#555'/></svg> <svg id='p' class='sb' viewBox='0 0 74 74'><line x1='37' y1='15' x2='37' y2='27'/><circle cx='37' cy='37' r='33'/><path d='M 48 22 A 18 18 0 1 1 26 22'/></svg> <svg id='s' class='sb' viewBox='0 0 74 74'><path d='M30 3 A 37 37 0 0 1 44 3 L 44 13 A 25 25 0 0 1 54.5 20 L 63 14 A 37 37 0 0 1 70 25.5 L 61 31 A 25 25 0 0 1 61 42.5 L 70 48.5 A 37 37 0 0 1 63 60 L 54.5 54 A 25 25 0 0 1 44 61 L 44 71 A 37 37 0 0 1 30 71 L 30 61 A 25 25 0 0 1 19.5 54 L 11 60 A 37 37 0 0 1 4 48.5 L 13 42.5 A 25 25 0 0 1 13 31 L 4 25.5 A 37 37 0 0 1 11 14 L 19.5 20 A 25 25 0 0 1 30 13 Z'/><circle cx='37' cy='37' r='12'/></svg></div><div id='pS' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><div class='pb'><label for='co'>Weli Farb wosch?</label> <input type='color' id='co' value='#ffffff'/></div><div class='pb'><label>Cha mi nid entscheide. Chli vo auem.</label> <svg id='rm' class='sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></div><div class='pb'><label class='w100' for='speed'>Wie schnäu?</label> <input type='range' id='speed' class='sl' min='50' max='2000'/> <label>gmüetlech</label> <label>jufle</label></div><div class='pb'><label>Ir Nacht chli weniger häu.</label> <svg id='dm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></div><div class='pb'><label>I ha ke Angst vor Gspängster.</label> <svg id='gm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></div><div class='pb'><label>Schnäu e Rundi Snake spile.</label> <svg id='SN' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pb'><label>Chli Tetris zocke.</label> <svg id='TE' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pb'><label>Oder hurti es Mastermind.</label> <svg id='MM' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pb'><label>Es paar Wörtli errate.</label> <svg id='WG' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pf'><p class='c'>Handgmachti Software us Bärn</p><p class='c'><span>Gérard&nbsp;Tyedmers</span> <span><svg width='24' height='24' viewBox='0 -5 160 170' stroke='#fff' fill='none' stroke-width='10'><circle cx='80' cy='80' r='70'/><path d='M27 32c7 20 93 43 121 28M13 60c-3 30 117 60 135 35M16 106c16 19 84 39 112 24M100 13C34 3 10 130 65 148M100 13C70 33 45 118 65 148M100 13c13 22 5 112-35 135M100 13c60 35 20 147-35 135'/></svg>&nbsp; <a href='https://grrd.ch'>grrd.ch</a> </span><span><svg width='30px' height='24px' viewBox='0 0 222 179' stroke='#fff' fill='none' stroke-width='10' stroke-linecap='round'><g transform='translate(-10,10) rotate(-6)'><rect x='15' y='25' rx='10' ry='10' width='192' height='129'/><path d='M15 40 C131 125, 91 125, 207 40'/><line x1='15' y1='134' x2='77' y2='90'/><line x1='207' y1='134' x2='145' y2='90'/></g></svg>&nbsp; <a href='mailto:grrd@gmx.net'>grrd@gmx.net</a></span></p></div></div><svg id='xS' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></div><div id='pSN' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><svg id='ctrl' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><path data-num='1' class='snb' transform='scale(3.8) translate(8,10) rotate(270)'/><path data-num='2' class='snb' transform='scale(3.8) translate(20,7.5)'/><path data-num='3' class='snb' transform='scale(3.8) translate(22,19) rotate(90)'/><path data-num='4' class='snb' transform='scale(3.8) translate(10,21.5) rotate(180)'/></svg></div><svg id='xSN' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sSN'></span></div><div id='pTE' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><svg id='ctrlt' viewBox='0 -15 115 130' preserveAspectRatio='xMidYMid slice' role='img'><g class='snb' stroke-width='6' data-num='1' transform='scale(0.8) translate(34,-15)'><path data-num='1' stroke='none' fill='#333' fill-opacity='0.01' d='M13 37 A 24 24 0 1 1 13 37.5'></path><path data-num='1' id='arc' d='M23 45 L17.5 50.5 A 24 24 10 0 1 34 13 L34 4 L50 17 L34 33 L34 24 '></path><use data-num='1' href='#arc' transform='rotate(180 37 37)'></use></g><path data-num='2' class='snb' transform='scale(3.8) translate(20,7.5)'/><path data-num='3' class='snb' transform='scale(3.8) translate(22,19) rotate(90)'/><path data-num='4' class='snb' transform='scale(3.8) translate(10,21.5) rotate(180)'/></svg></div><svg id='xTE' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sTE'></span></div><div id='pMM' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label class='c'>Hie chasch d Farb useläse:</label> <span class='c'><svg class='sb cb' data-num='1'/><svg class='sb cb' data-num='2'/><svg class='sb cb' data-num='3'/><svg class='sb cb' data-num='4'/><svg class='sb cb' data-num='5'/><svg class='sb cb' data-num='6'/></span><label class='c'>Hie muesch di Versuech iigäh:</label> <span class='c'><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg id='cMM' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xMM' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sMM'/></div><div id='pWG' class='p'><div class='pC'><div><svg class='t' viewBox='4 0 106 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><label for='wi' class='c'><br>Weles isch ds gsuechte Wort:</label> <span class='c'><input type='text' id='wi' maxlength='20' oninput='this.value = this.value.toUpperCase().replace(/[^A-ZÄÖÜ]/g, &#39;&#39;)' spellcheck='false' autocomplete='off'> <svg id='cWG' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xWG' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sWG'/></div><script>!function(){'use strict';const e=document,t=C('c'),n=C('pC'),r=C('pS'),a=C('pSN'),o=C('pTE'),c=C('pMM'),s=C('pWG'),i=C('co'),u=C('speed'),d=C('wi'),f=C('rm'),l=C('gm'),M=C('dm'),g=e.getElementsByTagName('body')[0],H=W('cdb'),m=W('cb'),w='click',h='<svg class=\"svgMsg\" viewBox=\"0 0 70 70\"> <circle cx=\"35\" cy=\"35\" r=\"25\" fill=';let p,v,S,L=1,b=1,E=1,y=0,T=255,A=0,I=0,R=0,x=0,_=0,G='1',N=0,k=0,D=0;function C(t){return e.getElementById(t)}function W(t){return e.getElementsByClassName(t)}function Z(e){return localStorage.getItem(e)}function B(e,t){return localStorage.setItem(e,t)}function V(e){return e.classList}function O(e){return e.children}function F(e,t,n){e.setAttribute(t,n)}function X(e,t,n){e.addEventListener(t,n)}function q(){p=new Date,b&&(p.getHours()>=22||p.getHours()<7)?V(g).add('d'):V(g).remove('d'),S!==p.getMinutes()&&(S=p.getMinutes(),V(t).remove(...V(t)),0!==L&&(S>=55?V(t).add('M5','MV'):S>=50?V(t).add('M10','MV'):S>=45?V(t).add('M15','MV'):S>=40?V(t).add('M20','MV'):S>=35?V(t).add('M5','MA','M30'):S>=30?V(t).add('M30'):S>=25?V(t).add('M5','MV','M30'):S>=20?V(t).add('M20','MA'):S>=15?V(t).add('M15','MA'):S>=10?V(t).add('M10','MA'):S>=5&&V(t).add('M5','MA'),v=p.getHours(),S>=25&&(v+=1),v%=12,V(t).add('H'+v.toString()),V(t).add('M'+(S%5).toString())))}function U(){y&&(T&&!I?(T-=1,A+=1):A?(A-=1,I+=1):(I-=1,T+=1),z('rgb('+T+', '+A+', '+I+')'),setTimeout(U,u.value/10))}function j(e){L=e,L?V(g).remove('off'):V(g).add('off'),S=-1,q()}function K(t,n){e.activeElement.blur(),V(t).remove('sor'),V(n).remove('sil'),V(t).add('so'),V(n).add('si')}function J(e,t){V(e).remove('so'),V(t).remove('si'),V(e).add('sor'),V(t).add('sil')}function z(t){e.documentElement.style.setProperty('--main-color',t)}function P(e){e!==y&&(V(O(f)[0]).toggle('h'),V(O(f)[1]).toggle('h')),y=e,y?U():z(i.value)}function Q(e){e!==E&&(V(O(l)[0]).toggle('h'),V(O(l)[1]).toggle('h')),E=e}function Y(e){e!==b&&(V(O(M)[0]).toggle('h'),V(O(M)[1]).toggle('h')),b=e}function $(){let e=parseInt(i.value.substring(1,3),16),t=parseInt(i.value.substring(3,5),16),n=parseInt(i.value.substring(5,7),16);B('wc_c',i.value),B('wc_r',y),B('wc_d',b),B('wc_g',E),B('wc_s',u.value.toString());let r=new XMLHttpRequest;r.open('GET','/update_params?red='+e+'&green='+t+'&blue='+n+'&rainbow='+y+'&darkmode='+b+'&speed='+u.value+'&power='+L+'&ghost='+E,!0),r.send()}function ee(e){let t=new XMLHttpRequest;t.onreadystatechange=function(){4===this.readyState&&200===this.status&&(R=10*(parseInt(t.responseText)-3),R>x&&(x=R,B('wc_sc',x)),C('sSN').innerHTML='Score: '+R+' / High-Score : '+x)},t.open('GET','snake?dir='+e,!0),t.send()}function te(e){let t=new XMLHttpRequest;t.onreadystatechange=function(){4===this.readyState&&200===this.status&&(R=parseInt(t.responseText),R>_&&(_=R,B('wc_te',_)),C('sTE').innerHTML='Score: '+R+' / High-Score : '+_)},t.open('GET','tetris?dir='+e,!0),t.send()}function ne(t){let n='';if(1===t)n='mastermind?c4=0',re(),ae();else if(2===t)n='mastermind?c4=7',re();else{if(e.querySelectorAll('.cdb[data-num=\"1\"], .cdb[data-num=\"2\"], .cdb[data-num=\"3\"], .cdb[data-num=\"4\"], .cdb[data-num=\"5\"], .cdb[data-num=\"6\"]').length<4)return void ae('Muesch zersch aues uswähle.');n='mastermind?c1='+H[0].getAttribute('data-num')+'&c2='+H[1].getAttribute('data-num')+'&c3='+H[2].getAttribute('data-num')+'&c4='+H[3].getAttribute('data-num'),re()}let r=new XMLHttpRequest;r.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(r.responseText);N=e.place,k=e.try,4===N?ae('Bravo! I '+k+' Mau usegfunde.'):11===k?ae('Schad, jetz hesch verlore.'):ae()}},r.open('GET',n,!0),r.send()}function re(){Array.from(H).forEach((function(e){F(e,'data-num','')}))}function ae(e){C('sMM').innerHTML=e||h+'\"white\"/></svg>&nbsp;am richtige Ort&nbsp;'+h+'\"cornflowerblue\"/></svg>&nbsp;di richtigi Farb'}function oe(e){let t;t='1'===e?'wordguessr?new':'2'===e?'wordguessr?exit':'wordguessr?word='+d.value;let n=new XMLHttpRequest;n.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(n.responseText);0===e.score?(V(d).add('error'),setTimeout((function(){V(d).remove('error'),d.value=''}),100)):1===e.score&&(D+=e.score,C('sWG').innerHTML=D+' hesch usegfunde.',V(d).add('ok'),setTimeout((function(){V(d).remove('ok'),d.value=''}),100))}},n.open('GET',t,!0),n.send()}setInterval(q,100),X(C('p'),w,(function(){j(1-L),$()})),X(C('s'),w,(function(){K(n,r)})),X(C('xS'),w,(function(){J(n,r),V(r).remove('sor'),$()})),X(C('SN'),w,(function(){K(r,a),ee(5)})),X(C('xSN'),w,(function(){J(r,a),ee(6)})),X(C('TE'),w,(function(){K(r,o),te(5)})),X(C('xTE'),w,(function(){J(r,o),te(6)})),X(C('MM'),w,(function(){K(r,c),ne(1)})),X(C('xMM'),w,(function(){J(r,c),ne(2)})),X(C('cMM'),w,ne),X(C('WG'),w,(function(){K(r,s),oe('1'),D=0,C('sWG').innerHTML=''})),X(C('xWG'),w,(function(){J(r,s),oe('2')})),X(C('cWG'),w,oe),Array.from(W('snb')).forEach((function(e,t){F(e,'d','M2 2 L9 7 L2 12 Z'),X(e,w,t<4?function(e){ee(e.target.getAttribute('data-num'))}:function(e){te(e.target.getAttribute('data-num'))})})),Array.from(W('n')).forEach((function(e){F(e,'d','M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'),F(e,'transform','scale(0.9) translate(5,5)')})),Array.from(W('y')).forEach((function(e){F(e,'d','M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'),F(e,'transform','scale(0.85) translate(5,5)')})),Array.from(W('play')).forEach((function(e){e.innerHTML='<path d=\"M2 2 L9 7 L2 12 Z\" stroke-width=\"1.4\"/>'})),Array.from(m).forEach((function(e){X(e,w,(function(e){Array.from(m).forEach((function(e){V(e).remove('g')})),V(e.target).add('g'),G=e.target.getAttribute('data-num')})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),Array.from(H).forEach((function(e){X(e,w,(function(e){F(e.target,'data-num',G),ae()})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),e.onkeydown=function(e){let t=0;switch(e.key){case'ArrowUp':t=1;break;case'ArrowRight':t=2;break;case'ArrowDown':t=3;break;case'ArrowLeft':t=4;break;case'Enter':V(s).contains('si')&&oe()}t&&V(a).contains('si')&&(ee(t),V(O(C('ctrl'))[t-1]).add('g'),setTimeout((function(){V(O(C('ctrl'))[t-1]).remove('g')}),200)),t&&V(o).contains('si')&&(te(t),V(O(C('ctrlt'))[t-1]).add('g'),setTimeout((function(){V(O(C('ctrlt'))[t-1]).remove('g')}),200))},X(i,'change',(e=>{z(i.value)})),X(f,w,(e=>{P(1-y)})),X(l,w,(e=>{Q(1-E)})),X(M,w,(e=>{Y(1-b)})),Z('wc_c')&&(i.value=Z('wc_c'),z(i.value)),Z('wc_r')&&P(parseInt(Z('wc_r'))),Z('wc_g')&&Q(parseInt(Z('wc_g'))),Z('wc_d')&&Y(parseInt(Z('wc_d'))),Z('wc_s')&&(u.value=parseInt(Z('wc_s'))),Z('wc_sc')&&(x=Z('wc_sc')),Z('wc_te')&&(_=Z('wc_te')),C('iphone').href=C('icon').href,'E g,S g,D,I g,S g,C g,H g,W,F M5,Ü M5,F M5,V M15,I M15,E M15,R M15,T M15,U M15,T,Z M10,Ä M10,Ä M10,Y,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,U M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,Ö H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,Ü H5,F H5,I H5,T,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,U H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,U H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K'.split(',').forEach((function(n,r){const a=e.createElementNS('http://www.w3.org/2000/svg','text');F(a,'x',r%11*10+7),F(a,'y',10*Math.ceil((r+1)/11)),[113,114,116,117].includes(r)&&F(a,'y',112.5),n.split(' ').forEach((function(e,t){t?V(a).add(e):a.textContent=e})),t.appendChild(a)}));const ce=['ewfGRRDcSajnWORDuCLOCK','ewfGRRDcSajmSNAKExlbdk','ewfGRRDcSajmTETRISlbdk','ewfGRRDcSajMASTERMINDk','ewfGRRDcSajWORDbGUESSR'];Array.from(W('t')).forEach((function(t,n){for(let r=0;r<22;r++){const a=e.createElementNS('http://www.w3.org/2000/svg','text');let o=ce[n].substring(r,r+1),c=o.toUpperCase();F(a,'x',r%11*10+7),F(a,'y',10*Math.ceil((r+1)/11)),a.textContent=c,o===c&&F(a,'class','g'),t.appendChild(a)}}));let se=new XMLHttpRequest;se.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let r=JSON.parse(se.responseText);r.rainbow||(i.value=(e=r.red,t=r.green,n=r.blue,'#'+(1<<24|e<<16|t<<8|n).toString(16).slice(1))),z(i.value),Y(r.darkmode),P(r.rainbow),Q(r.ghost),j(r.power),u.value=r.speed}var e,t,n},se.open('GET','get_params',!0),se.send()}();</script></body></html>"));
             }
 
             // The HTTP response ends with another blank line
@@ -1007,10 +1304,10 @@ void loop() {
         ghostChange = 1;
       }
       // Calculate the RGB values for the current step
-      int red   = (120 * ghostStep) / 100;    // Red value from 0 to 100
-      int blue  = (6 * ghostStep) / 100;      // Blue value from 0 to 5
+      int tempRed   = (120 * ghostStep) / 100;    // Red value from 0 to 100
+      int tempBlue  = (6 * ghostStep) / 100;      // Blue value from 0 to 5
     
-      lightup(WordGhostEyes, pixels.Color(red, 0, blue));
+      lightup(WordGhostEyes, pixels.Color(tempRed, 0, tempBlue));
       pixels.show();
       delay(10);  
       getLocalTime();
@@ -1092,7 +1389,7 @@ void loop() {
       }
 
       if (snakeNext >= 0) {
-        // move snake on step forward
+        // move snake one step forward
         for (int i = snakeLen - 1; i > 0; i--) {
           snake[i] = snake[i-1];
         }
@@ -1110,6 +1407,29 @@ void loop() {
         lastMinuteWordClock = 61;
       }
 
+    }
+  } else if (inTetris) {
+    if (!gameOver && millis() - lastDrop > dropInterval) {
+      lastDrop = millis();
+      if (!checkCollision(posX, posY + 1, rotation)) {
+        posY++;
+      } else {
+        placeTetromino();
+        clearLines();
+        spawnTetromino();
+        if (checkCollision(posX, posY, rotation)) {
+          gameOver = true;
+        }
+      }
+      if (!gameOver) {
+        drawBoard();
+      }
+    }
+    if (gameOver) {
+      delay(500);
+      chase(Red);
+      inTetris = false;
+      lastMinuteWordClock = 61;
     }
   } else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
@@ -1153,7 +1473,7 @@ void loop() {
     }
   }
 
-  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr) {
+  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
       getLocalTime();
       displayTime();

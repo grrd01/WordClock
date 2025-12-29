@@ -10,6 +10,27 @@
 (function () {
     "use strict";
 
+    const doc = document;
+    const clock = ElementById("c");
+    const pClock = ElementById("pC");
+    const pSettings = ElementById("pS");
+    const pSnake = ElementById("pSN");
+    const pTetris = ElementById("pTE");
+    const pMastermind = ElementById("pMM");
+    const pWordGuessr = ElementById("pWG");
+    const color = ElementById("co");
+    const speed = ElementById("speed");
+    const wordInput = ElementById("wi");
+    const rainbowMode =  ElementById("rm");
+    const ghostMode = ElementById("gm");
+    const darkMode = ElementById("dm");
+    const body = doc.getElementsByTagName("body")[0];
+    const codeBtns = ElementsByClassName("cdb");
+    const colorBtns = ElementsByClassName("cb");
+    const click = "click";
+    const svgCircle = "<svg class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill=";
+    const clockFace = "E g,S g,D,I g,S g,C g,H g,W,F M5,Ü M5,F M5,V M15,I M15,E M15,R M15,T M15,U M15,T,Z M10,Ä M10,Ä M10,Y,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,U M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,Ö H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,Ü H5,F H5,I H5,T,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,U H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,U H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K";
+
     let date;
     let hour;
     let minute;
@@ -22,39 +43,43 @@
     let rainbowBlue = 0;
     let score = 0;
     let highscore = 0;
+    let highscoreTe = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
-    //let mastermindGrau = 0;
     let mastermindTry = 0;
     let wordGuessrScore = 0;
 
-    function $(id) {
-        return document.getElementById(id);
+    function ElementById(id) {
+        return doc.getElementById(id);
     }
 
-    function $$(key) {
+    function ElementsByClassName(id) {
+        return doc.getElementsByClassName(id);
+    }
+
+    function localStorageGet(key) {
         return localStorage.getItem(key);
     }
 
-    function $$$(key, value) {
+    function localStorageSet(key, value) {
         return localStorage.setItem(key, value);
     }
 
-    const clock = $("clock");
-    const pageClock = $("pageClock");
-    const pageSettings = $("pageSettings");
-    const pageSnake = $("pageSnake");
-    const pageMastermind = $("pageMastermind");
-    const pageWordGuessr = $("pageWordGuessr");
-    const color = $("color");
-    const speed = $("speed");
-    const wordInput = $("wordInput");
-    const rainbowMode =  $("rainbowMode");
-    const ghostMode = $("ghostMode");
-    const darkMode = $("darkMode");
-    const body = document.getElementsByTagName("body")[0];
-    const codeButtons = document.getElementsByClassName("codeButton");
-    const colorButtons = document.getElementsByClassName("colorButton");
+    function fClassList(element) {
+        return element.classList;
+    }
+
+    function fChildren(element) {
+        return element.children;
+    }
+
+    function fSetAttribute(element, attribute, value) {
+        element.setAttribute(attribute, value);
+    }
+
+    function fEventListener(element, event, func) {
+        element.addEventListener(event, func);
+    }
 
     /**
      * Set the current time
@@ -62,48 +87,48 @@
     function setTime() {
         date = new Date();
         if (dark && (date.getHours() >= 22 || date.getHours() < 7)) {
-            body.classList.add("d");
+            fClassList(body).add("d");
         } else {
-            body.classList.remove("d");
+            fClassList(body).remove("d");
         }
         if (minute === date.getMinutes()) {
             return;
         }
         minute = date.getMinutes();
-        clock.classList.remove(...clock.classList);
+        fClassList(clock).remove(...fClassList(clock));
         if (power === 0) {
             return;
         }
         if (minute >= 55) {
-            clock.classList.add("M5", "MV");
+            fClassList(clock).add("M5", "MV");
         } else if (minute >= 50) {
-            clock.classList.add("M10", "MV");
+            fClassList(clock).add("M10", "MV");
         } else if (minute >= 45) {
-            clock.classList.add("M15", "MV");
+            fClassList(clock).add("M15", "MV");
         } else if (minute >= 40) {
-            clock.classList.add("M20", "MV");
+            fClassList(clock).add("M20", "MV");
         } else if (minute >= 35) {
-            clock.classList.add("M5", "MA", "M30");
+            fClassList(clock).add("M5", "MA", "M30");
         } else if (minute >= 30) {
-            clock.classList.add("M30");
+            fClassList(clock).add("M30");
         } else if (minute >= 25) {
-            clock.classList.add("M5", "MV", "M30");
+            fClassList(clock).add("M5", "MV", "M30");
         } else if (minute >= 20) {
-            clock.classList.add("M20", "MA");
+            fClassList(clock).add("M20", "MA");
         } else if (minute >= 15) {
-            clock.classList.add("M15", "MA");
+            fClassList(clock).add("M15", "MA");
         } else if (minute >= 10) {
-            clock.classList.add("M10", "MA");
+            fClassList(clock).add("M10", "MA");
         } else if (minute >= 5) {
-            clock.classList.add("M5", "MA");
+            fClassList(clock).add("M5", "MA");
         }
         hour = date.getHours();
         if (minute >= 25) {
             hour += 1;
         }
         hour = hour % 12;
-        clock.classList.add("H" + hour.toString());
-        clock.classList.add("M" + (minute % 5).toString());
+        fClassList(clock).add("H" + hour.toString());
+        fClassList(clock).add("M" + (minute % 5).toString());
     }
 
     setInterval(setTime, 100);
@@ -142,11 +167,12 @@
     function fSetPower(power_in) {
         power = power_in;
         if (power) {
-            body.classList.remove("off");
+            fClassList(body).remove("off");
         } else {
-            body.classList.add("off");
+            fClassList(body).add("off");
         }
         minute = -1;
+        setTime();
     }
 
     /**
@@ -156,11 +182,11 @@
      */
     function fShowPage(pageHide, pageShow) {
         // Fix for Firefox OnKeydown
-        document.activeElement.blur();
-        pageHide.classList.remove("swipe-out-right");
-        pageShow.classList.remove("swipe-in-left");
-        pageHide.classList.add("swipe-out");
-        pageShow.classList.add("swipe-in");
+        doc.activeElement.blur();
+        fClassList(pageHide).remove("sor");
+        fClassList(pageShow).remove("sil");
+        fClassList(pageHide).add("so");
+        fClassList(pageShow).add("si");
     }
 
     /**
@@ -169,24 +195,24 @@
      * @param {Element} pageHide : the page to hide
      */
     function fHidePage(pageShow, pageHide) {
-        pageShow.classList.remove("swipe-out");
-        pageHide.classList.remove("swipe-in");
-        pageShow.classList.add("swipe-out-right");
-        pageHide.classList.add("swipe-in-left");
+        fClassList(pageShow).remove("so");
+        fClassList(pageHide).remove("si");
+        fClassList(pageShow).add("sor");
+        fClassList(pageHide).add("sil");
     }
 
     /**
      * Display the settings-page
      */
     function fShowSettings() {
-        fShowPage(pageClock, pageSettings);
+        fShowPage(pClock, pSettings);
     }
 
     /**
      * Set all elements to selected color
      */
     function fChangeColor(color_in) {
-        document.documentElement.style.setProperty('--main-color', color_in);
+        doc.documentElement.style.setProperty('--main-color', color_in);
     }
 
     /**
@@ -195,8 +221,8 @@
      */
     function fRainbow(rain_in) {
         if (rain_in !== rainbow) {
-            rainbowMode.children[0].classList.toggle("hide");
-            rainbowMode.children[1].classList.toggle("hide");
+            fClassList(fChildren(rainbowMode)[0]).toggle("h");
+            fClassList(fChildren(rainbowMode)[1]).toggle("h");
         }
         rainbow = rain_in;
         if (rainbow) {
@@ -212,8 +238,8 @@
      */
     function fGhost(ghost_in) {
         if (ghost_in !== ghost) {
-            ghostMode.children[0].classList.toggle("hide");
-            ghostMode.children[1].classList.toggle("hide");
+            fClassList(fChildren(ghostMode)[0]).toggle("h");
+            fClassList(fChildren(ghostMode)[1]).toggle("h");
         }
         ghost = ghost_in;
     }
@@ -224,8 +250,8 @@
      */
     function fSetDarkMode(dark_in) {
         if (dark_in !== dark) {
-            darkMode.children[0].classList.toggle("hide");
-            darkMode.children[1].classList.toggle("hide");
+            fClassList(fChildren(darkMode)[0]).toggle("h");
+            fClassList(fChildren(darkMode)[1]).toggle("h");
         }
         dark = dark_in;
     }
@@ -244,8 +270,8 @@
      * Hide the settings-page and return to clock-page
      */
     function fHideSettings() {
-        fHidePage(pageClock, pageSettings);
-        pageSettings.classList.remove("swipe-out-right");
+        fHidePage(pClock, pSettings);
+        fClassList(pSettings).remove("sor");
         fUpdateParams();
     }
 
@@ -256,23 +282,21 @@
         let red = parseInt(color.value.substring(1, 3), 16);
         let green = parseInt(color.value.substring(3, 5), 16);
         let blue = parseInt(color.value.substring(5, 7), 16);
-        $$$("wc_color", color.value);
-        $$$("wc_rainbow", rainbow);
-        $$$("wc_dark", dark);
-        $$$("wc_ghost", ghost);
-        $$$("wc_speed", speed.value.toString());
-        if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
-            let xhr = new XMLHttpRequest();
-            xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
-            xhr.send();
-        }
+        localStorageSet("wc_c", color.value);
+        localStorageSet("wc_r", rainbow);
+        localStorageSet("wc_d", dark);
+        localStorageSet("wc_g", ghost);
+        localStorageSet("wc_s", speed.value.toString());
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
+        xhr.send();
     }
 
     /**
      * Display the snake-page
      */
     function fShowSnake() {
-        fShowPage(pageSettings, pageSnake);
+        fShowPage(pSettings, pSnake);
         fSendSnake(5);
     }
 
@@ -287,9 +311,9 @@
                 score = (parseInt(xhttp.responseText) - 3) * 10;
                 if (score > highscore) {
                     highscore = score;
-                    $$$("wc_score", highscore);
+                    localStorageSet("wc_sc", highscore);
                 }
-                $("scoreSnake").innerHTML = "Score: " + score + " / High-Score : " + highscore;
+                ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
         };
         xhttp.open("GET", "snake?dir=" + dir, true);
@@ -300,15 +324,52 @@
      * Hide the snake-page and return to settings-page
      */
     function fHideSnake() {
-        fHidePage(pageSettings, pageSnake);
+        fHidePage(pSettings, pSnake);
         fSendSnake(6);
     }
+
+    /**
+     * Display the tetris-page
+     */
+    function fShowTetris() {
+        fShowPage(pSettings, pTetris);
+        fSendTetris(5);
+    }
+
+    /**
+     * Send tetris-control-input to word-clock
+     * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
+     */
+    function fSendTetris(dir) {
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                score = parseInt(xhttp.responseText);
+                if (score > highscoreTe) {
+                    highscoreTe = score;
+                    localStorageSet("wc_te", highscoreTe);
+                }
+                ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscoreTe;
+            }
+        };
+        xhttp.open("GET", "tetris?dir=" + dir, true);
+        xhttp.send();
+    }
+
+    /**
+     * Hide the snake-page and return to settings-page
+     */
+    function fHideTetris() {
+        fHidePage(pSettings, pTetris);
+        fSendTetris(6);
+    }
+
 
     /**
      * Display the mastermind-page
      */
     function fShowMastermind() {
-        fShowPage(pageSettings, pageMastermind);
+        fShowPage(pSettings, pMastermind);
         fSendMastermind(1);
     }
 
@@ -326,14 +387,14 @@
             urlparams = "mastermind?c4=7"
             fClearMastermind();
         } else {
-            if (document.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
+            if (doc.querySelectorAll(".cdb[data-num='1'], .cdb[data-num='2'], .cdb[data-num='3'], .cdb[data-num='4'], .cdb[data-num='5'], .cdb[data-num='6']").length < 4) {
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
-            urlparams = "mastermind?c1=" + codeButtons[0].getAttribute("data-num")
-                + "&c2=" + codeButtons[1].getAttribute("data-num")
-                + "&c3=" + codeButtons[2].getAttribute("data-num")
-                + "&c4=" + codeButtons[3].getAttribute("data-num");
+            urlparams = "mastermind?c1=" + codeBtns[0].getAttribute("data-num")
+                + "&c2=" + codeBtns[1].getAttribute("data-num")
+                + "&c3=" + codeBtns[2].getAttribute("data-num")
+                + "&c4=" + codeBtns[3].getAttribute("data-num");
             fClearMastermind();
         }
         let xhttp = new XMLHttpRequest();
@@ -341,7 +402,6 @@
             if (this.readyState === 4 && this.status === 200) {
                 let response = JSON.parse(xhttp.responseText);
                 mastermindWeiss = response.place;
-                //mastermindGrau = response.color;
                 mastermindTry = response.try;
                 if (mastermindWeiss === 4) {
                     fMastermindMessage("Bravo! I " + mastermindTry + " Mau usegfunde.");
@@ -360,7 +420,7 @@
      * Hide the mastermind-page and return to settings-page
      */
     function fHideMastermind() {
-        fHidePage(pageSettings, pageMastermind);
+        fHidePage(pSettings, pMastermind);
         fSendMastermind(2);
     }
 
@@ -368,8 +428,8 @@
      * Clear current mastermind code
      */
     function fClearMastermind() {
-        Array.from(codeButtons).forEach(function (element) {
-            element.setAttribute("data-num", "");
+        Array.from(codeBtns).forEach(function (element) {
+            fSetAttribute(element, "data-num", "");
         });
     }
 
@@ -378,10 +438,10 @@
      */
     function fMastermindMessage(msg) {
         if (msg) {
-            $("scoreMastermind").innerHTML = msg;
+            ElementById("sMM").innerHTML = msg;
         } else {
-            $("scoreMastermind").innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='white'/></svg>&nbsp;am richtige Ort&nbsp;" +
-                "<svg xmlns='http://www.w3.org/2000/svg' class='svgMsg' viewBox='0 0 70 70'> <circle cx='35' cy='35' r='25' fill='cornflowerblue'/></svg>&nbsp;di richtigi Farb";
+            ElementById("sMM").innerHTML = svgCircle + "'white'/></svg>&nbsp;am richtige Ort&nbsp;" +
+                svgCircle + "'cornflowerblue'/></svg>&nbsp;di richtigi Farb";
         }
     }
 
@@ -389,10 +449,10 @@
      * Display the wordguessr-page
      */
     function fShowWordGuessr() {
-        fShowPage(pageSettings, pageWordGuessr);
+        fShowPage(pSettings, pWordGuessr);
         fSendWordGuessr("1");
         wordGuessrScore = 0;
-        $("scoreWordGuessr").innerHTML = "";
+        ElementById("sWG").innerHTML = "";
     }
 
     /**
@@ -414,18 +474,18 @@
                 let response = JSON.parse(xhttp.responseText);
                 if (response.score === 0) {
                     // wrong guess
-                    wordInput.classList.add("error");
+                    fClassList(wordInput).add("error");
                     setTimeout(function () {
-                        wordInput.classList.remove("error");
+                        fClassList(wordInput).remove("error");
                         wordInput.value = "";
                     }, 100);
                 } else if (response.score === 1) {
                     // correct guess
                     wordGuessrScore += response.score;
-                    $("scoreWordGuessr").innerHTML = wordGuessrScore + " hesch usegfunde.";
-                    wordInput.classList.add("ok");
+                    ElementById("sWG").innerHTML = wordGuessrScore + " hesch usegfunde.";
+                    fClassList(wordInput).add("ok");
                     setTimeout(function () {
-                        wordInput.classList.remove("ok");
+                        fClassList(wordInput).remove("ok");
                         wordInput.value = "";
                     }, 100);
                 }
@@ -439,44 +499,72 @@
      * Hide the wordguessr-page and return to settings-page
      */
     function fHideWordGuessr() {
-        fHidePage(pageSettings, pageWordGuessr);
+        fHidePage(pSettings, pWordGuessr);
         fSendWordGuessr("2");
     }
 
     /**
      * Initialize application, add event-listeners
      */
-    $("power").addEventListener("click", fTogglePower);
-    $("settings").addEventListener("click", fShowSettings);
-    $("settingsClose").addEventListener("click", fHideSettings);
+    fEventListener(ElementById("p"), click, fTogglePower);
+    fEventListener(ElementById("s"), click, fShowSettings);
+    fEventListener(ElementById("xS"), click, fHideSettings);
 
-    $("playSnake").addEventListener("click", fShowSnake);
-    $("exitSnake").addEventListener("click", fHideSnake);
-    $("playMastermind").addEventListener("click", fShowMastermind);
-    $("exitMastermind").addEventListener("click", fHideMastermind);
-    $("sendMastermind").addEventListener("click", fSendMastermind);
-    $("playWordGuessr").addEventListener("click", fShowWordGuessr);
-    $("exitWordGuessr").addEventListener("click", fHideWordGuessr);
-    $("sendWordGuessr").addEventListener("click", fSendWordGuessr);
-    Array.from(document.getElementsByClassName("snakeButton")).forEach(function (element) {
-        element.addEventListener("click", function (e) {
-            fSendSnake(e.target.getAttribute("data-num"));
-        });
-    });
-    Array.from(colorButtons).forEach(function (element) {
-        element.addEventListener("click", function (e) {
-            Array.from(colorButtons).forEach(function (element) {
-                element.classList.remove("g");
+    fEventListener(ElementById("SN"), click, fShowSnake);
+    fEventListener(ElementById("xSN"), click, fHideSnake);
+    fEventListener(ElementById("TE"), click, fShowTetris);
+    fEventListener(ElementById("xTE"), click, fHideTetris);
+    fEventListener(ElementById("MM"), click, fShowMastermind);
+    fEventListener(ElementById("xMM"), click, fHideMastermind);
+    fEventListener(ElementById("cMM"), click, fSendMastermind);
+    fEventListener(ElementById("WG"), click, fShowWordGuessr);
+    fEventListener(ElementById("xWG"), click, fHideWordGuessr);
+    fEventListener(ElementById("cWG"), click, fSendWordGuessr);
+    Array.from(ElementsByClassName("snb")).forEach(function (element, index) {
+        fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
+        if (index < 4) {
+            fEventListener(element, click, function (e) {
+                fSendSnake(e.target.getAttribute("data-num"));
             });
-            e.target.classList.add("g");
+        } else {
+            fEventListener(element, click, function (e) {
+                fSendTetris(e.target.getAttribute("data-num"));
+            });
+        }
+
+    });
+    // no-svg: x
+    Array.from(ElementsByClassName("n")).forEach(function (element) {
+        fSetAttribute(element, "d", "M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z");
+        fSetAttribute(element, "transform", "scale(0.9) translate(5,5)");
+    });
+    // yes-svg: check
+    Array.from(ElementsByClassName("y")).forEach(function (element) {
+        fSetAttribute(element, "d", "M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z");
+        fSetAttribute(element, "transform", "scale(0.85) translate(5,5)");
+    });
+    // play-svg: >
+    Array.from(ElementsByClassName("play")).forEach(function (element) {
+        element.innerHTML = "<path d='M2 2 L9 7 L2 12 Z' stroke-width='1.4'/>";
+    });
+    Array.from(colorBtns).forEach(function (element) {
+        fEventListener(element, click, function (e) {
+            Array.from(colorBtns).forEach(function (element) {
+                fClassList(element).remove("g");
+            });
+            fClassList(e.target).add("g");
             mastermindColor = e.target.getAttribute("data-num");
         });
+        element.innerHTML = "<circle cx='35' cy='35' r='25'/>";
+        fSetAttribute(element, "viewBox", "0 0 70 70");
     });
-    Array.from(codeButtons).forEach(function (element) {
-        element.addEventListener("click", function (e) {
-            e.target.setAttribute("data-num", mastermindColor);
+    Array.from(codeBtns).forEach(function (element) {
+        fEventListener(element, click, function (e) {
+            fSetAttribute(e.target, "data-num", mastermindColor);
             fMastermindMessage()
         });
+        element.innerHTML = "<circle cx='35' cy='35' r='25'/>";
+        fSetAttribute(element, "viewBox", "0 0 70 70");
     });
 
     function fCheckKey(e) {
@@ -495,100 +583,119 @@
                 dir = 4;
                 break;
             case "Enter":
-                if (pageWordGuessr.classList.contains("swipe-in")) {
+                if ( fClassList(pWordGuessr).contains("si")) {
                     fSendWordGuessr();
                 }
         }
-        if (dir && pageSnake.classList.contains("swipe-in")) {
+        if (dir &&  fClassList(pSnake).contains("si")) {
             fSendSnake(dir);
-            $("control").children[dir - 1].classList.add("g");
+            fClassList(fChildren(ElementById("ctrl"))[dir - 1]).add("g");
             setTimeout(function () {
-                $("control").children[dir - 1].classList.remove("g");
+                fClassList(fChildren(ElementById("ctrl"))[dir - 1]).remove("g");
+            }, 200);
+        }
+        if (dir &&  fClassList(pTetris).contains("si")) {
+            fSendTetris(dir);
+            fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).add("g");
+            setTimeout(function () {
+                fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).remove("g");
             }, 200);
         }
     }
 
-    document.onkeydown = fCheckKey;
-    color.addEventListener("change", (ignore) => {
+    doc.onkeydown = fCheckKey;
+    fEventListener(color, "change", (ignore) => {
         fChangeColor(color.value);
     }, false);
-    rainbowMode.addEventListener("click", (ignore) => {
+    fEventListener(rainbowMode, click, (ignore) => {
         fRainbow(1 - rainbow);
     });
-    ghostMode.addEventListener("click", (ignore) => {
+    fEventListener(ghostMode, click, (ignore) => {
         fGhost(1 - ghost);
     });
-    darkMode.addEventListener("click", (ignore) => {
+    fEventListener(darkMode, click, (ignore) => {
         fSetDarkMode(1 - dark);
     });
 
     /**
      * Reload last settings from local storage
      */
-    if ($$("wc_color")) {
-        color.value = $$("wc_color");
+    if (localStorageGet("wc_c")) {
+        color.value = localStorageGet("wc_c");
         fChangeColor(color.value);
     }
-    if ($$("wc_rainbow")) {
-        fRainbow(parseInt($$("wc_rainbow")));
+    if (localStorageGet("wc_r")) {
+        fRainbow(parseInt(localStorageGet("wc_r")));
     }
-    if ($$("wc_ghost")) {
-        fGhost(parseInt($$("wc_ghost")));
+    if (localStorageGet("wc_g")) {
+        fGhost(parseInt(localStorageGet("wc_g")));
     }
-    if ($$("wc_dark")) {
-        fSetDarkMode(parseInt($$("wc_dark")));
+    if (localStorageGet("wc_d")) {
+        fSetDarkMode(parseInt(localStorageGet("wc_d")));
     }
-    if ($$("wc_speed")) {
-        speed.value = (parseInt($$("wc_speed")));
+    if (localStorageGet("wc_s")) {
+        speed.value = (parseInt(localStorageGet("wc_s")));
     }
-    if ($$("wc_score")) {
-        highscore = $$("wc_score");
+    if (localStorageGet("wc_sc")) {
+        highscore = localStorageGet("wc_sc");
     }
-    $("iphone").href = $("icon").href;
+    if (localStorageGet("wc_te")) {
+        highscoreTe = localStorageGet("wc_te");
+    }
+    ElementById("iphone").href = ElementById("icon").href;
+
+    clockFace.split(",").forEach(function(element, index1) {
+        const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
+        fSetAttribute(textElement, "x", (index1 % 11 * 10) + 7);
+        fSetAttribute(textElement, "y", Math.ceil((index1 + 1) / 11) * 10);
+        if ([113,114,116,117].includes(index1)) {
+            fSetAttribute(textElement, "y", 112.5);
+        }
+        element.split(" ").forEach(function (element2, index2) {
+            if (!index2) {
+                textElement.textContent = element2;
+            } else {
+                fClassList(textElement).add(element2);
+            }
+        });
+        clock.appendChild(textElement);
+    });
 
     // generate Titles on Pages
-    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
-    Array.from(document.getElementsByClassName("title")).forEach(function (element, index) {
+    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajmTETRISlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
-            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
             let letter = pageTitles[index].substring(step, step + 1);
             let letterUpper = letter.toUpperCase();
-            textElement.setAttribute("x", (step % 11 * 10) + 7);
-            textElement.setAttribute("y", Math.ceil((step + 1) / 11) * 10);
+            fSetAttribute(textElement, "x", (step % 11 * 10) + 7);
+            fSetAttribute(textElement, "y", Math.ceil((step + 1) / 11) * 10);
             textElement.textContent = letterUpper;
             if (letter === letterUpper) {
-                textElement.setAttribute("class", "g");
+                fSetAttribute(textElement, "class", "g");
             }
             element.appendChild(textElement);
         }
-
     });
 
     /**
      * Load current settings from word-clock
      */
-    if (window.location.href.includes("192.168.") || window.location.href.includes(".local")) {
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-                let response = JSON.parse(xhttp.responseText);
-                if (!response.rainbow) {
-                    color.value = fRgb2Hex(response.red, response.green, response.blue);
-                }
-                fChangeColor(color.value);
-                fSetDarkMode(response.darkmode);
-                fRainbow(response.rainbow);
-                fGhost(response.ghost);
-                fSetPower(response.power);
-                speed.value = response.speed;
+    let xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+        if (this.readyState === 4 && this.status === 200) {
+            let response = JSON.parse(xhttp.responseText);
+            if (!response.rainbow) {
+                color.value = fRgb2Hex(response.red, response.green, response.blue);
             }
-        };
-        xhttp.open("GET", "get_params", true);
-        xhttp.send();
-    } else {
-        $("snakeBody").classList.add("hide");
-        $("mastermindBody").classList.add("hide");
-        $("wordGuessrBody").classList.add("hide");
-    }
-
+            fChangeColor(color.value);
+            fSetDarkMode(response.darkmode);
+            fRainbow(response.rainbow);
+            fGhost(response.ghost);
+            fSetPower(response.power);
+            speed.value = response.speed;
+        }
+    };
+    xhttp.open("GET", "get_params", true);
+    xhttp.send();
 }());
