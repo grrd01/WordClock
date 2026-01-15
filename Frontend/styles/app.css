@@ -160,12 +160,6 @@ path.snb {
     fill-opacity: 0.01;
 }
 
-#pS, #pCT, #pGO, #pMM, #pWG {
-    transform: translateX(100vw);
-    visibility: hidden;
-    opacity: 0;
-}
-
 #pCT.tetris .sn {
     display: none;
 }
@@ -244,99 +238,25 @@ path.snb {
     fill: #f803fc
 }
 
-.si {
-    animation-name: si;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
+.show {
+    transform: translateX(0);
+    transition: transform 0.7s ease-in-out;
+    visibility: visible;
+    opacity: 1;
 }
 
-@keyframes si {
-    0% {
-        transform: translateX(100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-    1% {
-        transform: translateX(100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
+.left {
+    transform: translateX(-100vw);
+    transition: transform 0.7s ease-in-out;
+    /*visibility: hidden;
+    opacity: 0;*/
 }
 
-.so {
-    animation-name: so;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
-}
-
-@keyframes so {
-    0% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
-    99% {
-        transform: translateX(-100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(-100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-}
-.sil {
-    animation-name: sil;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
-}
-
-@keyframes sil {
-    0% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
-    99% {
-        transform: translateX(100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-}
-
-.sor {
-    animation-name: sor;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
-}
-
-@keyframes sor {
-    0% {
-        transform: translateX(-100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-    1% {
-        transform: translateX(-100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
+.right {
+    transform: translateX(100vw);
+    transition: transform 0.7s ease-in-out;
+    /*visibility: hidden;
+    opacity: 0;*/
 }
 
 .sl {

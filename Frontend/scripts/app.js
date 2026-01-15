@@ -41,6 +41,7 @@
     let rainbowRed = 255;
     let rainbowGreen = 0;
     let rainbowBlue = 0;
+    let game;
     let score = 0;
     let highscoreSn = 0;
     let highscoreTe = 0;
@@ -184,10 +185,10 @@
     function fShowPage(pageHide, pageShow) {
         // Fix for Firefox OnKeydown
         doc.activeElement.blur();
-        fClassList(pageHide).remove("sor");
-        fClassList(pageShow).remove("sil");
-        fClassList(pageHide).add("so");
-        fClassList(pageShow).add("si");
+        fClassList(pageHide).remove("show");
+        fClassList(pageShow).remove("right");
+        fClassList(pageHide).add("left");
+        fClassList(pageShow).add("show");
     }
 
     /**
@@ -196,10 +197,10 @@
      * @param {Element} pageHide : the page to hide
      */
     function fHidePage(pageShow, pageHide) {
-        fClassList(pageShow).remove("so");
-        fClassList(pageHide).remove("si");
-        fClassList(pageShow).add("sor");
-        fClassList(pageHide).add("sil");
+        fClassList(pageShow).remove("left");
+        fClassList(pageHide).remove("show");
+        fClassList(pageShow).add("show");
+        fClassList(pageHide).add("right");
     }
 
     /**
@@ -307,7 +308,7 @@
     /**
      * Display the controls-page for tetris / snake
      */
-    function fShowControls(game) {
+    function fShowControls() {
         pControls.classList.add(game);
         fShowPage(pSettings, pControls);
         fSendControls(game);
@@ -320,9 +321,8 @@
         fHidePage(pSettings, pControls);
         fSendControls("stop");
         setTimeout(function () {
-            pControls.className = "p";
+            fClassList(pControls).remove(game);
         }, 700);
-
     }
 
     /**
@@ -337,7 +337,7 @@
      */
     function fPlayAgain() {
         fHidePage(pControls, pGameOver);
-        fSendControls("todo_send_game_name");
+        fSendControls(game);
     }
 
     /**
@@ -347,9 +347,9 @@
         fHidePage(pControls, pGameOver);
         fHidePage(pSettings, pControls);
         fHidePage(pClock, pSettings);
-
-
-
+        setTimeout(function () {
+            fClassList(pControls).remove(game);
+        }, 700);
     }
 
     /**
@@ -498,10 +498,12 @@
     fEventListener(ElementById("xS"), click, fHideSettings);
 
     fEventListener(ElementById("SN"), click, function (e) {
-        fShowControls("snake");
+        game = "snake";
+        fShowControls();
     });
     fEventListener(ElementById("TE"), click, function (e) {
-        fShowControls("tetris");
+        game = "tetris";
+        fShowControls();
     });
     fEventListener(ElementById("xCT"), click, fHideControls);
     fEventListener(ElementById("xGO"),click, fExitGame);
