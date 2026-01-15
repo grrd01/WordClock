@@ -1360,6 +1360,7 @@ void loop() {
 
       if (snakeNext == -3) {
         // game over
+        webSocket.broadcastTXT("gameOver");
         chase(Red);
         inSnake = false;
         lastMinuteWordClock = 61;
@@ -1385,6 +1386,7 @@ void loop() {
     }
     if (gameOver) {
       delay(500);
+      webSocket.broadcastTXT("gameOver");
       chase(Red);
       inTetris = false;
       lastMinuteWordClock = 61;

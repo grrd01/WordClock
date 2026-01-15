@@ -96,15 +96,15 @@ a:active {
     filter: brightness(125%);
 }
 
-#s, #xS, #xSN, #xTE, #xMM, #xWG {
+#s, #xS, #xCT, #xGOA, #xMM, #xWG {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
-#p {
+#p, #xGO {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#sSN, #sMM, #sWG , #sTE {
+#sCT, #sMM, #sWG {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
     align-items: center;
@@ -160,11 +160,20 @@ path.snb {
     fill-opacity: 0.01;
 }
 
-#pS, #pSN, #pTE, #pMM, #pWG {
+#pS, #pCT, #pGO, #pMM, #pWG {
     transform: translateX(100vw);
     visibility: hidden;
     opacity: 0;
 }
+
+#pCT.tetris .sn {
+    display: none;
+}
+
+#pCT.snake .te {
+    display: none;
+}
+
 .pC {
     display: block;
     position: absolute;

@@ -14,8 +14,8 @@
     const clock = ElementById("c");
     const pClock = ElementById("pC");
     const pSettings = ElementById("pS");
-    const pSnake = ElementById("pSN");
-    const pTetris = ElementById("pTE");
+    const pControls = ElementById("pCT");
+    const pGameOver = ElementById("pGO");
     const pMastermind = ElementById("pMM");
     const pWordGuessr = ElementById("pWG");
     const color = ElementById("co");
@@ -305,37 +305,52 @@
     }
 
     /**
-     * Display the snake-page
+     * Display the controls-page for tetris / snake
      */
-    function fShowSnake() {
-        fShowPage(pSettings, pSnake);
-        fSendControls("snake");
+    function fShowControls(game) {
+        pControls.classList.add(game);
+        fShowPage(pSettings, pControls);
+        fSendControls(game);
     }
 
     /**
      * Hide the snake-page and return to settings-page
      */
-    function fHideSnake() {
-        fHidePage(pSettings, pSnake);
+    function fHideControls() {
+        fHidePage(pSettings, pControls);
         fSendControls("stop");
+        setTimeout(function () {
+            pControls.className = "p";
+        }, 700);
+
     }
 
     /**
-     * Display the tetris-page
+     * Display the game-over-page for tetris / snake
      */
-    function fShowTetris() {
-        fShowPage(pSettings, pTetris);
-        fSendControls("tetris");
+    function fShowGameOver() {
+        fShowPage(pControls, pGameOver);
     }
 
     /**
-     * Hide the snake-page and return to settings-page
+     * Hide the game-over-page, start a new game
      */
-    function fHideTetris() {
-        fHidePage(pSettings, pTetris);
-        fSendControls("stop");
+    function fPlayAgain() {
+        fHidePage(pControls, pGameOver);
+        fSendControls("todo_send_game_name");
     }
 
+    /**
+     * Hide the game-over-page, start a new game
+     */
+    function fExitGame() {
+        fHidePage(pControls, pGameOver);
+        fHidePage(pSettings, pControls);
+        fHidePage(pClock, pSettings);
+
+
+
+    }
 
     /**
      * Display the mastermind-page
@@ -482,10 +497,15 @@
     fEventListener(ElementById("s"), click, fShowSettings);
     fEventListener(ElementById("xS"), click, fHideSettings);
 
-    fEventListener(ElementById("SN"), click, fShowSnake);
-    fEventListener(ElementById("xSN"), click, fHideSnake);
-    fEventListener(ElementById("TE"), click, fShowTetris);
-    fEventListener(ElementById("xTE"), click, fHideTetris);
+    fEventListener(ElementById("SN"), click, function (e) {
+        fShowControls("snake");
+    });
+    fEventListener(ElementById("TE"), click, function (e) {
+        fShowControls("tetris");
+    });
+    fEventListener(ElementById("xCT"), click, fHideControls);
+    fEventListener(ElementById("xGO"),click, fExitGame);
+    fEventListener(ElementById("xGOA"),click, fPlayAgain);
     fEventListener(ElementById("MM"), click, fShowMastermind);
     fEventListener(ElementById("xMM"), click, fHideMastermind);
     fEventListener(ElementById("cMM"), click, fSendMastermind);
@@ -554,12 +574,16 @@
         }
         if (dir) {
             fSendControls(dir);
-            fClassList(ElementById("ctrlt" + dir)).add("g");
             fClassList(ElementById("ctrl" + dir)).add("g");
             setTimeout(function () {
-                fClassList(ElementById("ctrlt" + dir)).remove("g");
                 fClassList(ElementById("ctrl" + dir)).remove("g");
             }, 200);
+
+            // todo: TESTTESTTESTTESTTEST
+            setTimeout(function () {
+                fShowGameOver();
+            }, 2000);
+            // todo: TESTTESTTESTTESTTEST
         }
     }
 
@@ -622,7 +646,7 @@
     });
 
     // generate Titles on Pages
-    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajmTETRISlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajmTETRISlbdk", "ewfGAMEcsajmsnakOVERdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -650,14 +674,17 @@
                         highscoreSn = score;
                         localStorageSet("wc_te", highscoreSn);
                     }
-                    ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscoreSn;
+
                 } else {
                     if (score > highscoreTe) {
                         highscoreTe = score;
                         localStorageSet("wc_te", highscoreTe);
                     }
-                    ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscoreTe;
                 }
+                ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscoreSn;
+            }
+            if (e.data && e.data.indexOf('gameOver') === 0) {
+                fShowGameOver();
             }
         }
         webSocket.onclose = function(){ console.log('webSocket closed'); };
