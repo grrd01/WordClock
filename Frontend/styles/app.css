@@ -247,16 +247,16 @@ path.snb {
 
 .left {
     transform: translateX(-100vw);
-    transition: transform 0.7s ease-in-out;
-    /*visibility: hidden;
-    opacity: 0;*/
+    visibility: hidden;
+    opacity: 0;
+    transition: transform 0.7s ease-in-out, visibility 0s 0.7s, opacity 0s 0.7s;
 }
 
 .right {
     transform: translateX(100vw);
-    transition: transform 0.7s ease-in-out;
-    /*visibility: hidden;
-    opacity: 0;*/
+    visibility: hidden;
+    opacity: 0;
+    transition: transform 0.7s ease-in-out, visibility 0s 0.7s, opacity 0s 0.7s;
 }
 
 .sl {
