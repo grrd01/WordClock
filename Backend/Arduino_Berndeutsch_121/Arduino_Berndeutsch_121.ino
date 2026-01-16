@@ -722,7 +722,7 @@ void setSnack() {
   pixels.setPixelColor(snakeSnack, Red);
 }
 
-// Tetris: Send current score to all connected WebSocket clients
+// Tetris & Snake: Send current score to all connected WebSocket clients
 void sendScoreToClients(int score) {
   String msg = "score:" + String(score);
   webSocket.broadcastTXT(msg);

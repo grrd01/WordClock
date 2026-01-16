@@ -32,7 +32,7 @@ body {
     background: linear-gradient(#444, #222);
 }
 
-#c, .t, #ctrl, #ctrlt {
+#c, .t, #ctrl {
     font: 6px sans-serif;
     fill: #555;
     text-shadow: none;
@@ -43,13 +43,13 @@ body {
 }
 
 @media (orientation: landscape) {
-    #ctrl, #ctrlt {
+    #ctrl {
         width: 100%;
         max-width: 60vh;
     }
 }
 @media (orientation: portrait) {
-    #ctrl, #ctrlt {
+    #ctrl {
         width: 100%;
     }
 }

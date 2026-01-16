@@ -43,8 +43,7 @@
     let rainbowBlue = 0;
     let game;
     let score = 0;
-    let highscoreSn = 0;
-    let highscoreTe = 0;
+    let highscore = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
     let mastermindTry = 0;
@@ -312,6 +311,11 @@
         pControls.classList.add(game);
         fShowPage(pSettings, pControls);
         fSendControls(game);
+        if (localStorageGet("wc_" + game)) {
+            highscore = localStorageGet("wc_" + game);
+        } else {
+            highscore = 0;
+        }
     }
 
     /**
@@ -576,6 +580,9 @@
         }
         if (dir) {
             fSendControls(dir);
+            if (dir == "up" && game == "tetris") {
+                dir = "tup";
+            }
             fClassList(ElementById("ctrl" + dir)).add("g");
             setTimeout(function () {
                 fClassList(ElementById("ctrl" + dir)).remove("g");
@@ -622,12 +629,6 @@
     if (localStorageGet("wc_s")) {
         speed.value = (parseInt(localStorageGet("wc_s")));
     }
-    if (localStorageGet("wc_sc")) {
-        highscoreSn = localStorageGet("wc_sc");
-    }
-    if (localStorageGet("wc_te")) {
-        highscoreTe = localStorageGet("wc_te");
-    }
     ElementById("iphone").href = ElementById("icon").href;
 
     clockFace.split(",").forEach(function(element, index1) {
@@ -671,21 +672,15 @@
         webSocket.onmessage = function(e) {
             if (e.data && e.data.indexOf('score:') === 0) {
                 score = parseInt(e.data.split(':')[1]);
-                if (fClassList(pSnake).contains("si")) {
-                    if (score > highscoreSn) {
-                        highscoreSn = score;
-                        localStorageSet("wc_te", highscoreSn);
-                    }
-
-                } else {
-                    if (score > highscoreTe) {
-                        highscoreTe = score;
-                        localStorageSet("wc_te", highscoreTe);
-                    }
+                if (score > highscore) {
+                    highscore = score;
+                    localStorageSet("wc_" + game, highscore);
                 }
-                ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscoreSn;
+                ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
             if (e.data && e.data.indexOf('gameOver') === 0) {
+                ElementById("sGO").innerHTML = score;
+                ElementById("hsGO").innerHTML = highscore;
                 fShowGameOver();
             }
         }
