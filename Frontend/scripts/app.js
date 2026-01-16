@@ -319,13 +319,14 @@
     }
 
     /**
-     * Hide the snake-page and return to settings-page
+     * Hide the controls-page and return to settings-page
      */
     function fHideControls() {
         fHidePage(pSettings, pControls);
         fSendControls("stop");
         setTimeout(function () {
             fClassList(pControls).remove(game);
+            game = "";
         }, 700);
     }
 
@@ -349,11 +350,8 @@
      */
     function fExitGame() {
         fHidePage(pControls, pGameOver);
-        fHidePage(pSettings, pControls);
+        fHideControls();
         fHidePage(pClock, pSettings);
-        setTimeout(function () {
-            fClassList(pControls).remove(game);
-        }, 700);
     }
 
     /**
@@ -578,7 +576,7 @@
                     fSendWordGuessr();
                 }
         }
-        if (dir) {
+        if (dir && game) {
             fSendControls(dir);
             if (dir == "up" && game == "tetris") {
                 dir = "tup";
@@ -587,12 +585,6 @@
             setTimeout(function () {
                 fClassList(ElementById("ctrl" + dir)).remove("g");
             }, 200);
-
-            // todo: TESTTESTTESTTESTTEST
-            setTimeout(function () {
-                fShowGameOver();
-            }, 2000);
-            // todo: TESTTESTTESTTESTTEST
         }
     }
 
