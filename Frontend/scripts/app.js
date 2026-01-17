@@ -298,7 +298,7 @@
      * @param {string} cmd : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
      */
     function fSendControls(cmd) {
-        console.log(cmd);
+        //console.log(cmd);
         if (webSocket && webSocket.readyState === 1) {
             webSocket.send(cmd);
         }
@@ -499,11 +499,11 @@
     fEventListener(ElementById("s"), click, fShowSettings);
     fEventListener(ElementById("xS"), click, fHideSettings);
 
-    fEventListener(ElementById("SN"), click, function (e) {
+    fEventListener(ElementById("SN"), click, function () {
         game = "snake";
         fShowControls();
     });
-    fEventListener(ElementById("TE"), click, function (e) {
+    fEventListener(ElementById("TE"), click, function () {
         game = "tetris";
         fShowControls();
     });
@@ -578,7 +578,7 @@
         }
         if (dir && game) {
             fSendControls(dir);
-            if (dir == "up" && game == "tetris") {
+            if (dir === "up" && game === "tetris") {
                 dir = "tup";
             }
             fClassList(ElementById("ctrl" + dir)).add("g");
@@ -661,10 +661,10 @@
     // initialize websocket connection for game controls
     try {
         webSocket = new WebSocket('ws://' + location.hostname + ':81/');
-        webSocket.onopen = function(){ console.log('webSocket open'); };
+        // webSocket.onopen = function(){ console.log('webSocket open'); };
         webSocket.onmessage = function(e) {
             if (e.data && e.data.indexOf('score:') === 0) {
-                score = parseInt(e.data.split(':')[1]);
+                score = parseInt(e.data.split(':')[1]) * 10;
                 if (score > highscore) {
                     highscore = score;
                     localStorageSet("wc_" + game, highscore);
@@ -677,9 +677,11 @@
                 fShowGameOver();
             }
         }
-        webSocket.onclose = function(){ console.log('webSocket closed'); };
-        webSocket.onerror = function(e){ console.log('webSocket error', e); };
-    } catch(e) { console.log('webSocket init failed'); }
+        // webSocket.onclose = function(){ console.log('webSocket closed'); };
+        // webSocket.onerror = function(e){ console.log('webSocket error', e); };
+    } catch(e) {
+        // console.log('webSocket init failed');
+    }
 
     /**
      * Load current settings from word-clock
