@@ -572,7 +572,7 @@
                 dir = "left";
                 break;
             case "Enter":
-                if ( fClassList(pWordGuessr).contains("si")) {
+                if ( fClassList(pWordGuessr).contains("show")) {
                     fSendWordGuessr();
                 }
         }
@@ -640,8 +640,9 @@
         clock.appendChild(textElement);
     });
 
-    // generate Titles on Pages
-    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajmTETRISlbdk", "ewfGAMEcsajmsnakOVERdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    // generate Titles on Pages (grrd: ewfGRRDcSaj, mascha: qwMASCHAbSd)
+    const pageTitleLine1 = "ewfGRRDcSaj";
+    const pageTitles = [pageTitleLine1 + "nWORDuCLOCK", pageTitleLine1 + "mSNAKExlbdk", pageTitleLine1 + "mTETRISlbdk", "ewfGAMEcsajmsnakOVERdk", pageTitleLine1 + "MASTERMINDk", pageTitleLine1 + "WORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
