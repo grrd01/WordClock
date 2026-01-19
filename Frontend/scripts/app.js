@@ -308,7 +308,7 @@
      * Display the controls-page for tetris / snake
      */
     function fShowControls() {
-        pControls.classList.add(game);
+        fClassList(pControls).add(game);
         fShowPage(pSettings, pControls);
         fSendControls(game);
         if (localStorageGet("wc_" + game)) {
@@ -600,6 +600,18 @@
     });
     fEventListener(darkMode, click, (ignore) => {
         fSetDarkMode(1 - dark);
+    });
+    fEventListener(ElementById("SE"), click, (e) => {
+        fClassList(ElementById("SE")).toggle("ddo");
+        fClassList(ElementById("LSE")).toggle("ddlc");
+        fClassList(ElementById("GM")).remove("ddo");
+        fClassList(ElementById("LGM")).add("ddlc");
+    });
+    fEventListener(ElementById("GM"), click, (e) => {
+        fClassList(ElementById("GM")).toggle("ddo");
+        fClassList(ElementById("LGM")).toggle("ddlc");
+        fClassList(ElementById("SE")).remove("ddo");
+        fClassList(ElementById("LSE")).add("ddlc");
     });
 
     /**

@@ -123,6 +123,25 @@ a:active {
     z-index: 1000;
 }
 
+.dd {
+    transform: rotate(90deg);
+    transition: transform 0.7s ease-in-out;
+    overflow: hidden;
+}
+.ddo {
+    transform: rotate(270deg);
+}
+.ddl {
+    max-height: calc(100vh - 100px);
+    transition: max-height 0.7s ease-in-out;
+    overflow: hidden;
+    margin: 0;
+}
+.ddlc  {
+    max-height: 0;
+    transition: max-height 0.7s ease-in-out;
+}
+
 circle {
     pointer-events: none
 }
@@ -180,15 +199,32 @@ path.snb {
     max-width: calc(100vw - 40px);
     height: 100%;
 }
+
+#pCS {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.menu {
+    overflow-y: auto;
+}
+
 .pb, .c, .c > span {
     display: flex;
     justify-content: space-between;
     margin-bottom: 20px;
     align-items: center;
     flex-wrap: wrap;
+    overflow: hidden;
+}
+.c > span {
+    margin-bottom: 3vmin;
 }
 .pf {
-    margin-top: 60px;
+    margin-top: auto;
+    max-width: calc(100vw - 80px);
+    /*todo margin bottom oder maxwidth*/
 }
 #co {
     appearance: none;
