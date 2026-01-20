@@ -103,6 +103,6 @@ void loop() {
     }
   }
   pixels.show();
-  delay(30);
+  delay(2);
   frame++;
 }
