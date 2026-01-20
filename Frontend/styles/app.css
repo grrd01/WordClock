@@ -133,13 +133,13 @@ a:active {
 }
 .ddl {
     max-height: calc(100vh - 100px);
-    transition: max-height 0.7s ease-in-out;
+    transition: max-height 1.5s ease-in-out;
     overflow: hidden;
     margin: 0;
 }
 .ddlc  {
     max-height: 0;
-    transition: max-height 0.7s ease-in-out;
+    transition: max-height 1.5s ease-in-out;
 }
 
 circle {
@@ -224,7 +224,6 @@ path.snb {
 .pf {
     margin-top: auto;
     max-width: calc(100vw - 80px);
-    /*todo margin bottom oder maxwidth*/
 }
 #co {
     appearance: none;
