@@ -47,6 +47,7 @@ int ghost = 1;
 int effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
 int effectSpeed = 200;
 int effectWait = 200;
+uint16_t frame = 0;
 
 
 // Current time
@@ -153,6 +154,11 @@ static int WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
 
 static int *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
+// aktueller und letzter Zeit-Satz
+int satzalt[30];
+int satzneu[30];
+uint8_t satzindex = 0;
+
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(121, D7, NEO_GRB + NEO_KHZ800);
 
 // How long this state should be displayed
@@ -242,6 +248,28 @@ int xyToIndex(int x, int y) {
   } else {
     return y * 11 + (10 - x);
   }
+}
+
+// Hilfsfunktion: Prüft, ob LED in Array enthalten ist
+bool inArray(int led, int *arr) {
+  for (int i = 0; arr[i] != -1; i++) {
+    if (arr[i] == led) return true;
+  }
+  return false;
+}
+
+// Hilfsfunktion: HSV zu RGB 
+uint32_t colorWheel(byte pos) {
+  pos = 255 - pos;
+  if (pos < 85) {
+    return pixels.Color(255 - pos * 3, 0, pos * 3);
+  }
+  if (pos < 170) {
+    pos -= 85;
+    return pixels.Color(0, pos * 3, 255 - pos * 3);
+  }
+  pos -= 170;
+  return pixels.Color(pos * 3, 255 - pos * 3, 0);
 }
 
 // Mastermind variables
@@ -351,6 +379,21 @@ int down(int pixel, int rows) {
   return pixel;
 }
 
+/**
+ * Adds a word to the new time-sentence
+ * @param word array with the id's of the pixels
+ */
+void addword(int *word) {
+  for (int x = 0; x < pixels.numPixels() + 1; x++) {
+    satzneu[satzindex] = (word[x]);
+    if (word[x] == -1) {
+      break;
+    } else {
+      satzindex ++;
+    }
+  }
+}
+
 
 /**
  * Sets array of pixels to a specific color
@@ -398,10 +441,10 @@ int extractParameterValue(const char *url, const char *paramName) {
 void showHour() {
   if (wordClockMinute < 25) {
     // show this hour if we are before 25 minutes past
-    lightup(WordStunden[wordClockHour % 12], foregroundColor);
+    addword(WordStunden[wordClockHour % 12]);
   } else {
     // show next hour
-    lightup(WordStunden[(wordClockHour % 12) + 1], foregroundColor);
+    addword(WordStunden[(wordClockHour % 12) + 1]);
   }
 }
 
@@ -412,19 +455,19 @@ void showMinute() {
   if (wordClockMinute != 0) {
     if (wordClockMinute >= 5 && wordClockMinute < 30) {
       // sets pixels with minutes array
-      lightup(WordMinuten[(wordClockMinute / 5) - 1], foregroundColor);
+      addword(WordMinuten[(wordClockMinute / 5) - 1]);
     } else if (wordClockMinute >= 35) {
       // sets pixels with same array, but in reverse
-      lightup(WordMinuten[5 - ((wordClockMinute - 30) / 5)], foregroundColor);
+      addword(WordMinuten[5 - ((wordClockMinute - 30) / 5)]);
     }
     if ((wordClockMinute >= 5 && wordClockMinute < 25) || (wordClockMinute < 40 && wordClockMinute >= 35)) {
-      lightup(WordNach, foregroundColor);
+      addword(WordNach);
     }
     if (wordClockMinute >= 40 || (wordClockMinute >= 25 && wordClockMinute < 30)) {
-      lightup(WordVor, foregroundColor);
+      addword(WordVor);
     }
     if (wordClockMinute >= 25 && wordClockMinute < 40) {
-      lightup(WordHalb, foregroundColor);
+      addword(WordHalb);
     }
     // Checks if the minute ticks should be displayed
     int differenceToLast5Min = wordClockMinute % 5;
@@ -452,6 +495,8 @@ void displayWifiStatus() {
  * Displays the current time
  */
 void displayTime() {
+  satzindex = 0;
+  memcpy(satzalt, satzneu, sizeof(satzneu));
   blank();
 
   // Display darker color between 22:00 and 07:00
@@ -462,11 +507,29 @@ void displayTime() {
   }
 
   // light up "it's" it stays on
-  lightup(WordEs, foregroundColor);
-  lightup(WordIst, foregroundColor);
+  addword(WordEs);
+  addword(WordIst);
 
   showMinute();
   showHour();
+
+  if (effect == 2) {
+    for (uint8_t y = 0; y < 11; y++) {
+      for (uint8_t x = 0; x < 11; x++) {
+        uint16_t idx = xyToIndex(x, y);
+        if (inArray(idx, satzneu)) {
+          // Diagonale bestimmen: x + y
+          uint8_t diag = x + y;
+          // Regenbogenfarbe berechnen, animiert durch frame
+          uint8_t colorPos = (diag * 20 + frame) % 256;
+          uint32_t color = colorWheel(colorPos);
+          pixels.setPixelColor(idx, color);
+        }
+      }
+    }
+  } else {
+    lightup(satzneu, foregroundColor);
+  }
 
   displayWifiStatus();
 
@@ -1432,6 +1495,10 @@ void loop() {
       colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
       lastMinuteWordClock = 61;
     }
+  } else if (effect == 2) {
+    // rainbow (ToDo: Frame nicht jedesmal erhöhen, sondern nach Speed)
+    frame++;
+    lastMinuteWordClock = 61;
   }
 
   if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris) {
