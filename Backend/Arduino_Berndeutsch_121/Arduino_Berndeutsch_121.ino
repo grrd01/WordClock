@@ -240,7 +240,7 @@ int xyToIndex(int x, int y) {
   if (y % 2 == 0) {
     return y * 11 + x;
   } else {
-    return y * 11 + (11 - 1 - x);
+    return y * 11 + (10 - x);
   }
 }
 
