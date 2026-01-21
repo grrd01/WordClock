@@ -1139,7 +1139,7 @@ void loop() {
                 pixels.show();
               }
               if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
-                effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4;
+                effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-8000 in Arduino
               }
               if (extractParameterValue(url, "darkmode=") == 1) {
                 darkMode = 1;

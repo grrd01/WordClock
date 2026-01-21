@@ -19,7 +19,7 @@
     const pMastermind = ElementById("pMM");
     const pWordGuessr = ElementById("pWG");
     const color = ElementById("co");
-    const speed = ElementById("speed");
+    const speed = ElementById("speed"); // speed of effects, 2000 (slow) to 50 (fast)
     const wordInput = ElementById("wi");
     const effectColorWheel =  ElementById("eCW");
     const ghostMode = ElementById("gm");
