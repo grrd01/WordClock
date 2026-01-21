@@ -21,7 +21,7 @@
     const color = ElementById("co");
     const speed = ElementById("speed");
     const wordInput = ElementById("wi");
-    const rainbowMode =  ElementById("rm");
+    const effectColorWheel =  ElementById("eCW");
     const ghostMode = ElementById("gm");
     const darkMode = ElementById("dm");
     const body = doc.getElementsByTagName("body")[0];
@@ -37,10 +37,10 @@
     let power = 1;
     let dark = 1;
     let ghost = 1;
-    let rainbow = 0;
-    let rainbowRed = 255;
-    let rainbowGreen = 0;
-    let rainbowBlue = 0;
+    let effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
+    let effectColorWheelRed = 255;
+    let effectColorWheelGreen = 0;
+    let effectColorWheelBlue = 0;
     let game;
     let score = 0;
     let highscore = 0;
@@ -135,22 +135,22 @@
     setInterval(setTime, 100);
 
     /**
-     * Change the color by one step in rainbow-mode
+     * Change the color by one step in ColorWheel-mode
      */
-    function fChangeRainbow() {
-        if (rainbow) {
-            if (rainbowRed && !rainbowBlue) {
-                rainbowRed -= 1;
-                rainbowGreen += 1;
-            } else if (rainbowGreen) {
-                rainbowGreen -= 1;
-                rainbowBlue += 1;
+    function fChangeColorWheel() {
+        if (effect === 1) {
+            if (effectColorWheelRed && !effectColorWheelBlue) {
+                effectColorWheelRed -= 1;
+                effectColorWheelGreen += 1;
+            } else if (effectColorWheelGreen) {
+                effectColorWheelGreen -= 1;
+                effectColorWheelBlue += 1;
             } else {
-                rainbowBlue -= 1;
-                rainbowRed += 1;
+                effectColorWheelBlue -= 1;
+                effectColorWheelRed += 1;
             }
-            fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
-            setTimeout(fChangeRainbow, speed.value / 10);
+            fChangeColor("rgb(" + effectColorWheelRed + ", " + effectColorWheelGreen + ", " + effectColorWheelBlue + ")");
+            setTimeout(fChangeColorWheel, speed.value / 10);
         }
     }
 
@@ -217,17 +217,27 @@
     }
 
     /**
-     * Set rainbow-mode on or off
-     * @param {int} rain_in : 1 = rainbow on; 0 = rainbow off
+     * Set effect -
+     * @param {int} rain_in : 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
      */
-    function fRainbow(rain_in) {
-        if (rain_in !== rainbow) {
-            fClassList(fChildren(rainbowMode)[0]).toggle("h");
-            fClassList(fChildren(rainbowMode)[1]).toggle("h");
+    function fEffect(effect_in) {
+        if (effect_in == effect) {
+            effect = 0;
+        } else {
+            effect = effect_in;
         }
-        rainbow = rain_in;
-        if (rainbow) {
-            fChangeRainbow();
+        Array.from(ElementsByClassName("ef")).forEach(function (element, index) {
+            if (index + 1 == effect) {
+                fClassList(fChildren(element)[0]).add("h");
+                fClassList(fChildren(element)[1]).remove("h");
+            } else {
+                fClassList(fChildren(element)[0]).remove("h");
+                fClassList(fChildren(element)[1]).add("h");
+            }
+        });
+
+        if (effect === 1) {
+            fChangeColorWheel();
         } else {
             fChangeColor(color.value);
         }
@@ -284,12 +294,12 @@
         let green = parseInt(color.value.substring(3, 5), 16);
         let blue = parseInt(color.value.substring(5, 7), 16);
         localStorageSet("wc_c", color.value);
-        localStorageSet("wc_r", rainbow);
+        localStorageSet("wc_e", effect);
         localStorageSet("wc_d", dark);
         localStorageSet("wc_g", ghost);
         localStorageSet("wc_s", speed.value.toString());
         let xhr = new XMLHttpRequest();
-        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
+        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
         xhr.send();
     }
 
@@ -592,8 +602,10 @@
     fEventListener(color, "change", (ignore) => {
         fChangeColor(color.value);
     }, false);
-    fEventListener(rainbowMode, click, (ignore) => {
-        fRainbow(1 - rainbow);
+    Array.from(ElementsByClassName("ef")).forEach(function (element, index) {
+        fEventListener(element, click, function (e) {
+            fEffect(index + 1);
+        });
     });
     fEventListener(ghostMode, click, (ignore) => {
         fGhost(1 - ghost);
@@ -621,8 +633,8 @@
         color.value = localStorageGet("wc_c");
         fChangeColor(color.value);
     }
-    if (localStorageGet("wc_r")) {
-        fRainbow(parseInt(localStorageGet("wc_r")));
+    if (localStorageGet("wc_e")) {
+        fEffect(parseInt(localStorageGet("wc_e")));
     }
     if (localStorageGet("wc_g")) {
         fGhost(parseInt(localStorageGet("wc_g")));
@@ -702,12 +714,12 @@
     xhttp.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
             let response = JSON.parse(xhttp.responseText);
-            if (!response.rainbow) {
+            if (!response.effect) {
                 color.value = fRgb2Hex(response.red, response.green, response.blue);
             }
             fChangeColor(color.value);
             fSetDarkMode(response.darkmode);
-            fRainbow(response.rainbow);
+            fEffect(response.effect);
             fGhost(response.ghost);
             fSetPower(response.power);
             speed.value = response.speed;
