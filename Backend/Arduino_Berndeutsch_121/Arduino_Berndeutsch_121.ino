@@ -564,20 +564,25 @@ void displayTime() {
     }
   } else if (effect == 5) {
     // Typewriter effect
-    // First, turn off pixels that are no longer needed
-    for (int i = 0; i < pixels.numPixels(); i++) {
-      if (inArray(i, satzalt) && !inArray(i, satzneu)) {
-        dimToBlack(i, foregroundColor, 10, 20);
+     lightup(satzalt, foregroundColor);
+    // 1. Löschen: alle LEDs, die nur in satzalt sind
+    for (int y = 10; y >= 0; y--) {
+      for (int x = 10; x >= 0; x--) {
+        int idx = xyToIndex(x, y);
+        if (inArray(idx, satzalt) && !inArray(idx, satzneu)) {
+          dimToBlack(idx, foregroundColor, 8, 20);
+        }
       }
     }
-    // Then, turn on new pixels one by one
-    static int typeIndex = 0;
-    if (typeIndex < satzindex) {
-      int pixelToLight = satzneu[typeIndex];
-      pulseOn(pixelToLight, foregroundColor, 10, 20);
-      typeIndex++;
-    } else {
-      typeIndex = 0; // Reset for next time
+    delay(200);
+    // 2. Einschalten: alle LEDs, die nur in satzneu sind
+    for (uint8_t y = 0; y < 11; y++) {
+      for (uint8_t x = 0; x < 11; x++) {
+        int idx = xyToIndex(x, y);
+        if (inArray(idx, satzneu) && !inArray(idx, satzalt)) {
+          pulseOn(idx, foregroundColor, 8, 20);
+        }
+      }
     }
   } else {
     // No effect
