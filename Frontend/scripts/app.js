@@ -311,6 +311,12 @@
         //console.log(cmd);
         if (webSocket && webSocket.readyState === 1) {
             webSocket.send(cmd);
+        } else {
+            initWebSocket();
+            setTimeout(function () {
+                fSendControls(cmd);
+            }, 400);
+
         }
     }
 
@@ -682,8 +688,12 @@
         }
     });
 
-    // initialize websocket connection for game controls
-    try {
+    function initWebSocket() {
+        if (webSocket) {
+            webSocket.onclose = null;
+            webSocket.onerror = null;
+            webSocket.close();
+        }
         webSocket = new WebSocket('ws://' + location.hostname + ':81/');
         // webSocket.onopen = function(){ console.log('webSocket open'); };
         webSocket.onmessage = function(e) {
@@ -700,12 +710,19 @@
                 ElementById("hsGO").innerHTML = highscore;
                 fShowGameOver();
             }
-        }
-        // webSocket.onclose = function(){ console.log('webSocket closed'); };
-        // webSocket.onerror = function(e){ console.log('webSocket error', e); };
-    } catch(e) {
-        // console.log('webSocket init failed');
+        };
+        webSocket.onclose = function() {
+            // Try to reconnect after 2 seconds
+            setTimeout(initWebSocket, 2000);
+        };
+        webSocket.onerror = function() {
+            // Close and trigger onclose for reconnection
+            if (webSocket) webSocket.close();
+        };
     }
+
+    // initialize websocket connection for game controls
+    initWebSocket();
 
     /**
      * Load current settings from word-clock
