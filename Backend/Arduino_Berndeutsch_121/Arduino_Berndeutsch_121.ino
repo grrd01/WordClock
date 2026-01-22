@@ -48,6 +48,16 @@ int effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse,
 int effectSpeed = 200;
 int effectWait = 200;
 uint16_t frame = 0;
+// Matrix-Drops
+struct Drop {
+  float y; // aktuelle Position (kann zwischen den Zeilen liegen)
+  float speed; // Geschwindigkeit (Zeilen pro Frame)
+  uint8_t length; // Abdunklungslänge
+  uint8_t maxBrightness; // Maximale Helligkeit (0..255)
+  bool active; // Ob dieser Drop aktiv ist
+};
+Drop drops[11][2]; // 11 Spalten, bis zu 2 Drops pro Spalte
+uint16_t dropCooldown[11]; // Cooldown pro Spalte bis zum nächsten neuen Drop
 
 
 // Current time
@@ -441,6 +451,89 @@ void lightup(int *word, uint32_t color) {
   }
 }
 
+// Initialisiere Drop in Spalte
+void initDrop(uint8_t col, uint8_t dropIndex) {
+  drops[col][dropIndex].y = -random(1, 8); // Startet oberhalb der Matrix
+  drops[col][dropIndex].speed = 0.1 + random(5, 80) / 100.0; // 0.15..0.90
+  drops[col][dropIndex].length = random(3, 8); // 3..7
+  drops[col][dropIndex].maxBrightness = random(120, 255); // 120..255
+  drops[col][dropIndex].active = true;
+}
+
+// Matrix-Animation
+void matrixEffect() {
+  lightup(satzalt, foregroundColor);
+  frame = 0;
+  for (uint8_t x = 0; x < 11; x++) {
+    initDrop(x, 0);
+    dropCooldown[x] = 0;
+  }
+  while (true) {
+    frame++;
+    bool allowNewDrops = (frame < 133); // 4 Sekunden / 30ms = ~133 Frames
+    
+    bool hasActiveDrops = false;
+    
+    for (uint8_t x = 0; x < 11; x++) {
+      // Cooldown für neue Drops verwalten
+      if (dropCooldown[x] > 0) {
+        dropCooldown[x]--;
+      }
+      
+      // Alle Drops in dieser Spalte verarbeiten
+      for (uint8_t d = 0; d < 2; d++) {
+        if (!drops[x][d].active) {
+          // Wenn dieser Drop inaktiv ist und Cooldown abgelaufen, neuen Drop starten
+          if (dropCooldown[x] == 0 && allowNewDrops) {
+            initDrop(x, d);
+            dropCooldown[x] = random(5, 30); // Kurzer Cooldown bis zum nächsten Drop
+          }
+          continue;
+        }
+        
+        hasActiveDrops = true;
+        drops[x][d].y += drops[x][d].speed;
+        
+        // Drop ist fertig, wenn er unten angekommen ist
+        if (drops[x][d].y - drops[x][d].length > 11) {
+          drops[x][d].active = false;
+          continue;
+        }
+        
+        // Zeichne den Drop
+        for (int8_t i = 0; i <= drops[x][d].length; i++) {
+          int8_t py = (int8_t)(drops[x][d].y) - i;
+          if (py < 0 || py > 11) continue;
+          uint16_t idx = xyToIndex(x, py);
+          
+          // Prüfe, ob dieser Pixel in satzneu enthalten ist
+          if (inArray(idx, satzneu)) {
+            // Satzneu-Pixel: keine Fade, volle Helligkeit
+            pixels.setPixelColor(idx, foregroundColor);
+          } else {
+            // Andere Pixel: normales Faden
+            float fade = 1.0 - (float)i / drops[x][d].length;
+            fade = fade * fade; // Exponentieller Fade für stärkeren Effekt
+            uint8_t brightness = (uint8_t)(drops[x][d].maxBrightness * fade);
+            uint32_t col = pixels.Color(
+              (uint8_t)((foregroundColor >> 16) & 0xFF) * brightness / 255,
+              (uint8_t)((foregroundColor >> 8) & 0xFF) * brightness / 255,
+              (uint8_t)(foregroundColor & 0xFF) * brightness / 255
+            );
+            pixels.setPixelColor(idx, col);
+          }
+        }
+      }
+    }
+    
+    pixels.show();
+    delay(30);
+    
+    // Schleife nur beenden wenn keine Drops mehr aktiv sind und neue Drops nicht mehr gespawnt werden
+    if (!allowNewDrops && !hasActiveDrops) break;
+  }
+}
+
 /**
  * Get the numeric value of a URL-Parameter
  * @param url char url-string
@@ -562,6 +655,9 @@ void displayTime() {
         }
       }
     }
+  } else if (effect == 3 && wordClockMinute % 5 == 0) {
+    // Matrix effect
+    matrixEffect();
   } else if (effect == 5) {
     // Typewriter effect
      lightup(satzalt, foregroundColor);
