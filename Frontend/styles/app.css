@@ -54,8 +54,13 @@ body {
     }
 }
 
-.t, .w100 {
+.t {
     width: 100%;
+}
+
+[for="speed"] {
+    width: 100%;
+    margin-bottom: 0;
 }
 
 .M1, .M2, .M3, .M4 {
@@ -131,15 +136,27 @@ a:active {
 .ddo {
     transform: rotate(270deg);
 }
-.ddl {
-    max-height: calc(100vh - 100px);
-    transition: max-height 1.5s ease-in-out;
-    overflow: hidden;
+ul {
+    list-style-type: none;
     margin: 0;
+    padding-left: 20px;
 }
-.ddlc  {
+li {
+    max-height: calc(4.5vmin + 60px);
+    transition: max-height 0.7s ease-in-out;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    overflow: hidden;
+}
+li label, li svg {
+    margin-bottom: 20px;
+}
+ul.cl li {
     max-height: 0;
-    transition: max-height 1.5s ease-in-out;
+    transition: max-height 0.7s ease-in-out;
 }
 
 circle {

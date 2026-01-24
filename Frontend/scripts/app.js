@@ -621,15 +621,15 @@
     });
     fEventListener(ElementById("SE"), click, (e) => {
         fClassList(ElementById("SE")).toggle("ddo");
-        fClassList(ElementById("LSE")).toggle("ddlc");
+        fClassList(ElementById("LSE")).toggle("cl");
         fClassList(ElementById("GM")).remove("ddo");
-        fClassList(ElementById("LGM")).add("ddlc");
+        fClassList(ElementById("LGM")).add("cl");
     });
     fEventListener(ElementById("GM"), click, (e) => {
         fClassList(ElementById("GM")).toggle("ddo");
-        fClassList(ElementById("LGM")).toggle("ddlc");
+        fClassList(ElementById("LGM")).toggle("cl");
         fClassList(ElementById("SE")).remove("ddo");
-        fClassList(ElementById("LSE")).add("ddlc");
+        fClassList(ElementById("LSE")).add("cl");
     });
 
     /**
