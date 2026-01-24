@@ -38,6 +38,7 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 String header;
 
 // Auxiliar variables to store the web parameters
+const int numPixels = 121;
 int rgbRed = 255;
 int rgbGreen = 255;
 int rgbBlue = 255;
@@ -169,7 +170,7 @@ int satzalt[30];
 int satzneu[30];
 uint8_t satzindex = 0;
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(121, D7, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800);
 
 // How long this state should be displayed
 int wifiWait = 0;
@@ -326,7 +327,7 @@ bool inMastermind = false;
 // äöü durch aou ersetzen, damit Zugriff über Byte-Index möglich ist (äöü brauchen 2 Bytes, aou nur eins)
 // ESDISCHWFÜFYÄÄZTUTREIVZWÄNZGQDVORZTIBUAHDBAKEISQZWÖIDRÜTIFÜFIREIVZGMSÄCHSIBNIFOINÜNITHCACDZÄNIXEUFIXLIFUÖWZGKOLYB..P..MK.
 const char* wordGuessrLetters = "ESDISCHWFuFYaaZTUTREIVZWaNZGQDVORZTIBUAHDBAKEISQZWoIDRuTIFuFIREIVZGMSaCHSIBNIFOINuNITHCACDZaNIXEUFIXLIFUoWZGKOLYB..P..MK.";
-char wordGuessrLettersCopy[121];
+char wordGuessrLettersCopy[numPixels];
 
 const char wordGuessrWords0[] PROGMEM = "AAL AARE ABEND ABENTEUER ABSCHLUSS ACHSE ACHSEL ACHT ACKER ADER ADLER ADRIA AFRIKA AGENT ÄGYPTEN AKTION ALPEN ALPHABET ALTER AMEISE AMERIKA AMOR AMT ANANAS ANFANG ANGEBOT ANGOLA ANGST ANLAGE ANTILOPE ANTWORT ANWALT ANZUG APFEL APRIKOSE APRIL ARBEIT ARCHIV ÄRGER ARM ARMBAND ARTIKEL ARZT ASPHALT ASTRONAUT ATHEN ATMEN AUGE AUGUST AUSDAUER AUSGANG AUSPUFF AUSWAHL AUTO AUTOBAHN AVOCADO BACH BACKE BADEN BADEWANNE BAHN BALL BANANE BAND BANK BÄR BART BASEL BATTERIE BAUCH BAUER BAUM BECHER BEDINGUNG BEERE BEGINN BEIL BEIN BEISPIEL BEITRAG BERATUNG BERG BERICHT BERLIN BERN BERUF BESCHWERDE BESUCH BETON BETRAG BETT BEWEIS BEWERTUNG BIBER BIBLIOTHEK BIENE BIER BILD BILLARD BILLIG"; 
 const char wordGuessrWords1[] PROGMEM = "BIRNE BISON BLATT BLAU BLICK BLICKEN BLITZ BLÖD BLUME BLUT BLÜTE BODEN BOGEN BOHNE BOLIVIEN BOMBE BRAUE BRAUN BREI BREIT BRIEF BRILLE BROKKOLI BRONZE BROT BRÜCKE BRUST BUCH BUCHE BUCHSTABE BÜHNE BUND BURG BÜRSTE BUSCH BUTTER CHILE CHINA COMPUTER DACH DACHS DACKEL DAME DÄNEMARK DANK DARM DATTEL DAUER DAUMEN DECKE DELFIN DETAIL DETEKTIV DIALOG DICK DIEB DIENST DING DISTEL DOKTOR DOKUMENT DOMINO DONAU DONNER DOOF DORF DRACHE DRAMA DREI DREIECK DREIRAD DROMEDAR DROSSEL DUMM DUNKEL DÜNN DUNST EBBE EBENE ECHSE ECKE EICHE EIDECHSE EIER EINFLUSS EINKAUF EINS EINTOPF EIS EISBÄR EISHOCKEY EKLIG ELCH ELEFANT ELLBOGEN ELTERN ENDE ENERGIE ENKEL ENTE"; 
@@ -375,19 +376,12 @@ void chase(uint32_t color) {
 /**
  * Function to scale brightness by a factor
  * @param color Adafruit_NeoPixel-Color to display
- * @param factor float to dim color, 0.5 for 50% brightness
+ * @param brightness float to dim color, 0.5 for 50% brightness
  */
-uint32_t dimColor(uint32_t color, float factor) {
-  uint8_t r = (color >> 16) & 0xFF;  // Extract the red component
-  uint8_t g = (color >> 8) & 0xFF;   // Extract the green component
-  uint8_t b = color & 0xFF;          // Extract the blue component
-
-  // Scale each color component by the brightness factor
-  r = (uint8_t)(r * factor);
-  g = (uint8_t)(g * factor);
-  b = (uint8_t)(b * factor);
-
-  // Return the new color
+uint32_t scaleColor(uint32_t color, float brightness) {
+  uint8_t r = (uint8_t)((uint8_t)(color >> 16) * brightness);
+  uint8_t g = (uint8_t)((uint8_t)(color >> 8) * brightness);
+  uint8_t b = (uint8_t)((uint8_t)color * brightness);
   return Adafruit_NeoPixel::Color(r, g, b);
 }
 
@@ -534,6 +528,77 @@ void matrixEffect() {
   }
 }
 
+// Pulse-Animation
+void pulseEffect() {
+  float radius = -2.0f;
+  const float speed = 0.10f; // Geschwindigkeit der Welle
+  const float maxRadius = 9.0f; // maximaler Abstand von Mitte zu Ecke
+  const float width = 1.1f; // Breite der Welle
+  const uint8_t cx = 5, cy = 5; // Mittelpunkt
+
+  // Statusarrays: markiere satzalt und satzneu Pixel und ob ihr Peak erreicht wurde
+  bool peakReached[numPixels];
+  for (uint16_t i = 0; i < numPixels; ++i) {
+    peakReached[i] = false;
+  }
+  const float peakThreshold = 0.95f; // Schwelle um "Maximalhelligkeit" zu erkennen
+  const float peakEpsilon = 0.05f; // wie nah an diff==0 gelten wir als Peak
+
+  while (radius < maxRadius + width * 3.0f) {
+    for (uint8_t y = 0; y < 11; y++) {
+      for (uint8_t x = 0; x < 11; x++) {
+        float dx = x - cx;
+        float dy = y - cy;
+        float dist = sqrtf(dx * dx + dy * dy);
+        float diff = dist - radius;
+        float brightness = expf(-0.5f * (diff * diff) / (width * width));
+        if (brightness < 0.01f) brightness = 0.0f;
+        uint16_t idx = xyToIndex(x, y);
+
+        // wurde Peak erreicht?
+        if (!peakReached[idx] && (fabsf(diff) <= peakEpsilon || brightness >= peakThreshold)) peakReached[idx] = true;
+
+        if (inArray(idx, satzalt) && !peakReached[idx]) {
+          // nichts tun, bleibt hell bis Peak
+        } else if (inArray(idx, satzneu) && peakReached[idx]) {
+          // satzneu nach Peak: dauerhaft weiß
+          pixels.setPixelColor(idx, foregroundColor);
+        } else {
+          // normale Pixel folgen der Welle
+          pixels.setPixelColor(idx, scaleColor(foregroundColor, brightness));
+        }
+      }
+    }
+    pixels.show();
+    radius += speed;
+    delay(10);
+  }
+}
+
+// Typewriter Animation
+void typewriterEffect() {
+  lightup(satzalt, foregroundColor);
+  // 1. Löschen: alle LEDs, die nur in satzalt sind
+  for (int y = 10; y >= 0; y--) {
+    for (int x = 10; x >= 0; x--) {
+      int idx = xyToIndex(x, y);
+      if (inArray(idx, satzalt) && !inArray(idx, satzneu)) {
+        dimToBlack(idx, foregroundColor, 8, 20);
+      }
+    }
+  }
+  delay(200);
+  // 2. Einschalten: alle LEDs, die nur in satzneu sind
+  for (uint8_t y = 0; y < 11; y++) {
+    for (uint8_t x = 0; x < 11; x++) {
+      int idx = xyToIndex(x, y);
+      if (inArray(idx, satzneu) && !inArray(idx, satzalt)) {
+        pulseOn(idx, foregroundColor, 8, 20);
+      }
+    }
+  }
+}
+
 /**
  * Get the numeric value of a URL-Parameter
  * @param url char url-string
@@ -658,28 +723,12 @@ void displayTime() {
   } else if (effect == 3 && wordClockMinute % 5 == 0) {
     // Matrix effect
     matrixEffect();
+  } else if (effect == 4 && wordClockMinute % 5 == 0) {
+    // Pulse effect
+    pulseEffect();
   } else if (effect == 5) {
     // Typewriter effect
-     lightup(satzalt, foregroundColor);
-    // 1. Löschen: alle LEDs, die nur in satzalt sind
-    for (int y = 10; y >= 0; y--) {
-      for (int x = 10; x >= 0; x--) {
-        int idx = xyToIndex(x, y);
-        if (inArray(idx, satzalt) && !inArray(idx, satzneu)) {
-          dimToBlack(idx, foregroundColor, 8, 20);
-        }
-      }
-    }
-    delay(200);
-    // 2. Einschalten: alle LEDs, die nur in satzneu sind
-    for (uint8_t y = 0; y < 11; y++) {
-      for (uint8_t x = 0; x < 11; x++) {
-        int idx = xyToIndex(x, y);
-        if (inArray(idx, satzneu) && !inArray(idx, satzalt)) {
-          pulseOn(idx, foregroundColor, 8, 20);
-        }
-      }
-    }
+    typewriterEffect();
   } else {
     // No effect
     lightup(satzneu, foregroundColor);
@@ -926,7 +975,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 void setSnack() {
   snakeSnack = -1;
   while (snakeSnack < 0) {
-    snakeSnack = random(121);
+    snakeSnack = random(numPixels);
     for (int i = snakeLen - 1; i >= 0; i--) {
       if (snakeSnack == snake[i]){
         // place occupied by snake
@@ -1102,7 +1151,7 @@ void handleRestart() {
 int wordGuessrFindIndex(char letter) {
   int indices[16]; // max 16 occurences of a letter (i has 15)
   int count = 0;
-  for (int j = 0; j < 121; j++) {
+  for (int j = 0; j < numPixels; j++) {
     if (wordGuessrLettersCopy[j] == letter) {
       indices[count] = j;
       count++;
@@ -1376,14 +1425,37 @@ void loop() {
                 rgbRed = extractParameterValue(url, "red=");
               }
               if (effect == 1) {
+                // colorWheel
                 rgbRed = 255;
                 rgbGreen = 0;
                 rgbBlue = 0;
                 effectWait = effectSpeed;
-              } else if (effect == 2)  {
+              } else if (effect == 2) {
+                // rainbow
                 effectWait = effectSpeed / 8;
+              } else if (effect == 3) {
+                // matrix
+                memcpy(satzalt, satzneu, sizeof(satzneu));
+                matrixEffect();
+              } else if (effect == 4) {
+                // pulse
+                memcpy(satzalt, satzneu, sizeof(satzneu));
+                pulseEffect();
+              } else if (effect == 5) {
+                // typewriter
+                satzalt[0] = 0;
+                satzalt[1] = 1;
+                satzalt[2] = 3;
+                satzalt[3] = 4;
+                satzalt[4] = 5;
+                satzalt[5] = 6;
+                satzalt[6] = -1; 
+                blank();
+                lightup(WordEs, foregroundColor);
+                lightup(WordIst, foregroundColor);
+                pixels.show();
+                typewriterEffect();
               }
-
               colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
               colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
               lastMinuteWordClock = 61;
@@ -1461,7 +1533,7 @@ void loop() {
       for (int j = 11; j >= 0; j--) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < 121; i++) {
+        for (int i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1469,7 +1541,7 @@ void loop() {
           }
           // pixel um anzahl Zeilen nach unten verschieben
           ghostPixel = down(ghostPixel,j);
-          pixels.setPixelColor(ghostPixel, dimColor(White, (11 - (float)j) / 11));
+          pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
         }
         pixels.show();
         delay(200);
@@ -1502,7 +1574,7 @@ void loop() {
       for (int j = 0; j < 11; j++) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < 121; i++) {
+        for (int i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1510,7 +1582,7 @@ void loop() {
           }
           // pixel um anzahl Zeilen nach unten verschieben
           ghostPixel = down(ghostPixel,j);
-          pixels.setPixelColor(ghostPixel, dimColor(White, (11 - (float)j) / 11));
+          pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
         }
         pixels.show();
         delay(200);

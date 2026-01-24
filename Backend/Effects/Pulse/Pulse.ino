@@ -75,24 +75,22 @@ uint32_t scaleColor(uint32_t color, float brightness) {
 }
 
 void wave() {
-  float radius = 0.0f;
+  float radius = -2.0f;
   const float speed = 0.10f; // Geschwindigkeit der Welle
   const float maxRadius = 9.0f; // maximaler Abstand von Mitte zu Ecke
-  const float width = 1.3f; // Breite der Welle
+  const float width = 1.1f; // Breite der Welle
   const uint8_t cx = 5, cy = 5; // Mittelpunkt
 
   // Statusarrays: markiere satzalt und satzneu Pixel und ob ihr Peak erreicht wurde
-  bool inSatzneu[NUM_PIXELS];
   bool peakReached[NUM_PIXELS];
   for (uint16_t i = 0; i < NUM_PIXELS; ++i) {
-    inSatzneu[i] = false;
     peakReached[i] = false;
   }
 
   const float peakThreshold = 0.95f; // Schwelle um "Maximalhelligkeit" zu erkennen
   const float peakEpsilon = 0.05f; // wie nah an diff==0 gelten wir als Peak
 
-  while (radius < maxRadius + width * 2.0f) {
+  while (radius < maxRadius + width * 3.0f) {
     for (uint8_t y = 0; y < 11; y++) {
       for (uint8_t x = 0; x < 11; x++) {
         float dx = x - cx;
@@ -103,7 +101,7 @@ void wave() {
         if (brightness < 0.01f) brightness = 0.0f;
         uint16_t idx = xyToIndex(x, y);
 
-        // Priorität: satzalt (darf bis Peak hell bleiben und danach abdunkeln)
+        // wurde Peak erreicht?
         if (!peakReached[idx] && (fabsf(diff) <= peakEpsilon || brightness >= peakThreshold)) peakReached[idx] = true;
 
         if (inArray(idx, satzalt) && !peakReached[idx]) {
@@ -115,7 +113,6 @@ void wave() {
           // normale Pixel folgen der Welle
           pixels.setPixelColor(idx, scaleColor(foregroundColor, brightness));
         }
-
       }
     }
     pixels.show();
