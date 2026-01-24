@@ -178,9 +178,6 @@ void matrixEffect() {
     // Schleife nur beenden wenn keine Drops mehr aktiv sind und neue Drops nicht mehr gespawnt werden
     if (!allowNewDrops && !hasActiveDrops) break;
   }
-  //blank();
-  //lightup(satzneu, foregroundColor);
-  //pixels.show();
 }
 
 void setup() {
