@@ -6,6 +6,18 @@ This repository contains the code for the LOLIN (WEMOS) D1 mini Lite (ESP8266) W
 Generate custom clockface:
 [SVG-Generator](https://wordclock.collaud.me/)
 
+## Update Arduino Code with Current Frontend
+
+The web interface is automatically generated from the Frontend using Grunt and embedded in `web_interface.h`:
+
+```bash
+cd Frontend
+yarn install         # (only required on first run)
+yarn grunt           # Compiles Frontend and updates web_interface.h
+```
+
+After running `yarn grunt`, the file `Backend/Arduino_Berndeutsch_121/web_interface.h` is automatically updated and ready to compile with the Arduino IDE.
+
 Hardware required:
 
 
