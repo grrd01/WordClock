@@ -698,6 +698,7 @@
         // webSocket.onopen = function(){ console.log('webSocket open'); };
         webSocket.onmessage = function(e) {
             if (e.data && e.data.indexOf('score:') === 0) {
+                // get score update for snake / tetris
                 score = parseInt(e.data.split(':')[1]) * 10;
                 if (score > highscore) {
                     highscore = score;
@@ -706,9 +707,21 @@
                 ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
             if (e.data && e.data.indexOf('gameOver') === 0) {
+                // game over for snake / tetris
                 ElementById("sGO").innerHTML = score;
                 ElementById("hsGO").innerHTML = highscore;
                 fShowGameOver();
+            }
+            if (e.data && e.data.indexOf('effect')) {
+              // get current settings from word-clock
+              let response = JSON.parse(e.data);
+              color.value = fRgb2Hex(response.red, response.green, response.blue);
+              fChangeColor(color.value);
+              fSetDarkMode(response.darkmode);
+              fEffect(response.effect);
+              fGhost(response.ghost);
+              fSetPower(response.power);
+              speed.value = response.speed;
             }
         };
         webSocket.onclose = function() {
@@ -724,24 +737,4 @@
     // initialize websocket connection for game controls
     initWebSocket();
 
-    /**
-     * Load current settings from word-clock
-     */
-    let xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState === 4 && this.status === 200) {
-            let response = JSON.parse(xhttp.responseText);
-            if (!response.effect) {
-                color.value = fRgb2Hex(response.red, response.green, response.blue);
-            }
-            fChangeColor(color.value);
-            fSetDarkMode(response.darkmode);
-            fEffect(response.effect);
-            fGhost(response.ghost);
-            fSetPower(response.power);
-            speed.value = response.speed;
-        }
-    };
-    xhttp.open("GET", "get_params", true);
-    xhttp.send();
 }())
