@@ -464,7 +464,7 @@ void matrixEffect() {
   }
   while (true) {
     frame++;
-    bool allowNewDrops = (frame < 133); // 4 Sekunden / 30ms = ~133 Frames
+    bool allowNewDrops = (frame < 90); // Dauer der Animation
     
     bool hasActiveDrops = false;
     
@@ -535,6 +535,8 @@ void pulseEffect() {
   const float maxRadius = 9.0f; // maximaler Abstand von Mitte zu Ecke
   const float width = 1.1f; // Breite der Welle
   const uint8_t cx = 5, cy = 5; // Mittelpunkt
+
+  lightup(satzalt, foregroundColor);
 
   // Statusarrays: markiere satzalt und satzneu Pixel und ob ihr Peak erreicht wurde
   bool peakReached[numPixels];
@@ -683,6 +685,15 @@ void displayWifiStatus() {
   }
 }
 
+void setForegroundColor() {
+  // Display darker color between 22:00 and 07:00
+  if (darkMode == 1 && (wordClockHour >= 22 || wordClockHour < 7)) {
+    foregroundColor = colorNight;
+  } else {
+    foregroundColor = colorDay;
+  }
+}
+
 /**
  * Displays the current time
  */
@@ -690,13 +701,7 @@ void displayTime() {
   satzindex = 0;
   memcpy(satzalt, satzneu, sizeof(satzneu));
   blank();
-
-  // Display darker color between 22:00 and 07:00
-  if (darkMode == 1 && (wordClockHour >= 22 || wordClockHour < 7)) {
-    foregroundColor = colorNight;
-  } else {
-    foregroundColor = colorDay;
-  }
+  setForegroundColor();
 
   // light up "it's" it stays on
   addword(WordEs);
@@ -1424,6 +1429,9 @@ void loop() {
               if (extractParameterValue(url, "red=") >= 0) {
                 rgbRed = extractParameterValue(url, "red=");
               }
+              colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+              colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+              setForegroundColor();
               if (effect == 1) {
                 // colorWheel
                 rgbRed = 255;
@@ -1433,31 +1441,22 @@ void loop() {
               } else if (effect == 2) {
                 // rainbow
                 effectWait = effectSpeed / 8;
-              } else if (effect == 3) {
+              } else if (effect == 3 && wordClockMinute % 5 != 0) {
                 // matrix
                 memcpy(satzalt, satzneu, sizeof(satzneu));
                 matrixEffect();
-              } else if (effect == 4) {
+              } else if (effect == 4 && wordClockMinute % 5 != 0) {
                 // pulse
                 memcpy(satzalt, satzneu, sizeof(satzneu));
                 pulseEffect();
               } else if (effect == 5) {
                 // typewriter
-                satzalt[0] = 0;
-                satzalt[1] = 1;
-                satzalt[2] = 3;
-                satzalt[3] = 4;
-                satzalt[4] = 5;
-                satzalt[5] = 6;
                 satzalt[6] = -1; 
                 blank();
-                lightup(WordEs, foregroundColor);
-                lightup(WordIst, foregroundColor);
+                lightup(satzalt, foregroundColor);
                 pixels.show();
                 typewriterEffect();
               }
-              colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
-              colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
               lastMinuteWordClock = 61;
               client.println(F("HTTP/1.1 200 OK"));
               client.println(F("Content-type:text/plain"));
