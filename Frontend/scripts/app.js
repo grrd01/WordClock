@@ -218,7 +218,7 @@
 
     /**
      * Set effect -
-     * @param {int} rain_in : 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
+     * @param {int} effect_in : 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
      */
     function fEffect(effect_in) {
         if (effect_in == effect) {
@@ -718,7 +718,9 @@
               color.value = fRgb2Hex(response.red, response.green, response.blue);
               fChangeColor(color.value);
               fSetDarkMode(response.darkmode);
-              fEffect(response.effect);
+              if (response.effect !== effect) {
+                  fEffect(response.effect);
+              }
               fGhost(response.ghost);
               fSetPower(response.power);
               speed.value = response.speed;
