@@ -1705,7 +1705,7 @@ void loop() {
       effectWait--;
     } else {
       effectWait = effectSpeed;
-      if (rgbRed > 0 && !rgbBlue > 0) {
+      if (rgbRed > 0 && rgbBlue == 0) {
         rgbRed--;
         rgbGreen++;
       } else if (rgbGreen > 0) {
