@@ -1417,12 +1417,12 @@ void loop() {
               const char *url = header.c_str();
               if (extractParameterValue(url, "ghost=") == 1) {
                 ghost = 1;
-              } else if (extractParameterValue(url, "ghost=") == 0) {
+              } else {
                 ghost = 0;
               }
               if (extractParameterValue(url, "power=") == 1) {
                 power = 1;
-              } else if (extractParameterValue(url, "power=") == 0) {
+              } else {
                 power = 0;
                 blank();
                 pixels.show();
@@ -1432,19 +1432,19 @@ void loop() {
               }
               if (extractParameterValue(url, "darkmode=") == 1) {
                 darkMode = 1;
-              } else if (extractParameterValue(url, "darkmode=") == 0) {
+              } else {
                 darkMode = 0;
               }
-              if (extractParameterValue(url, "effect=") >= 0) {
+              if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
                 effect = extractParameterValue(url, "effect=");
               }
-              if (extractParameterValue(url, "blue=") >= 0) {
+              if (extractParameterValue(url, "blue=") >= 0 && extractParameterValue(url, "blue=") <= 255) {
                 rgbBlue = extractParameterValue(url, "blue=");
               }
-              if (extractParameterValue(url, "green=") >= 0) {
+              if (extractParameterValue(url, "green=") >= 0 && extractParameterValue(url, "green=") <= 255) {
                 rgbGreen = extractParameterValue(url, "green=");
               }
-              if (extractParameterValue(url, "red=") >= 0) {
+              if (extractParameterValue(url, "red=") >= 0 && extractParameterValue(url, "red=") <= 255) {
                 rgbRed = extractParameterValue(url, "red=");
               }
               colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
@@ -1459,15 +1459,15 @@ void loop() {
               } else if (effect == 2) {
                 // rainbow
                 effectWait = effectSpeed / 8;
-              } else if (effect == 3 && wordClockMinute % 5 != 0) {
+              } else if (effect == 3 && wordClockMinute % 5 != 0 && power == 1) {
                 // matrix
                 memcpy(satzalt, satzneu, sizeof(satzneu));
                 matrixEffect();
-              } else if (effect == 4 && wordClockMinute % 5 != 0) {
+              } else if (effect == 4 && wordClockMinute % 5 != 0 && power == 1) {
                 // pulse
                 memcpy(satzalt, satzneu, sizeof(satzneu));
                 pulseEffect();
-              } else if (effect == 5) {
+              } else if (effect == 5 && power == 1) {
                 // typewriter
                 satzalt[6] = -1; 
                 blank();
