@@ -38,14 +38,14 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 String header;
 
 // Auxiliar variables to store the web parameters
-const int numPixels = 121;
-int rgbRed = 255;
-int rgbGreen = 255;
-int rgbBlue = 255;
-int power = 1;
-int darkMode = 1;
-int ghost = 1;
-int effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
+const uint8_t numPixels = 121;
+uint8_t rgbRed = 255;
+uint8_t rgbGreen = 255;
+uint8_t rgbBlue = 255;
+uint8_t power = 1;
+uint8_t darkMode = 1;
+uint8_t ghost = 1;
+uint8_t effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
 int effectSpeed = 200;
 int effectWait = 200;
 uint16_t frame = 0;
@@ -68,15 +68,15 @@ unsigned long previousTime = 0;
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
-int wordClockMinute = 62;
-int wordClockHour = 0;
-int lastMinuteWordClock = 61;
+uint8_t wordClockMinute = 62;
+uint8_t wordClockHour = 0;
+uint8_t lastMinuteWordClock = 61;
 
-const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
+const uint8_t NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
 static const char ntpServerName[] = "0.ch.pool.ntp.org";
 
-const int timeZone = 0;     // Central European Time
+const uint8_t timeZone = 0;     // Central European Time
 
 //Central European Time (Frankfurt, Paris)
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};     //Central European Summer Time
@@ -124,50 +124,50 @@ uint32_t wifiColor = Black;
 | L | Y | B | ° | ° | P | ° | ° | M | K | @ |
  */
 
-static int WordEs[] = {0, 1, -1};
-static int WordIst[] = {3, 4, 5, 6, -1};
-static int WordHalb[] = {39, 38, 37, 36, 35, -1};
+static int8_t WordEs[] = {0, 1, -1};
+static int8_t WordIst[] = {3, 4, 5, 6, -1};
+static int8_t WordHalb[] = {39, 38, 37, 36, 35, -1};
 
-static int WordFix[] = {77, 98, 99, -1};
-static int WordWifi[] = {120, -1};
-static int WordNach[] = {42, 41, -1};
-static int WordVor[] = {30, 31, 32, -1};
+static int8_t WordFix[] = {77, 98, 99, -1};
+static int8_t WordWifi[] = {120, -1};
+static int8_t WordNach[] = {42, 41, -1};
+static int8_t WordVor[] = {30, 31, 32, -1};
 
-static int SymbolWifi[] = {120, -1};
+static int8_t SymbolWifi[] = {120, -1};
 
-static int *WordURL[] = {WordFix, WordWifi};
+static int8_t *WordURL[] = {WordFix, WordWifi};
 
 // Stunde
-static int WordStundeEins[] = {44, 45, 46, -1};                     // EIS
-static int WordStundeZwei[] = {48, 49, 50, 51, -1};                 // ZWÖI
-static int WordStundeDrei[] = {52, 53, 54, -1};                     // DRÜ
-static int WordStundeVier[] = {64, 63, 62, 61, 60, -1};             // VIERI
-static int WordStundeFuenf[] = {59, 58, 57, 56, -1};                // FÜFI
-static int WordStundeSechs[] = {68, 69, 70, 71, 72, 73, -1};        // SÄCHSI
-static int WordStundeSieben[] = {72, 73, 74, 75, 76, -1};           // SIBNI
-static int WordStundeAcht[] = {87, 86, 85, 84, 83, -1};             // ACHTI
-static int WordStundeNeun[] = {82, 81, 80, 79, -1};                 // NÜNI
-static int WordStundeZehn[] = {90, 91, 92, 93, -1};                 // ZÄNI
-static int WordStundeElf[] = {95, 96, 97, 98, -1};                  // EUFI
-static int WordStundeZwoelf[] = {106, 105, 104, 103, 102, 101, -1}; // ZWÖUFI
+static int8_t WordStundeEins[] = {44, 45, 46, -1};                     // EIS
+static int8_t WordStundeZwei[] = {48, 49, 50, 51, -1};                 // ZWÖI
+static int8_t WordStundeDrei[] = {52, 53, 54, -1};                     // DRÜ
+static int8_t WordStundeVier[] = {64, 63, 62, 61, 60, -1};             // VIERI
+static int8_t WordStundeFuenf[] = {59, 58, 57, 56, -1};                // FÜFI
+static int8_t WordStundeSechs[] = {68, 69, 70, 71, 72, 73, -1};        // SÄCHSI
+static int8_t WordStundeSieben[] = {72, 73, 74, 75, 76, -1};           // SIBNI
+static int8_t WordStundeAcht[] = {87, 86, 85, 84, 83, -1};             // ACHTI
+static int8_t WordStundeNeun[] = {82, 81, 80, 79, -1};                 // NÜNI
+static int8_t WordStundeZehn[] = {90, 91, 92, 93, -1};                 // ZÄNI
+static int8_t WordStundeElf[] = {95, 96, 97, 98, -1};                  // EUFI
+static int8_t WordStundeZwoelf[] = {106, 105, 104, 103, 102, 101, -1}; // ZWÖUFI
 
-static int *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, WordStundeDrei, WordStundeVier,
+static int8_t *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, WordStundeDrei, WordStundeVier,
                              WordStundeFuenf, WordStundeSechs, WordStundeSieben, WordStundeAcht, WordStundeNeun,
                              WordStundeZehn, WordStundeElf, WordStundeZwoelf
 };
 
 // Minute
-static int WordMinFuenf[] = {8, 9, 10, -1};                   // FÜF
-static int WordMinZehn[] = {14, 13, 12, -1};                  // ZÄÄ
-static int WordMinViertel[] = {21, 20, 19, 18, 17, 16, -1};   // VIERTU
-static int WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};   // ZWÄNZG
-static int WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
+static int8_t WordMinFuenf[] = {8, 9, 10, -1};                   // FÜF
+static int8_t WordMinZehn[] = {14, 13, 12, -1};                  // ZÄÄ
+static int8_t WordMinViertel[] = {21, 20, 19, 18, 17, 16, -1};   // VIERTU
+static int8_t WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};   // ZWÄNZG
+static int8_t WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
 
-static int *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
+static int8_t *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
 // aktueller und letzter Zeit-Satz
-int satzalt[30];
-int satzneu[30];
+int8_t satzalt[30];
+int8_t satzneu[30];
 uint8_t satzindex = 0;
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800);
@@ -253,7 +253,7 @@ uint8_t currentPiece[4][4]; // Store current piece with rotation applied
 bool gameOver = false;
 
 // Map (x, y) to LED index for serpentine wiring
-int xyToIndex(int x, int y) {
+uint8_t xyToIndex(uint8_t x, uint8_t y) {
   if (y % 2 == 0) {
     return y * 11 + x;
   } else {
@@ -262,8 +262,8 @@ int xyToIndex(int x, int y) {
 }
 
 // Hilfsfunktion: Prüft, ob LED in Array enthalten ist
-bool inArray(int led, int *arr) {
-  for (int i = 0; arr[i] != -1; i++) {
+bool inArray(uint8_t led, uint8_t *arr) {
+  for (uint8_t i = 0; arr[i] != -1; i++) {
     if (arr[i] == led) return true;
   }
   return false;
@@ -352,12 +352,12 @@ int wordGuessrHint = 0;
 bool inWordGuessr = false;
 
 // Ghost variables
-int ghostHour = 0;
-int ghostMinute = 0;
+int8_t ghostHour = 0;
+int8_t ghostMinute = 0;
 int ghostStep = 0;
 int ghostChange = 1;
-static int WordGhost[] = {5, 6, 7, 17, 16, 15, 25, 26, 27, 28, 29, 40, 38, 36, 44, 47, 49, 51, 53, 54, 65, 64, 63, 62, 61, 59, 58, 57, 56, 55, 67, 68, 69, 70, 72, 73, 74, 75, 85, 84, 83, 82, 81, 80, 79, 91, 92, 93, 94, 95, 105, 104, 103, 102, 116, 117, 118, -1};
-static int WordGhostEyes[] = {39, 48, 37, 50, -1};
+static int8_t WordGhost[] = {5, 6, 7, 17, 16, 15, 25, 26, 27, 28, 29, 40, 38, 36, 44, 47, 49, 51, 53, 54, 65, 64, 63, 62, 61, 59, 58, 57, 56, 55, 67, 68, 69, 70, 72, 73, 74, 75, 85, 84, 83, 82, 81, 80, 79, 91, 92, 93, 94, 95, 105, 104, 103, 102, 116, 117, 118, -1};
+static int8_t WordGhostEyes[] = {39, 48, 37, 50, -1};
 bool inGhost = false;
 
 /**
@@ -389,7 +389,7 @@ uint32_t scaleColor(uint32_t color, float brightness) {
  * Sets all pixels to the background-color
  */
 void blank() {
-  for (int x = 0; x < pixels.numPixels(); ++x) {
+  for (uint8_t x = 0; x < pixels.numPixels(); ++x) {
     pixels.setPixelColor(x, backgroundColor);
   }
 }
@@ -407,8 +407,8 @@ void wipe() {
  * @param pixel int id of the pixel to move down
  * @param rows int number of rows to move donw
  */
-int down(int pixel, int rows) {
-  for (int i = 0; i < rows; i++) {
+int down(uint8_t pixel, uint8_t rows) {
+  for (uint8_t i = 0; i < rows; i++) {
     pixel = pixel + 1 + 2 * (10 - pixel % 11);
   }
   return pixel;
@@ -418,8 +418,8 @@ int down(int pixel, int rows) {
  * Adds a word to the new time-sentence
  * @param word array with the id's of the pixels
  */
-void addword(int *word) {
-  for (int x = 0; x < pixels.numPixels() + 1; x++) {
+void addword(uint8_t *word) {
+  for (uint8_t x = 0; x < pixels.numPixels() + 1; x++) {
     satzneu[satzindex] = (word[x]);
     if (word[x] == -1) {
       break;
@@ -435,8 +435,8 @@ void addword(int *word) {
  * @param word array with the id's of the pixels
  * @param color Adafruit_NeoPixel-Color to display those pixels
  */
-void lightup(int *word, uint32_t color) {
-  for (int x = 0; x < pixels.numPixels() + 1; x++) {
+void lightup(uint8_t *word, uint32_t color) {
+  for (uint8_t x = 0; x < pixels.numPixels() + 1; x++) {
     if (word[x] == -1) {
       break;
     } else {
@@ -582,8 +582,8 @@ void pulseEffect() {
 void typewriterEffect() {
   lightup(satzalt, foregroundColor);
   // 1. Löschen: alle LEDs, die nur in satzalt sind
-  for (int y = 10; y >= 0; y--) {
-    for (int x = 10; x >= 0; x--) {
+  for (int8_t y = 10; y >= 0; y--) {
+    for (int8_t x = 10; x >= 0; x--) {
       int idx = xyToIndex(x, y);
       if (inArray(idx, satzalt) && !inArray(idx, satzneu)) {
         dimToBlack(idx, foregroundColor, 8, effectSpeed / 200);
@@ -592,8 +592,8 @@ void typewriterEffect() {
   }
   delay(effectSpeed / 20);
   // 2. Einschalten: alle LEDs, die nur in satzneu sind
-  for (uint8_t y = 0; y < 11; y++) {
-    for (uint8_t x = 0; x < 11; x++) {
+  for (int8_t y = 0; y < 11; y++) {
+    for (int8_t x = 0; x < 11; x++) {
       int idx = xyToIndex(x, y);
       if (inArray(idx, satzneu) && !inArray(idx, satzalt)) {
         pulseOn(idx, foregroundColor, 8, effectSpeed / 200);
@@ -663,7 +663,7 @@ void showMinute() {
     }
     // Checks if the minute ticks should be displayed
     int differenceToLast5Min = wordClockMinute % 5;
-    for (int i = 0; i < differenceToLast5Min; i++) {
+    for (uint8_t i = 0; i < differenceToLast5Min; i++) {
       //pixels.setPixelColor(WordMinTicks[i], foregroundColor);
       satzneu[satzindex] = (WordMinTicks[i]);
       satzindex ++;
@@ -881,7 +881,7 @@ void setupWifi() {
   Serial.println(WiFi.localIP());
   // Display local ip address on clockface by looping through every character.
   String localIP = WiFi.localIP().toString();
-  for (int i = 0; i < localIP.length(); i++) {
+  for (uint8_t i = 0; i < localIP.length(); i++) {
     blank();
     if (localIP[i] == '0') {
       pixels.setPixelColor(109, foregroundColor);
@@ -1025,8 +1025,8 @@ void spawnTetromino() {
   posX = 3; // Centered
   posY = -2;  // Spawn above visible area
   // Copy initial tetromino to current piece
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       currentPiece[i][j] = tetrominos[currentTetromino][i][j];
     }
   }
@@ -1035,8 +1035,8 @@ void spawnTetromino() {
 
 // Tetris: Check collision for current piece at (x, y) with rotation
 bool checkCollision(int x, int y, int rot) {
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (currentPiece[i][j]) {
         int nx = x + j;
         int ny = y + i;
@@ -1052,8 +1052,8 @@ bool checkCollision(int x, int y, int rot) {
 
 // Tetris: Place current piece on the board
 void placeTetromino() {
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
@@ -1067,9 +1067,9 @@ void placeTetromino() {
 
 // Tetris: Clear full lines and animate
 void clearLines() {
-  for (int y = 0; y < 11; y++) {
+  for (uint8_t y = 0; y < 11; y++) {
     bool full = true;
-    for (int x = 0; x < 11; x++) {
+    for (uint8_t x = 0; x < 11; x++) {
       if (!board[y][x]) {
         full = false;
         break;
@@ -1077,25 +1077,25 @@ void clearLines() {
     }
     if (full) {
       // Animate line
-      for (int t = 0; t < 3; t++) {
-        for (int x = 0; x < 11; x++) {
+      for (uint8_t t = 0; t < 3; t++) {
+        for (uint8_t x = 0; x < 11; x++) {
           pixels.setPixelColor(xyToIndex(x, y), White);
         }
         pixels.show();
         delay(80);
-        for (int x = 0; x < 11; x++) {
+        for (uint8_t x = 0; x < 11; x++) {
           pixels.setPixelColor(xyToIndex(x, y), 0);
         }
         pixels.show();
         delay(80);
       }
       // Remove line and shift down
-      for (int yy = y; yy > 0; yy--) {
-        for (int x = 0; x < 11; x++) {
+      for (uint8_t yy = y; yy > 0; yy--) {
+        for (uint8_t x = 0; x < 11; x++) {
           board[yy][x] = board[yy-1][x];
         }
       }
-      for (int x = 0; x < 11; x++) board[0][x] = 0;
+      for (uint8_t x = 0; x < 11; x++) board[0][x] = 0;
       tetrisScore += 1;
       sendScoreToClients(tetrisScore);
     }
@@ -1106,16 +1106,16 @@ void clearLines() {
 void drawBoard() {
   pixels.clear();
   // Draw placed blocks
-  for (int y = 0; y < 11; y++) {
-    for (int x = 0; x < 11; x++) {
+  for (uint8_t y = 0; y < 11; y++) {
+    for (uint8_t x = 0; x < 11; x++) {
       if (board[y][x]) {
         pixels.setPixelColor(xyToIndex(x, y), GameColors[board[y][x]-1]);
       }
     }
   }
   // Draw current piece
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
@@ -1131,14 +1131,14 @@ void drawBoard() {
 // Tetris: Rotate tetromino (clockwise)
 void rotateTetromino() {
   uint8_t rotated[4][4];
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       rotated[j][3-i] = currentPiece[i][j];
     }
   }
   // Check collision for rotated piece
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (rotated[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
@@ -1149,8 +1149,8 @@ void rotateTetromino() {
     }
   }
   // Apply rotation
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       currentPiece[i][j] = rotated[i][j];
     }
   }
@@ -1174,7 +1174,7 @@ void handleRestart() {
 int wordGuessrFindIndex(char letter) {
   int indices[16]; // max 16 occurences of a letter (i has 15)
   int count = 0;
-  for (int j = 0; j < numPixels; j++) {
+  for (uint8_t j = 0; j < numPixels; j++) {
     if (wordGuessrLettersCopy[j] == letter) {
       indices[count] = j;
       count++;
@@ -1247,7 +1247,7 @@ void clearMastermind() {
   mastermindTry = 0;
   mastermindPlace = 0;
   mastermindColor = 0;
-  for (int i = 0; i < 11; i++) {
+  for (uint8_t i = 0; i < 11; i++) {
     pixels.setPixelColor(down(0, i), Grey);
     pixels.setPixelColor(down(5, i), Grey);
     pixels.setPixelColor(down(10, i), Grey);
@@ -1312,7 +1312,7 @@ void loop() {
                 mastermindCodeTry[0] = extractParameterValue(url, "c1=");
                 mastermindPlace = 0;
                 mastermindColor = 0;
-                for (int i = 0; i < 4; i++) {
+                for (uint8_t i = 0; i < 4; i++) {
                   pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
                   mastermindCodeBackup[i] = mastermindCode[i];
                   // check right position
@@ -1323,8 +1323,8 @@ void loop() {
                     pixels.setPixelColor(down(mastermindPlace + 5, mastermindTry), White);
                   }
                 }
-                for (int i = 0; i < 4; i++) {
-                  for (int j = 0; j < 4; j++) {
+                for (uint8_t i = 0; i < 4; i++) {
+                  for (uint8_t j = 0; j < 4; j++) {
                     // check right color
                     if (mastermindCodeTry[i] == mastermindCodeBackup[j]) {
                       mastermindCodeTry[i] = -1;
@@ -1338,14 +1338,14 @@ void loop() {
               }
               if (mastermindPlace == 4) {
                 // player won
-                for (int i = 0; i < mastermindTry; i++) {
+                for (uint8_t i = 0; i < mastermindTry; i++) {
                   pixels.setPixelColor(down(0, i), Green);
                   pixels.setPixelColor(down(5, i), Green);
                   pixels.setPixelColor(down(10, i), Green);
                 }
               } else if (mastermindTry == 11) {
                 // player lost
-                for (int i = 0; i < mastermindTry; i++) {
+                for (uint8_t i = 0; i < mastermindTry; i++) {
                   pixels.setPixelColor(down(0, i), Red);
                   pixels.setPixelColor(down(5, i), Red);
                   pixels.setPixelColor(down(10, i), Red);
@@ -1526,10 +1526,10 @@ void loop() {
     if (!inGhost) {
       inGhost = true;
       // loop 11 Zeilen
-      for (int j = 11; j >= 0; j--) {
+      for (uint8_t j = 11; j >= 0; j--) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < numPixels; i++) {
+        for (uint8_t i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1567,10 +1567,10 @@ void loop() {
     // hide ghost
     inGhost = false;
     // loop 11 Zeilen
-      for (int j = 0; j < 11; j++) {
+      for (uint8_t j = 0; j < 11; j++) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < numPixels; i++) {
+        for (uint8_t i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1618,7 +1618,7 @@ void loop() {
         snakeDir = snakePrevDir;
         snakeNext = -2;
       }
-      for (int i = snakeLen - 1; i > 1; i--) {
+      for (int8_t i = snakeLen - 1; i > 1; i--) {
         if (snakeNext == snake[i]) {
           // bite own tail
           snakeNext = -3;
@@ -1635,7 +1635,7 @@ void loop() {
 
       if (snakeNext >= 0) {
         // move snake one step forward
-        for (int i = snakeLen - 1; i > 0; i--) {
+        for (int8_t i = snakeLen - 1; i > 0; i--) {
           snake[i] = snake[i-1];
         }
         snake[0] = snakeNext;
@@ -1683,7 +1683,7 @@ void loop() {
       // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
       blank();
       lightup(wordGuessrActiveWordIndex, foregroundColor);
-      for (int i = 0; i < wordGuessrHint; i++) {
+      for (uint8_t i = 0; i < wordGuessrHint; i++) {
           pixels.setPixelColor(wordGuessrActiveWordIndex[i], Green);
         }
       pixels.show();
