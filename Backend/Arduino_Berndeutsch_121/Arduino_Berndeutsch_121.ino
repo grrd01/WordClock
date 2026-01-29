@@ -176,8 +176,8 @@ Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800
 int wifiWait = 0;
 
 // Snake variables
-int snake[120];
-int snakeLen = 3;
+int8_t snake[120];
+int8_t snakeLen = 3;
 int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
 String snakeDir = ""; // snake, up, right, down, left, stop
@@ -262,7 +262,7 @@ uint8_t xyToIndex(uint8_t x, uint8_t y) {
 }
 
 // Hilfsfunktion: Prüft, ob LED in Array enthalten ist
-bool inArray(uint8_t led, uint8_t *arr) {
+bool inArray(uint8_t led, int8_t *arr) {
   for (uint8_t i = 0; arr[i] != -1; i++) {
     if (arr[i] == led) return true;
   }
@@ -344,7 +344,7 @@ const char* const wordGuessrWordsAll[] PROGMEM = {wordGuessrWords0, wordGuessrWo
 char wordGuessrWordsBuffer[800]; // Buffer to load one of the 10 wordlists from progmem to ram; must be long enough for longest list
 
 String wordGuessrActiveWord = "";
-int wordGuessrActiveWordIndex[20] = {}; // max 20 letters
+int8_t wordGuessrActiveWordIndex[20] = {}; // max 20 letters
 int wordGuessrScore = 0;
 unsigned long wordGuessrAlert = 0;
 unsigned long wordGuessrStart = 0;
@@ -418,7 +418,7 @@ int down(uint8_t pixel, uint8_t rows) {
  * Adds a word to the new time-sentence
  * @param word array with the id's of the pixels
  */
-void addword(uint8_t *word) {
+void addword(int8_t *word) {
   for (uint8_t x = 0; x < pixels.numPixels() + 1; x++) {
     satzneu[satzindex] = (word[x]);
     if (word[x] == -1) {
@@ -435,7 +435,7 @@ void addword(uint8_t *word) {
  * @param word array with the id's of the pixels
  * @param color Adafruit_NeoPixel-Color to display those pixels
  */
-void lightup(uint8_t *word, uint32_t color) {
+void lightup(int8_t *word, uint32_t color) {
   for (uint8_t x = 0; x < pixels.numPixels() + 1; x++) {
     if (word[x] == -1) {
       break;
