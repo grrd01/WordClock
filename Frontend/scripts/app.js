@@ -14,8 +14,8 @@
     const clock = ElementById("c");
     const pClock = ElementById("pC");
     const pSettings = ElementById("pS");
-    const pSnake = ElementById("pSN");
-    const pTetris = ElementById("pTE");
+    const pControls = ElementById("pCT");
+    const pGameOver = ElementById("pGO");
     const pMastermind = ElementById("pMM");
     const pWordGuessr = ElementById("pWG");
     const color = ElementById("co");
@@ -41,13 +41,14 @@
     let rainbowRed = 255;
     let rainbowGreen = 0;
     let rainbowBlue = 0;
+    let game;
     let score = 0;
     let highscore = 0;
-    let highscoreTe = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
     let mastermindTry = 0;
     let wordGuessrScore = 0;
+    let webSocket = null;
 
     function ElementById(id) {
         return doc.getElementById(id);
@@ -183,10 +184,10 @@
     function fShowPage(pageHide, pageShow) {
         // Fix for Firefox OnKeydown
         doc.activeElement.blur();
-        fClassList(pageHide).remove("sor");
-        fClassList(pageShow).remove("sil");
-        fClassList(pageHide).add("so");
-        fClassList(pageShow).add("si");
+        fClassList(pageHide).remove("show");
+        fClassList(pageShow).remove("right");
+        fClassList(pageHide).add("left");
+        fClassList(pageShow).add("show");
     }
 
     /**
@@ -195,10 +196,10 @@
      * @param {Element} pageHide : the page to hide
      */
     function fHidePage(pageShow, pageHide) {
-        fClassList(pageShow).remove("so");
-        fClassList(pageHide).remove("si");
-        fClassList(pageShow).add("sor");
-        fClassList(pageHide).add("sil");
+        fClassList(pageShow).remove("left");
+        fClassList(pageHide).remove("show");
+        fClassList(pageShow).add("show");
+        fClassList(pageHide).add("right");
     }
 
     /**
@@ -293,77 +294,65 @@
     }
 
     /**
-     * Display the snake-page
+     * Send game-control-input to word-clock
+     * @param {string} cmd : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
      */
-    function fShowSnake() {
-        fShowPage(pSettings, pSnake);
-        fSendSnake(5);
+    function fSendControls(cmd) {
+        //console.log(cmd);
+        if (webSocket && webSocket.readyState === 1) {
+            webSocket.send(cmd);
+        }
     }
 
     /**
-     * Send snake-control-input to word-clock
-     * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
+     * Display the controls-page for tetris / snake
      */
-    function fSendSnake(dir) {
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-                score = (parseInt(xhttp.responseText) - 3) * 10;
-                if (score > highscore) {
-                    highscore = score;
-                    localStorageSet("wc_sc", highscore);
-                }
-                ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscore;
-            }
-        };
-        xhttp.open("GET", "snake?dir=" + dir, true);
-        xhttp.send();
+    function fShowControls() {
+        pControls.classList.add(game);
+        fShowPage(pSettings, pControls);
+        fSendControls(game);
+        if (localStorageGet("wc_" + game)) {
+            highscore = localStorageGet("wc_" + game);
+        } else {
+            highscore = 0;
+        }
     }
 
     /**
-     * Hide the snake-page and return to settings-page
+     * Hide the controls-page and return to settings-page
      */
-    function fHideSnake() {
-        fHidePage(pSettings, pSnake);
-        fSendSnake(6);
+    function fHideControls() {
+        fHidePage(pSettings, pControls);
+        fSendControls("stop");
+        setTimeout(function () {
+            fClassList(pControls).remove(game);
+            game = "";
+        }, 700);
     }
 
     /**
-     * Display the tetris-page
+     * Display the game-over-page for tetris / snake
      */
-    function fShowTetris() {
-        fShowPage(pSettings, pTetris);
-        fSendTetris(5);
+    function fShowGameOver() {
+        fShowPage(pControls, pGameOver);
     }
 
     /**
-     * Send tetris-control-input to word-clock
-     * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
+     * Hide the game-over-page, start a new game
      */
-    function fSendTetris(dir) {
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-                score = parseInt(xhttp.responseText);
-                if (score > highscoreTe) {
-                    highscoreTe = score;
-                    localStorageSet("wc_te", highscoreTe);
-                }
-                ElementById("sTE").innerHTML = "Score: " + score + " / High-Score : " + highscoreTe;
-            }
-        };
-        xhttp.open("GET", "tetris?dir=" + dir, true);
-        xhttp.send();
+    function fPlayAgain() {
+        fHidePage(pControls, pGameOver);
+        fSendControls(game);
     }
 
     /**
-     * Hide the snake-page and return to settings-page
+     * Hide the game-over-page, start a new game
      */
-    function fHideTetris() {
-        fHidePage(pSettings, pTetris);
-        fSendTetris(6);
+    function fExitGame() {
+        fHidePage(pControls, pGameOver);
+        fHideControls();
+        fHidePage(pClock, pSettings);
     }
-
 
     /**
      * Display the mastermind-page
@@ -510,28 +499,28 @@
     fEventListener(ElementById("s"), click, fShowSettings);
     fEventListener(ElementById("xS"), click, fHideSettings);
 
-    fEventListener(ElementById("SN"), click, fShowSnake);
-    fEventListener(ElementById("xSN"), click, fHideSnake);
-    fEventListener(ElementById("TE"), click, fShowTetris);
-    fEventListener(ElementById("xTE"), click, fHideTetris);
+    fEventListener(ElementById("SN"), click, function () {
+        game = "snake";
+        fShowControls();
+    });
+    fEventListener(ElementById("TE"), click, function () {
+        game = "tetris";
+        fShowControls();
+    });
+    fEventListener(ElementById("xCT"), click, fHideControls);
+    fEventListener(ElementById("xGO"),click, fExitGame);
+    fEventListener(ElementById("xGOA"),click, fPlayAgain);
     fEventListener(ElementById("MM"), click, fShowMastermind);
     fEventListener(ElementById("xMM"), click, fHideMastermind);
     fEventListener(ElementById("cMM"), click, fSendMastermind);
     fEventListener(ElementById("WG"), click, fShowWordGuessr);
     fEventListener(ElementById("xWG"), click, fHideWordGuessr);
     fEventListener(ElementById("cWG"), click, fSendWordGuessr);
-    Array.from(ElementsByClassName("snb")).forEach(function (element, index) {
+    Array.from(ElementsByClassName("snb")).forEach(function (element) {
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
-        if (index < 4) {
-            fEventListener(element, click, function (e) {
-                fSendSnake(e.target.getAttribute("data-num"));
-            });
-        } else {
-            fEventListener(element, click, function (e) {
-                fSendTetris(e.target.getAttribute("data-num"));
-            });
-        }
-
+        fEventListener(element, click, function (e) {
+            fSendControls(e.target.getAttribute("data-dir"));
+        });
     });
     // no-svg: x
     Array.from(ElementsByClassName("n")).forEach(function (element) {
@@ -568,37 +557,33 @@
     });
 
     function fCheckKey(e) {
-        let dir = 0;
+        let dir = "";
         switch (e.key) {
             case "ArrowUp":
-                dir = 1;
+                dir = "up";
                 break;
             case "ArrowRight":
-                dir = 2;
+                dir = "right";
                 break;
             case "ArrowDown":
-                dir = 3;
+                dir = "down";
                 break;
             case "ArrowLeft":
-                dir = 4;
+                dir = "left";
                 break;
             case "Enter":
-                if ( fClassList(pWordGuessr).contains("si")) {
+                if ( fClassList(pWordGuessr).contains("show")) {
                     fSendWordGuessr();
                 }
         }
-        if (dir &&  fClassList(pSnake).contains("si")) {
-            fSendSnake(dir);
-            fClassList(fChildren(ElementById("ctrl"))[dir - 1]).add("g");
+        if (dir && game) {
+            fSendControls(dir);
+            if (dir === "up" && game === "tetris") {
+                dir = "tup";
+            }
+            fClassList(ElementById("ctrl" + dir)).add("g");
             setTimeout(function () {
-                fClassList(fChildren(ElementById("ctrl"))[dir - 1]).remove("g");
-            }, 200);
-        }
-        if (dir &&  fClassList(pTetris).contains("si")) {
-            fSendTetris(dir);
-            fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).add("g");
-            setTimeout(function () {
-                fClassList(fChildren(ElementById("ctrlt"))[dir - 1]).remove("g");
+                fClassList(ElementById("ctrl" + dir)).remove("g");
             }, 200);
         }
     }
@@ -636,12 +621,6 @@
     if (localStorageGet("wc_s")) {
         speed.value = (parseInt(localStorageGet("wc_s")));
     }
-    if (localStorageGet("wc_sc")) {
-        highscore = localStorageGet("wc_sc");
-    }
-    if (localStorageGet("wc_te")) {
-        highscoreTe = localStorageGet("wc_te");
-    }
     ElementById("iphone").href = ElementById("icon").href;
 
     clockFace.split(",").forEach(function(element, index1) {
@@ -661,8 +640,9 @@
         clock.appendChild(textElement);
     });
 
-    // generate Titles on Pages
-    const pageTitles = ["ewfGRRDcSajnWORDuCLOCK", "ewfGRRDcSajmSNAKExlbdk", "ewfGRRDcSajmTETRISlbdk", "ewfGRRDcSajMASTERMINDk", "ewfGRRDcSajWORDbGUESSR"];
+    // generate Titles on Pages (grrd: ewfGRRDcSaj, mascha: qwMASCHAbSd)
+    const pageTitleLine1 = "ewfGRRDcSaj";
+    const pageTitles = [pageTitleLine1 + "nWORDuCLOCK", pageTitleLine1 + "mSNAKExlbdk", pageTitleLine1 + "mTETRISlbdk", "ewfGAMEcsajmsnakOVERdk", pageTitleLine1 + "MASTERMINDk", pageTitleLine1 + "WORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -677,6 +657,31 @@
             element.appendChild(textElement);
         }
     });
+
+    // initialize websocket connection for game controls
+    try {
+        webSocket = new WebSocket('ws://' + location.hostname + ':81/');
+        // webSocket.onopen = function(){ console.log('webSocket open'); };
+        webSocket.onmessage = function(e) {
+            if (e.data && e.data.indexOf('score:') === 0) {
+                score = parseInt(e.data.split(':')[1]) * 10;
+                if (score > highscore) {
+                    highscore = score;
+                    localStorageSet("wc_" + game, highscore);
+                }
+                ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
+            }
+            if (e.data && e.data.indexOf('gameOver') === 0) {
+                ElementById("sGO").innerHTML = score;
+                ElementById("hsGO").innerHTML = highscore;
+                fShowGameOver();
+            }
+        }
+        // webSocket.onclose = function(){ console.log('webSocket closed'); };
+        // webSocket.onerror = function(e){ console.log('webSocket error', e); };
+    } catch(e) {
+        // console.log('webSocket init failed');
+    }
 
     /**
      * Load current settings from word-clock
@@ -698,4 +703,4 @@
     };
     xhttp.open("GET", "get_params", true);
     xhttp.send();
-}());
+}())

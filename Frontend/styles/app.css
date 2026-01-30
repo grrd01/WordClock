@@ -32,7 +32,7 @@ body {
     background: linear-gradient(#444, #222);
 }
 
-#c, .t, #ctrl, #ctrlt {
+#c, .t, #ctrl {
     font: 6px sans-serif;
     fill: #555;
     text-shadow: none;
@@ -43,13 +43,13 @@ body {
 }
 
 @media (orientation: landscape) {
-    #ctrl, #ctrlt {
+    #ctrl {
         width: 100%;
         max-width: 60vh;
     }
 }
 @media (orientation: portrait) {
-    #ctrl, #ctrlt {
+    #ctrl {
         width: 100%;
     }
 }
@@ -96,15 +96,15 @@ a:active {
     filter: brightness(125%);
 }
 
-#s, #xS, #xSN, #xTE, #xMM, #xWG {
+#s, #xS, #xCT, #xGOA, #xMM, #xWG {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
-#p {
+#p, #xGO {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
-#sSN, #sMM, #sWG , #sTE {
+#sCT, #sMM, #sWG {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
     align-items: center;
@@ -160,11 +160,14 @@ path.snb {
     fill-opacity: 0.01;
 }
 
-#pS, #pSN, #pTE, #pMM, #pWG {
-    transform: translateX(100vw);
-    visibility: hidden;
-    opacity: 0;
+#pCT.tetris .sn {
+    display: none;
 }
+
+#pCT.snake .te {
+    display: none;
+}
+
 .pC {
     display: block;
     position: absolute;
@@ -216,7 +219,7 @@ path.snb {
     display: none;
 }
 
-svg[data-num='1'] {
+[data-num='1'] {
     fill: #fc034e
 }
 [data-num='2'] {
@@ -235,99 +238,25 @@ svg[data-num='1'] {
     fill: #f803fc
 }
 
-.si {
-    animation-name: si;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
+.show {
+    transform: translateX(0);
+    transition: transform 0.7s ease-in-out;
+    visibility: visible;
+    opacity: 1;
 }
 
-@keyframes si {
-    0% {
-        transform: translateX(100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-    1% {
-        transform: translateX(100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
+.left {
+    transform: translateX(-100vw);
+    visibility: hidden;
+    opacity: 0;
+    transition: transform 0.7s ease-in-out, visibility 0s 0.7s, opacity 0s 0.7s;
 }
 
-.so {
-    animation-name: so;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
-}
-
-@keyframes so {
-    0% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
-    99% {
-        transform: translateX(-100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(-100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-}
-.sil {
-    animation-name: sil;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
-}
-
-@keyframes sil {
-    0% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
-    99% {
-        transform: translateX(100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-}
-
-.sor {
-    animation-name: sor;
-    animation-fill-mode: forwards;
-    animation-duration: 0.7s;
-}
-
-@keyframes sor {
-    0% {
-        transform: translateX(-100vw);
-        visibility: hidden;
-        opacity: 0;
-    }
-    1% {
-        transform: translateX(-100vw);
-        visibility: visible;
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(0);
-        visibility: visible;
-        opacity: 1;
-    }
+.right {
+    transform: translateX(100vw);
+    visibility: hidden;
+    opacity: 0;
+    transition: transform 0.7s ease-in-out, visibility 0s 0.7s, opacity 0s 0.7s;
 }
 
 .sl {
