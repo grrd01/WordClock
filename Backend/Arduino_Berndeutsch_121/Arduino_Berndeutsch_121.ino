@@ -6,7 +6,7 @@
 // neotrace https://www.instructables.com/id/WORK-IN-PROGRESS-Ribba-Word-Clock-With-Wemos-D1-Mi/
 // and others
 //
-// Kurt Meister, 2018-12-24 | Edit: 2023-04-29 
+// Kurt Meister, 2018-12-24 | Edit: 2023-04-29
 // Thanks to Manuel Meister for refactoring and adding automated summertime conversion.
 //
 // Gérard Tyedmers, 2024-01-15 
@@ -21,6 +21,7 @@
 #include <ESP8266mDNS.h>
 #include <WiFiManager.h>        // v2.0.17
 #include <WiFiUdp.h>
+#include <WebSocketsServer.h>   // v2.7.1
 #include <TimeLib.h>            // v1.6.1
 #include <Timezone.h>           // v1.2.6
 #include <Adafruit_NeoPixel.h>  // v1.15.2
@@ -29,22 +30,35 @@
 // set name for access-point and mdns-server
 const char* version = "wordclock";
 
-// Set web server port number to 80
+// Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
 
 // Variable to store the HTTP request
 String header;
 
 // Auxiliar variables to store the web parameters
+const int numPixels = 121;
 int rgbRed = 255;
 int rgbGreen = 255;
 int rgbBlue = 255;
 int power = 1;
 int darkMode = 1;
 int ghost = 1;
-int rainbow = 0;
-int rainbowSpeed = 200;
-int rainbowWait = 200;
+int effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
+int effectSpeed = 200;
+int effectWait = 200;
+uint16_t frame = 0;
+// Matrix-Drops
+struct Drop {
+  float y; // aktuelle Position (kann zwischen den Zeilen liegen)
+  float speed; // Geschwindigkeit (Zeilen pro Frame)
+  uint8_t length; // Abdunklungslänge
+  uint8_t maxBrightness; // Maximale Helligkeit (0..255)
+  bool active; // Ob dieser Drop aktiv ist
+};
+Drop drops[11][2]; // 11 Spalten, bis zu 2 Drops pro Spalte
+uint16_t dropCooldown[11]; // Cooldown pro Spalte bis zum nächsten neuen Drop
 
 
 // Current time
@@ -151,7 +165,12 @@ static int WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
 
 static int *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(121, D7, NEO_GRB + NEO_KHZ800);
+// aktueller und letzter Zeit-Satz
+int satzalt[30];
+int satzneu[30];
+uint8_t satzindex = 0;
+
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800);
 
 // How long this state should be displayed
 int wifiWait = 0;
@@ -161,10 +180,10 @@ int snake[120];
 int snakeLen = 3;
 int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
-int snakeDir = 0; // 1=up, 2=right, 3=down, 4=left, 5=new game, 6=exit game
-int snakePrevDir = 0;
-int snakeSpeed = 35000;
-int snakeWait = 35000;
+String snakeDir = ""; // snake, up, right, down, left, stop
+String snakePrevDir = "";
+int snakeSpeed = 7000;
+int snakeWait = 7000;
 bool inSnake = false;
 
 // Tetris variables
@@ -238,8 +257,61 @@ int xyToIndex(int x, int y) {
   if (y % 2 == 0) {
     return y * 11 + x;
   } else {
-    return y * 11 + (11 - 1 - x);
+    return y * 11 + (10 - x);
   }
+}
+
+// Hilfsfunktion: Prüft, ob LED in Array enthalten ist
+bool inArray(int led, int *arr) {
+  for (int i = 0; arr[i] != -1; i++) {
+    if (arr[i] == led) return true;
+  }
+  return false;
+}
+
+// Hilfsfunktion: HSV zu RGB
+uint32_t colorWheel(byte pos) {
+  pos = 255 - pos;
+  if (pos < 85) {
+    return pixels.Color(255 - pos * 3, 0, pos * 3);
+  }
+  if (pos < 170) {
+    pos -= 85;
+    return pixels.Color(0, pos * 3, 255 - pos * 3);
+  }
+  pos -= 170;
+  return pixels.Color(pos * 3, 255 - pos * 3, 0);
+}
+
+// Hilfsfunktion: Dimm-Animation auf Schwarz
+void dimToBlack(int led, uint32_t color, int steps, int delayMs) {
+  for (int i = steps; i >= 0; i--) {
+    float f = (float)i / steps;
+    uint8_t r = (uint8_t)(((color >> 16) & 0xFF) * f);
+    uint8_t g = (uint8_t)(((color >> 8) & 0xFF) * f);
+    uint8_t b = (uint8_t)((color & 0xFF) * f);
+    pixels.setPixelColor(led, pixels.Color(r, g, b));
+    pixels.show();
+    delay(delayMs);
+  }
+  pixels.setPixelColor(led, Black);
+  pixels.show();
+}
+
+// Hilfsfunktion: Lichtimpuls-Animation
+void pulseOn(int led, uint32_t color, int steps, int delayMs) {
+  // Impuls heller als foregroundColor
+  for (int i = 0; i <= steps; i++) {
+    float f = 1.0 + 0.5 * sin(PI * i / steps); // von 1.0 bis 1.5 und zurück
+    uint8_t r = min((uint8_t)255, (uint8_t)(((color >> 16) & 0xFF) * f));
+    uint8_t g = min((uint8_t)255, (uint8_t)(((color >> 8) & 0xFF) * f));
+    uint8_t b = min((uint8_t)255, (uint8_t)((color & 0xFF) * f));
+    pixels.setPixelColor(led, pixels.Color(r, g, b));
+    pixels.show();
+    delay(delayMs);
+  }
+  pixels.setPixelColor(led, color);
+  pixels.show();
 }
 
 // Mastermind variables
@@ -304,19 +376,12 @@ void chase(uint32_t color) {
 /**
  * Function to scale brightness by a factor
  * @param color Adafruit_NeoPixel-Color to display
- * @param factor float to dim color, 0.5 for 50% brightness
+ * @param brightness float to dim color, 0.5 for 50% brightness
  */
-uint32_t dimColor(uint32_t color, float factor) {
-  uint8_t r = (color >> 16) & 0xFF;  // Extract the red component
-  uint8_t g = (color >> 8) & 0xFF;   // Extract the green component
-  uint8_t b = color & 0xFF;          // Extract the blue component
-
-  // Scale each color component by the brightness factor
-  r = (uint8_t)(r * factor);
-  g = (uint8_t)(g * factor);
-  b = (uint8_t)(b * factor);
-
-  // Return the new color
+uint32_t scaleColor(uint32_t color, float brightness) {
+  uint8_t r = (uint8_t)((uint8_t)(color >> 16) * brightness);
+  uint8_t g = (uint8_t)((uint8_t)(color >> 8) * brightness);
+  uint8_t b = (uint8_t)((uint8_t)color * brightness);
   return Adafruit_NeoPixel::Color(r, g, b);
 }
 
@@ -349,6 +414,21 @@ int down(int pixel, int rows) {
   return pixel;
 }
 
+/**
+ * Adds a word to the new time-sentence
+ * @param word array with the id's of the pixels
+ */
+void addword(int *word) {
+  for (int x = 0; x < pixels.numPixels() + 1; x++) {
+    satzneu[satzindex] = (word[x]);
+    if (word[x] == -1) {
+      break;
+    } else {
+      satzindex ++;
+    }
+  }
+}
+
 
 /**
  * Sets array of pixels to a specific color
@@ -361,6 +441,163 @@ void lightup(int *word, uint32_t color) {
       break;
     } else {
       pixels.setPixelColor(word[x], color);
+    }
+  }
+}
+
+// Initialisiere Drop in Spalte
+void initDrop(uint8_t col, uint8_t dropIndex) {
+  drops[col][dropIndex].y = -random(1, 8); // Startet oberhalb der Matrix
+  drops[col][dropIndex].speed = 0.1 + random(5, 80) / 100.0; // 0.15..0.90
+  drops[col][dropIndex].length = random(3, 8); // 3..7
+  drops[col][dropIndex].maxBrightness = random(120, 255); // 120..255
+  drops[col][dropIndex].active = true;
+}
+
+// Matrix-Animation
+void matrixEffect() {
+  lightup(satzalt, foregroundColor);
+  frame = 0;
+  for (uint8_t x = 0; x < 11; x++) {
+    initDrop(x, 0);
+    dropCooldown[x] = 0;
+  }
+  while (true) {
+    frame++;
+    bool allowNewDrops = (frame < effectSpeed / 50); // Dauer der Animation (effectSpeed 8-7808 in Arduino)
+
+    bool hasActiveDrops = false;
+
+    for (uint8_t x = 0; x < 11; x++) {
+      // Cooldown für neue Drops verwalten
+      if (dropCooldown[x] > 0) {
+        dropCooldown[x]--;
+      }
+
+      // Alle Drops in dieser Spalte verarbeiten
+      for (uint8_t d = 0; d < 2; d++) {
+        if (!drops[x][d].active) {
+          // Wenn dieser Drop inaktiv ist und Cooldown abgelaufen, neuen Drop starten
+          if (dropCooldown[x] == 0 && allowNewDrops) {
+            initDrop(x, d);
+            dropCooldown[x] = random(5, 30); // Kurzer Cooldown bis zum nächsten Drop
+          }
+          continue;
+        }
+
+        hasActiveDrops = true;
+        drops[x][d].y += drops[x][d].speed;
+
+        // Drop ist fertig, wenn er unten angekommen ist
+        if (drops[x][d].y - drops[x][d].length > 11) {
+          drops[x][d].active = false;
+          continue;
+        }
+
+        // Zeichne den Drop
+        for (int8_t i = 0; i <= drops[x][d].length; i++) {
+          int8_t py = (int8_t)(drops[x][d].y) - i;
+          if (py < 0 || py > 11) continue;
+          uint16_t idx = xyToIndex(x, py);
+
+          // Prüfe, ob dieser Pixel in satzneu enthalten ist
+          if (inArray(idx, satzneu)) {
+            // Satzneu-Pixel: keine Fade, volle Helligkeit
+            pixels.setPixelColor(idx, foregroundColor);
+          } else {
+            // Andere Pixel: normales Faden
+            float fade = 1.0 - (float)i / drops[x][d].length;
+            fade = fade * fade; // Exponentieller Fade für stärkeren Effekt
+            uint8_t brightness = (uint8_t)(drops[x][d].maxBrightness * fade);
+            uint32_t col = pixels.Color(
+              (uint8_t)((foregroundColor >> 16) & 0xFF) * brightness / 255,
+              (uint8_t)((foregroundColor >> 8) & 0xFF) * brightness / 255,
+              (uint8_t)(foregroundColor & 0xFF) * brightness / 255
+            );
+            pixels.setPixelColor(idx, col);
+          }
+        }
+      }
+    }
+
+    pixels.show();
+    delay(30);
+
+    // Schleife nur beenden wenn keine Drops mehr aktiv sind und neue Drops nicht mehr gespawnt werden
+    if (!allowNewDrops && !hasActiveDrops) break;
+  }
+}
+
+// Pulse-Animation
+void pulseEffect() {
+  float radius = -2.0f;
+  const float speed = 0.10f; // Geschwindigkeit der Welle
+  const float maxRadius = 9.0f; // maximaler Abstand von Mitte zu Ecke
+  const float width = 1.1f; // Breite der Welle
+  const uint8_t cx = 5, cy = 5; // Mittelpunkt
+
+  lightup(satzalt, foregroundColor);
+
+  // Statusarrays: markiere satzalt und satzneu Pixel und ob ihr Peak erreicht wurde
+  bool peakReached[numPixels];
+  for (uint16_t i = 0; i < numPixels; ++i) {
+    peakReached[i] = false;
+  }
+  const float peakThreshold = 0.95f; // Schwelle um "Maximalhelligkeit" zu erkennen
+  const float peakEpsilon = 0.05f; // wie nah an diff==0 gelten wir als Peak
+
+  while (radius < maxRadius + width * 3.0f) {
+    for (uint8_t y = 0; y < 11; y++) {
+      for (uint8_t x = 0; x < 11; x++) {
+        float dx = x - cx;
+        float dy = y - cy;
+        float dist = sqrtf(dx * dx + dy * dy);
+        float diff = dist - radius;
+        float brightness = expf(-0.5f * (diff * diff) / (width * width));
+        if (brightness < 0.01f) brightness = 0.0f;
+        uint16_t idx = xyToIndex(x, y);
+
+        // wurde Peak erreicht?
+        if (!peakReached[idx] && (fabsf(diff) <= peakEpsilon || brightness >= peakThreshold)) peakReached[idx] = true;
+
+        if (inArray(idx, satzalt) && !peakReached[idx]) {
+          // nichts tun, bleibt hell bis Peak
+        } else if (inArray(idx, satzneu) && peakReached[idx]) {
+          // satzneu nach Peak: dauerhaft weiß
+          pixels.setPixelColor(idx, foregroundColor);
+        } else {
+          // normale Pixel folgen der Welle
+          pixels.setPixelColor(idx, scaleColor(foregroundColor, brightness));
+        }
+      }
+    }
+    pixels.show();
+    radius += speed;
+    // effectSpeed 8-7808 in Arduino
+    delay(effectSpeed / 400);
+  }
+}
+
+// Typewriter Animation
+void typewriterEffect() {
+  lightup(satzalt, foregroundColor);
+  // 1. Löschen: alle LEDs, die nur in satzalt sind
+  for (int y = 10; y >= 0; y--) {
+    for (int x = 10; x >= 0; x--) {
+      int idx = xyToIndex(x, y);
+      if (inArray(idx, satzalt) && !inArray(idx, satzneu)) {
+        dimToBlack(idx, foregroundColor, 8, effectSpeed / 200);
+      }
+    }
+  }
+  delay(effectSpeed / 20);
+  // 2. Einschalten: alle LEDs, die nur in satzneu sind
+  for (uint8_t y = 0; y < 11; y++) {
+    for (uint8_t x = 0; x < 11; x++) {
+      int idx = xyToIndex(x, y);
+      if (inArray(idx, satzneu) && !inArray(idx, satzalt)) {
+        pulseOn(idx, foregroundColor, 8, effectSpeed / 200);
+      }
     }
   }
 }
@@ -396,10 +633,10 @@ int extractParameterValue(const char *url, const char *paramName) {
 void showHour() {
   if (wordClockMinute < 25) {
     // show this hour if we are before 25 minutes past
-    lightup(WordStunden[wordClockHour % 12], foregroundColor);
+    addword(WordStunden[wordClockHour % 12]);
   } else {
     // show next hour
-    lightup(WordStunden[(wordClockHour % 12) + 1], foregroundColor);
+    addword(WordStunden[(wordClockHour % 12) + 1]);
   }
 }
 
@@ -410,24 +647,27 @@ void showMinute() {
   if (wordClockMinute != 0) {
     if (wordClockMinute >= 5 && wordClockMinute < 30) {
       // sets pixels with minutes array
-      lightup(WordMinuten[(wordClockMinute / 5) - 1], foregroundColor);
+      addword(WordMinuten[(wordClockMinute / 5) - 1]);
     } else if (wordClockMinute >= 35) {
       // sets pixels with same array, but in reverse
-      lightup(WordMinuten[5 - ((wordClockMinute - 30) / 5)], foregroundColor);
+      addword(WordMinuten[5 - ((wordClockMinute - 30) / 5)]);
     }
     if ((wordClockMinute >= 5 && wordClockMinute < 25) || (wordClockMinute < 40 && wordClockMinute >= 35)) {
-      lightup(WordNach, foregroundColor);
+      addword(WordNach);
     }
     if (wordClockMinute >= 40 || (wordClockMinute >= 25 && wordClockMinute < 30)) {
-      lightup(WordVor, foregroundColor);
+      addword(WordVor);
     }
     if (wordClockMinute >= 25 && wordClockMinute < 40) {
-      lightup(WordHalb, foregroundColor);
+      addword(WordHalb);
     }
     // Checks if the minute ticks should be displayed
     int differenceToLast5Min = wordClockMinute % 5;
     for (int i = 0; i < differenceToLast5Min; i++) {
-      pixels.setPixelColor(WordMinTicks[i], foregroundColor);
+      //pixels.setPixelColor(WordMinTicks[i], foregroundColor);
+      satzneu[satzindex] = (WordMinTicks[i]);
+      satzindex ++;
+      satzneu[satzindex] = -1;
     }
   }
 }
@@ -446,37 +686,63 @@ void displayWifiStatus() {
   }
 }
 
-/**
- * Displays the current time
- */
-void displayTime() {
-  blank();
-
+void setForegroundColor() {
   // Display darker color between 22:00 and 07:00
   if (darkMode == 1 && (wordClockHour >= 22 || wordClockHour < 7)) {
     foregroundColor = colorNight;
   } else {
     foregroundColor = colorDay;
   }
+}
+
+/**
+ * Displays the current time
+ */
+void displayTime() {
+  satzindex = 0;
+  memcpy(satzalt, satzneu, sizeof(satzneu));
+  blank();
+  setForegroundColor();
 
   // light up "it's" it stays on
-  lightup(WordEs, foregroundColor);
-  lightup(WordIst, foregroundColor);
+  addword(WordEs);
+  addword(WordIst);
 
   showMinute();
   showHour();
 
+  if (effect == 2) {
+    // Rainbow effect
+    for (uint8_t y = 0; y < 11; y++) {
+      for (uint8_t x = 0; x < 11; x++) {
+        uint16_t idx = xyToIndex(x, y);
+        if (inArray(idx, satzneu)) {
+          // Diagonale bestimmen: x + y
+          uint8_t diag = x + y;
+          // Regenbogenfarbe berechnen, animiert durch frame
+          uint8_t colorPos = (diag * 20 + frame) % 256;
+          uint32_t color = colorWheel(colorPos);
+          pixels.setPixelColor(idx, color);
+        }
+      }
+    }
+  } else if (effect == 3 && wordClockMinute % 5 == 0) {
+    // Matrix effect
+    matrixEffect();
+  } else if (effect == 4 && wordClockMinute % 5 == 0) {
+    // Pulse effect
+    pulseEffect();
+  } else if (effect == 5) {
+    // Typewriter effect
+    typewriterEffect();
+  } else {
+    // No effect
+    lightup(satzneu, foregroundColor);
+  }
+
   displayWifiStatus();
 
   pixels.show();
-}
-
-/**
- * Initialize the display
- */
-void setupDisplay() {
-  pixels.begin();
-  wipe();
 }
 
 /**
@@ -594,7 +860,7 @@ void setupWifi() {
   // if it does not connect it starts an access point with the specified name (wordclock)
   // and goes into a blocking loop awaiting configuration
   wifiManager.autoConnect(version);
-
+  
   // or use this for auto generated name ESP + ChipID
   //wifiManager.autoConnect();
 
@@ -637,7 +903,93 @@ void setupWifi() {
   }
 
   server.begin();
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
   chase(Green);
+}
+
+// send params to all connected WebSocket clients
+void sendParamsToClients() {
+  String msg;
+  msg.reserve(100);
+  msg = "{";
+  msg += "\"red\":" + String(rgbRed);
+  msg += ", \"green\":" + String(rgbGreen);
+  msg += ", \"blue\":" + String(rgbBlue);
+  msg += ", \"effect\":" + String(effect);
+  msg += ", \"darkmode\":" + String(darkMode);
+  msg += ", \"speed\":" + String(effectSpeed / 4 + 48);
+  msg += ", \"power\":" + String(power);
+  msg += ", \"ghost\":" + String(ghost);
+  msg += "}";
+  webSocket.broadcastTXT(msg);
+}
+
+/*
+ * WebSocket event handler: receive control commands from client
+ */
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+  if (type == WStype_CONNECTED) {
+    // send current score on new connection
+    sendParamsToClients();
+    return;
+  }
+  if (type != WStype_TEXT) return;
+  String msg = String((char*)payload);
+  if (msg == "tetris") {
+    // Tetris start
+    inTetris = true;
+    inMastermind = false;
+    inWordGuessr = false;
+    inSnake = false;
+    blank();
+    pixels.show();
+    handleRestart();
+    sendScoreToClients(0);
+  } else if (msg == "snake") {
+    // Snake start
+    inSnake = true;
+    inMastermind = false;
+    inWordGuessr = false;
+    inTetris = false;
+    snake[0] = 49;
+    snake[1] = 60;
+    snake[2] = 71;
+    snake[3] = -1;
+    snakeLen = 3;
+    snakeDir = "";
+    snakeNext = -1;
+    snakeSpeed = 7000;
+    sendScoreToClients(0);
+    blank();
+    lightup(snake, Green);
+    setSnack();
+    pixels.show();
+  } else if (msg == "stop") {
+     // Tetris or Snake exit
+    inTetris = false;
+    inSnake = false;
+    lastMinuteWordClock = 61;
+  } else if (inSnake) {
+    snakePrevDir = snakeDir;
+    snakeDir = msg;
+  } else if (inTetris && msg == "left") {
+    if (!checkCollision(posX - 1, posY, rotation)) { posX--; if(!gameOver) drawBoard(); }
+  } else if (inTetris && msg == "right") {
+    if (!checkCollision(posX + 1, posY, rotation)) { posX++; if(!gameOver) drawBoard(); }
+  } else if (inTetris && msg == "up") {
+    rotateTetromino();
+  } else if (inTetris && msg == "down") {
+    if (!checkCollision(posX, posY + 1, rotation)) {
+      posY++;
+    } else {
+      placeTetromino();
+      clearLines();
+      spawnTetromino();
+      if (checkCollision(posX, posY, rotation)) gameOver = true;
+    }
+    if (!gameOver) drawBoard();
+  }
 }
 
 /*
@@ -646,7 +998,7 @@ void setupWifi() {
 void setSnack() {
   snakeSnack = -1;
   while (snakeSnack < 0) {
-    snakeSnack = random(121);
+    snakeSnack = random(numPixels);
     for (int i = snakeLen - 1; i >= 0; i--) {
       if (snakeSnack == snake[i]){
         // place occupied by snake
@@ -658,6 +1010,12 @@ void setSnack() {
     }
   }
   pixels.setPixelColor(snakeSnack, Red);
+}
+
+// Tetris & Snake: Send current score to all connected WebSocket clients
+void sendScoreToClients(int score) {
+  String msg = "score:" + String(score);
+  webSocket.broadcastTXT(msg);
 }
 
 // Tetris: Spawn a new tetromino at the top
@@ -738,7 +1096,8 @@ void clearLines() {
         }
       }
       for (int x = 0; x < 11; x++) board[0][x] = 0;
-      tetrisScore += 10;
+      tetrisScore += 1;
+      sendScoreToClients(tetrisScore);
     }
   }
 }
@@ -807,44 +1166,6 @@ void handleRestart() {
   drawBoard();
 }
 
-// Tetris: Handle left movement
-void handleLeft() {
-  if (!checkCollision(posX - 1, posY, rotation)) {
-    posX--;
-    drawBoard();
-  }
-}
-
-// Tetris: Handle right movement
-void handleRight() {
-  if (!checkCollision(posX + 1, posY, rotation)) {
-    posX++;
-    drawBoard();
-  }
-}
-
-// Tetris: Handle rotation
-void handleRotate() {
-  rotateTetromino();
-}
-
-// Tetris: Handle down movement
-void handleDown() {
-  if (!checkCollision(posX, posY + 1, rotation)) {
-    posY++;
-  } else {
-    placeTetromino();
-    clearLines();
-    spawnTetromino();
-    if (checkCollision(posX, posY, rotation)) {
-      gameOver = true;
-    }
-  }
-  if (!gameOver) {
-    drawBoard();
-  }
-}
-
 /*
  * Wordguessr: find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
  * @param letter the letter to find
@@ -853,7 +1174,7 @@ void handleDown() {
 int wordGuessrFindIndex(char letter) {
   int indices[20]; // max 16 occurences of a letter (i has 19)
   int count = 0;
-  for (int j = 0; j < 121; j++) {
+  for (int j = 0; j < numPixels; j++) {
     if (wordGuessrLettersCopy[j] == letter) {
       indices[count] = j;
       count++;
@@ -874,7 +1195,7 @@ void wordGuessrNewGuess() {
   randomSeed(micros());
 
   int listNr = random(10); // Index to randomly load one of ten wordlists from progmem
-  strcpy_P(wordGuessrWordsBuffer, (char*)pgm_read_ptr(&(wordGuessrWordsAll[listNr])));
+  strcpy_P(wordGuessrWordsBuffer, (char*)pgm_read_ptr(&(wordGuessrWordsAll[listNr]))); 
 
   // Zähle, wie viele Wörter vorhanden sind
   int wordCount = 0;
@@ -883,7 +1204,7 @@ void wordGuessrNewGuess() {
   // use strtok, to separate the words
   char* token = strtok(wordGuessrWordsBuffer, " ");
   while (token != NULL) {
-    wordGuessrWords[wordCount++] = token;
+    wordGuessrWords[wordCount++] = token;  
     token = strtok(NULL, " ");
   }
 
@@ -938,7 +1259,8 @@ void clearMastermind() {
  */
 void setup() {
   Serial.begin(115200);
-  setupDisplay();
+  pixels.begin();
+  wipe();
 
   chase(Green); // run basic screen test and show success
 
@@ -952,7 +1274,7 @@ void setup() {
  */
 void loop() {
   WiFiClient client = server.available();   // Listen for incoming clients
-
+  webSocket.loop();
   if (client) {                             // If a new client connects,
     String currentLine = "";                // make a String to hold incoming data from the client
     currentTime = millis();
@@ -967,78 +1289,7 @@ void loop() {
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
-            if (header.indexOf("snake") >= 0) {
-              // Client is playing snake game:
-              const char *url = header.c_str();
-              if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 7) {
-                snakePrevDir = snakeDir;
-                snakeDir = extractParameterValue(url, "dir=");
-              }
-              if (!inSnake && snakeDir == 5 && power == 1) {
-                // start new snake game
-                inSnake = true;
-                inMastermind = false;
-                inWordGuessr = false;
-                inTetris = false;
-                snake[0] = 49;
-                snake[1] = 60;
-                snake[2] = 71;
-                snake[3] = -1;
-                snakeLen = 3;
-                snakeDir = 0;
-                snakeNext = -1;
-                snakeSpeed = 35000;
-                blank();
-                lightup(snake, Green);
-                setSnack();
-                pixels.show();
-              } else if (inSnake && snakeDir == 6) {
-                // exit current snake game
-                inSnake = false;
-                lastMinuteWordClock = 61;
-              }
-              client.println(F("HTTP/1.1 200 OK"));
-              client.println(F("Content-type:text/plain"));
-              client.println(F("Access-Control-Allow-Origin: *"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(snakeLen);
-            } else if (header.indexOf("tetris") >= 0) {
-              // Client is playing Tetris game:
-              const char *url = header.c_str();
-              if (extractParameterValue(url, "dir=") > 0 && extractParameterValue(url, "dir=") < 7) {
-                tetrisDir = extractParameterValue(url, "dir=");
-              }
-              // int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
-              if (!inTetris && tetrisDir == 5 && power == 1) {
-                // start new Tetris game
-                inTetris = true;
-                inMastermind = false;
-                inWordGuessr = false;
-                inSnake = false;
-                blank();
-                pixels.show();
-                handleRestart();
-              } else if (inTetris && tetrisDir == 1) {
-                handleRotate();
-              } else if (inTetris && tetrisDir == 2) {
-                handleRight();
-              } else if (inTetris && tetrisDir == 3) {
-                handleDown();
-              } else if (inTetris && tetrisDir == 4) {
-                handleLeft();
-              } else if (inTetris && tetrisDir == 6) {
-                // exit current Tetris game
-                inTetris = false;
-                lastMinuteWordClock = 61;
-              }
-              client.println(F("HTTP/1.1 200 OK"));
-              client.println(F("Content-type:text/plain"));
-              client.println(F("Access-Control-Allow-Origin: *"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(tetrisScore);
-            } else if (header.indexOf("mastermind") >= 0) {
+            if (header.indexOf("mastermind") >= 0) {
               // Client is playing mastermind game:
               const char *url = header.c_str();
 
@@ -1166,76 +1417,72 @@ void loop() {
               const char *url = header.c_str();
               if (extractParameterValue(url, "ghost=") == 1) {
                 ghost = 1;
-              } else if (extractParameterValue(url, "ghost=") == 0) {
+              } else {
                 ghost = 0;
               }
               if (extractParameterValue(url, "power=") == 1) {
                 power = 1;
-              } else if (extractParameterValue(url, "power=") == 0) {
+              } else {
                 power = 0;
                 blank();
                 pixels.show();
               }
               if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
-                rainbowSpeed = (extractParameterValue(url, "speed=") - 48) * 4;
+                effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
               }
               if (extractParameterValue(url, "darkmode=") == 1) {
                 darkMode = 1;
-              } else if (extractParameterValue(url, "darkmode=") == 0) {
+              } else {
                 darkMode = 0;
               }
-              if (extractParameterValue(url, "rainbow=") == 1) {
-                rainbow = 1;
-              } else if (extractParameterValue(url, "rainbow=") == 0) {
-                rainbow = 0;
+              if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
+                effect = extractParameterValue(url, "effect=");
               }
-              if (extractParameterValue(url, "blue=") >= 0) {
+              if (extractParameterValue(url, "blue=") >= 0 && extractParameterValue(url, "blue=") <= 255) {
                 rgbBlue = extractParameterValue(url, "blue=");
               }
-              if (extractParameterValue(url, "green=") >= 0) {
+              if (extractParameterValue(url, "green=") >= 0 && extractParameterValue(url, "green=") <= 255) {
                 rgbGreen = extractParameterValue(url, "green=");
               }
-              if (extractParameterValue(url, "red=") >= 0) {
+              if (extractParameterValue(url, "red=") >= 0 && extractParameterValue(url, "red=") <= 255) {
                 rgbRed = extractParameterValue(url, "red=");
               }
-              if (rainbow == 1) {
+              colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+              colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+              setForegroundColor();
+              if (effect == 1) {
+                // colorWheel
                 rgbRed = 255;
                 rgbGreen = 0;
                 rgbBlue = 0;
-                rainbowWait = rainbowSpeed;
+                effectWait = effectSpeed;
+              } else if (effect == 2) {
+                // rainbow
+                effectWait = effectSpeed / 8;
+              } else if (effect == 3 && wordClockMinute % 5 != 0 && power == 1) {
+                // matrix
+                memcpy(satzalt, satzneu, sizeof(satzneu));
+                matrixEffect();
+              } else if (effect == 4 && wordClockMinute % 5 != 0 && power == 1) {
+                // pulse
+                memcpy(satzalt, satzneu, sizeof(satzneu));
+                pulseEffect();
+              } else if (effect == 5 && power == 1) {
+                // typewriter
+                satzalt[6] = -1;
+                blank();
+                lightup(satzalt, foregroundColor);
+                pixels.show();
+                typewriterEffect();
               }
-
-              colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
-              colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
               lastMinuteWordClock = 61;
               client.println(F("HTTP/1.1 200 OK"));
               client.println(F("Content-type:text/plain"));
               client.println(F("Connection: close"));
               client.println();
               client.println(F("OK"));
-            } else if (header.indexOf("get_params") >= 0) {
-              // Send current params to client:
-              client.println(F("HTTP/1.1 200 OK"));
-              client.println(F("Content-type:application/json"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(F("{\"red\":"));
-              client.println(rgbRed);
-              client.println(F(", \"green\":"));
-              client.println(rgbGreen);
-              client.println(F(", \"blue\":"));
-              client.println(rgbBlue);
-              client.println(F(", \"rainbow\":"));
-              client.println(rainbow);
-              client.println(F(", \"darkmode\":"));
-              client.println(darkMode);
-              client.println(F(", \"speed\":"));
-              client.println(rainbowSpeed / 4 + 48);
-              client.println(F(", \"power\":"));
-              client.println(power);
-              client.println(F(", \"ghost\":"));
-              client.println(ghost);
-              client.println(F("}"));
+              // send current params to all connected WebSocket clients
+              sendParamsToClients();
             } else {
               // New connection, send web interface to client:
               // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
@@ -1246,7 +1493,7 @@ void loop() {
               client.println();
 
               // Display the HTML web page
-              client.println(F("<!doctype html><html lang='en'><head><meta charset='utf-8'><title>grrd s WordClock</title><link id='icon' rel='icon' href='data:image/png;base64,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'><meta name='description' content='grrd s WordClock is a web WordClock and a user interface for the Wemos Mini D1 Lite Clock'><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'><meta name='theme-color' content='#444'><meta name='apple-mobile-web-app-title' content='WordClock'><link id='iphone' rel='apple-touch-icon'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black'><style>:root{--main-color:#878ade}html{height:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}body{background:linear-gradient(#444,#222);min-width:100vw;margin:0;position:fixed;overflow:hidden;font-family:Arial,sans-serif;font-size:large;color:#fff;text-shadow:1px 1px 2px #000;height:100%}.p{width:100vw;position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(#444,#222)}#c,#ctrl,#ctrlt,.t{font:6px sans-serif;fill:#555;text-shadow:none;text-anchor:middle;width:100vmin;margin:auto;display:block}@media (orientation:landscape){#ctrl,#ctrlt{width:100%;max-width:60vh}}@media (orientation:portrait){#ctrl,#ctrlt{width:100%}}.t,.w100{width:100%}.M1,.M2,.M3,.M4{font-size:8px}.H0 .H0,.H1 .H1,.H10 .H10,.H11 .H11,.H2 .H2,.H3 .H3,.H4 .H4,.H5 .H5,.H6 .H6,.H7 .H7,.H8 .H8,.H9 .H9,.M1 .M1,.M10 .M10,.M15 .M15,.M2 .M1,.M2 .M2,.M20 .M20,.M3 .M1,.M3 .M2,.M3 .M3,.M30 .M30,.M4 .M1,.M4 .M2,.M4 .M3,.M4 .M4,.M5 .M5,.MA .MA,.MV .MV,.g{fill:var(--main-color);text-shadow:0 0 10px var(--main-color)}.off .g:not(.colorBtn){fill:#555;text-shadow:none}.d .H0 .H0,.d .H1 .H1,.d .H10 .H10,.d .H11 .H11,.d .H2 .H2,.d .H3 .H3,.d .H4 .H4,.d .H5 .H5,.d .H6 .H6,.d .H7 .H7,.d .H8 .H8,.d .H9 .H9,.d .M1 .M1,.d .M10 .M10,.d .M15 .M15,.d .M2 .M1,.d .M2 .M2,.d .M20 .M20,.d .M3 .M1,.d .M3 .M2,.d .M3 .M3,.d .M30 .M30,.d .M4 .M1,.d .M4 .M2,.d .M4 .M3,.d .M4 .M4,.d .M5 .M5,.d .MA .MA,.d .MV .MV,.d .g{filter:brightness(70%)}a:link{color:var(--main-color)}a:visited{color:var(--main-color);filter:brightness(85%)}a:focus,a:hover{color:var(--main-color);filter:brightness(125%)}a:active{color:var(--main-color);filter:brightness(125%)}#s,#xMM,#xS,#xSN,#xTE,#xWG{position:absolute;right:4vmin;bottom:4vmin}#p{position:absolute;left:4vmin;bottom:4vmin}#sMM,#sSN,#sTE,#sWG{position:absolute;left:4vmin;bottom:4vmin;display:flex;align-items:center}.sb,.snb,.svgMsg{width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;stroke:#555;stroke-linejoin:round;stroke-linecap:round;stroke-width:6;fill:none;z-index:1000}circle{pointer-events:none}input[type=text]{width:calc(100% - 4.5vmin - 40px);border:2px solid #555;border-radius:5px;background-color:transparent;color:#fff;padding:10px;font-size:larger}input[type=text]:focus{border:2px solid #fff;outline:0}input[type=text].error{border:2px solid #f70562}input[type=text].ok{border:2px solid #059c7d}.sb.g,.sb:hover,.snb.g,.snb:hover{stroke:#fff;text-shadow:0 0 10px #fff;cursor:pointer}path.snb{stroke-width:1.4;fill:#333;fill-opacity:0.01}#pMM,#pS,#pSN,#pTE,#pWG{transform:translateX(100vw);visibility:hidden;opacity:0}.pC{display:block;position:absolute;overflow:auto;top:0;left:0;right:0;margin:0 auto 0 auto;width:600px;max-width:calc(100vw - 40px);height:100%}.c,.c>span,.pb{display:flex;justify-content:space-between;margin-bottom:20px;align-items:center;flex-wrap:wrap}.pf{margin-top:60px}#co{appearance:none;background-color:transparent;width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;border:none;cursor:pointer}#co::-webkit-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-moz-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-webkit-color-swatch:hover{border:.45vmin solid #fff}#co::-moz-color-swatch:hover{border:.45vmin solid #fff}.h{display:none}svg[data-num='1']{fill:#fc034e}[data-num='2']{fill:#fc6f03}[data-num='3']{fill:#fcce03}[data-num='4']{fill:#18fc03}[data-num='5']{fill:#0384fc}[data-num='6']{fill:#f803fc}.si{animation-name:si;animation-fill-mode:forwards;animation-duration:.7s}@keyframes si{0%{transform:translateX(100vw);visibility:hidden;opacity:0}1%{transform:translateX(100vw);visibility:visible;opacity:1}100%{transform:translateX(0);visibility:visible;opacity:1}}.so{animation-name:so;animation-fill-mode:forwards;animation-duration:.7s}@keyframes so{0%{transform:translateX(0);visibility:visible;opacity:1}99%{transform:translateX(-100vw);visibility:visible;opacity:1}100%{transform:translateX(-100vw);visibility:hidden;opacity:0}}.sil{animation-name:sil;animation-fill-mode:forwards;animation-duration:.7s}@keyframes sil{0%{transform:translateX(0);visibility:visible;opacity:1}99%{transform:translateX(100vw);visibility:visible;opacity:1}100%{transform:translateX(100vw);visibility:hidden;opacity:0}}.sor{animation-name:sor;animation-fill-mode:forwards;animation-duration:.7s}@keyframes sor{0%{transform:translateX(-100vw);visibility:hidden;opacity:0}1%{transform:translateX(-100vw);visibility:visible;opacity:1}100%{transform:translateX(0);visibility:visible;opacity:1}}.sl{appearance:none;width:100%;height:4px;border-radius:2px;background:0 0;margin:10px 0;direction:rtl;border:solid calc(2px + .2vmin) #555}.sl::-webkit-slider-thumb{appearance:none;width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-webkit-slider-thumb:hover{outline:solid .45vmin #fff}.sl::-moz-range-thumb{width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-moz-range-thumb:hover{outline:solid .45vmin #fff}</style></head><body><div id='pC' class='p'><svg id='c' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><g stroke='#555' fill='none' stroke-width='0.7'><path d='M 106 109.8 Q 106 106.4 109.4 106.4'/><path d='M 107.2 109.8 Q 107.2 107.8 109.4 107.8'/></g><circle cx='108.8' cy='109.5' r='0.6' fill='#555'/></svg> <svg id='p' class='sb' viewBox='0 0 74 74'><line x1='37' y1='15' x2='37' y2='27'/><circle cx='37' cy='37' r='33'/><path d='M 48 22 A 18 18 0 1 1 26 22'/></svg> <svg id='s' class='sb' viewBox='0 0 74 74'><path d='M30 3 A 37 37 0 0 1 44 3 L 44 13 A 25 25 0 0 1 54.5 20 L 63 14 A 37 37 0 0 1 70 25.5 L 61 31 A 25 25 0 0 1 61 42.5 L 70 48.5 A 37 37 0 0 1 63 60 L 54.5 54 A 25 25 0 0 1 44 61 L 44 71 A 37 37 0 0 1 30 71 L 30 61 A 25 25 0 0 1 19.5 54 L 11 60 A 37 37 0 0 1 4 48.5 L 13 42.5 A 25 25 0 0 1 13 31 L 4 25.5 A 37 37 0 0 1 11 14 L 19.5 20 A 25 25 0 0 1 30 13 Z'/><circle cx='37' cy='37' r='12'/></svg></div><div id='pS' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><div class='pb'><label for='co'>Weli Farb wosch?</label> <input type='color' id='co' value='#ffffff'/></div><div class='pb'><label>Cha mi nid entscheide. Chli vo auem.</label> <svg id='rm' class='sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></div><div class='pb'><label class='w100' for='speed'>Wie schnäu?</label> <input type='range' id='speed' class='sl' min='50' max='2000'/> <label>gmüetlech</label> <label>jufle</label></div><div class='pb'><label>Ir Nacht chli weniger häu.</label> <svg id='dm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></div><div class='pb'><label>I ha ke Angst vor Gspängster.</label> <svg id='gm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></div><div class='pb'><label>Schnäu e Rundi Snake spile.</label> <svg id='SN' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pb'><label>Chli Tetris zocke.</label> <svg id='TE' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pb'><label>Oder hurti es Mastermind.</label> <svg id='MM' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pb'><label>Es paar Wörtli errate.</label> <svg id='WG' class='sb play' viewBox='-2 -1 12 16'/></div><div class='pf'><p class='c'>Handgmachti Software us Bärn</p><p class='c'><span>Gérard&nbsp;Tyedmers</span> <span><svg width='24' height='24' viewBox='0 -5 160 170' stroke='#fff' fill='none' stroke-width='10'><circle cx='80' cy='80' r='70'/><path d='M27 32c7 20 93 43 121 28M13 60c-3 30 117 60 135 35M16 106c16 19 84 39 112 24M100 13C34 3 10 130 65 148M100 13C70 33 45 118 65 148M100 13c13 22 5 112-35 135M100 13c60 35 20 147-35 135'/></svg>&nbsp; <a href='https://grrd.ch'>grrd.ch</a> </span><span><svg width='30px' height='24px' viewBox='0 0 222 179' stroke='#fff' fill='none' stroke-width='10' stroke-linecap='round'><g transform='translate(-10,10) rotate(-6)'><rect x='15' y='25' rx='10' ry='10' width='192' height='129'/><path d='M15 40 C131 125, 91 125, 207 40'/><line x1='15' y1='134' x2='77' y2='90'/><line x1='207' y1='134' x2='145' y2='90'/></g></svg>&nbsp; <a href='mailto:grrd@gmx.net'>grrd@gmx.net</a></span></p></div></div><svg id='xS' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></div><div id='pSN' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><svg id='ctrl' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><path data-num='1' class='snb' transform='scale(3.8) translate(8,10) rotate(270)'/><path data-num='2' class='snb' transform='scale(3.8) translate(20,7.5)'/><path data-num='3' class='snb' transform='scale(3.8) translate(22,19) rotate(90)'/><path data-num='4' class='snb' transform='scale(3.8) translate(10,21.5) rotate(180)'/></svg></div><svg id='xSN' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sSN'></span></div><div id='pTE' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><svg id='ctrlt' viewBox='0 -15 115 130' preserveAspectRatio='xMidYMid slice' role='img'><g class='snb' stroke-width='6' data-num='1' transform='scale(0.8) translate(34,-15)'><path data-num='1' stroke='none' fill='#333' fill-opacity='0.01' d='M13 37 A 24 24 0 1 1 13 37.5'></path><path data-num='1' id='arc' d='M23 45 L17.5 50.5 A 24 24 10 0 1 34 13 L34 4 L50 17 L34 33 L34 24 '></path><use data-num='1' href='#arc' transform='rotate(180 37 37)'></use></g><path data-num='2' class='snb' transform='scale(3.8) translate(20,7.5)'/><path data-num='3' class='snb' transform='scale(3.8) translate(22,19) rotate(90)'/><path data-num='4' class='snb' transform='scale(3.8) translate(10,21.5) rotate(180)'/></svg></div><svg id='xTE' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sTE'></span></div><div id='pMM' class='p'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label class='c'>Hie chasch d Farb useläse:</label> <span class='c'><svg class='sb cb' data-num='1'/><svg class='sb cb' data-num='2'/><svg class='sb cb' data-num='3'/><svg class='sb cb' data-num='4'/><svg class='sb cb' data-num='5'/><svg class='sb cb' data-num='6'/></span><label class='c'>Hie muesch di Versuech iigäh:</label> <span class='c'><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg id='cMM' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xMM' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sMM'/></div><div id='pWG' class='p'><div class='pC'><div><svg class='t' viewBox='4 0 106 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><label for='wi' class='c'><br>Weles isch ds gsuechte Wort:</label> <span class='c'><input type='text' id='wi' maxlength='20' oninput='this.value = this.value.toUpperCase().replace(/[^A-ZÄÖÜ]/g, &#39;&#39;)' spellcheck='false' autocomplete='off'> <svg id='cWG' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xWG' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sWG'/></div><script>!function(){'use strict';const e=document,t=C('c'),n=C('pC'),r=C('pS'),a=C('pSN'),o=C('pTE'),c=C('pMM'),s=C('pWG'),i=C('co'),u=C('speed'),d=C('wi'),f=C('rm'),l=C('gm'),M=C('dm'),g=e.getElementsByTagName('body')[0],H=W('cdb'),m=W('cb'),w='click',h='<svg class=\"svgMsg\" viewBox=\"0 0 70 70\"> <circle cx=\"35\" cy=\"35\" r=\"25\" fill=';let p,v,S,L=1,b=1,E=1,y=0,T=255,A=0,I=0,R=0,x=0,_=0,G='1',N=0,k=0,D=0;function C(t){return e.getElementById(t)}function W(t){return e.getElementsByClassName(t)}function Z(e){return localStorage.getItem(e)}function B(e,t){return localStorage.setItem(e,t)}function V(e){return e.classList}function O(e){return e.children}function F(e,t,n){e.setAttribute(t,n)}function X(e,t,n){e.addEventListener(t,n)}function q(){p=new Date,b&&(p.getHours()>=22||p.getHours()<7)?V(g).add('d'):V(g).remove('d'),S!==p.getMinutes()&&(S=p.getMinutes(),V(t).remove(...V(t)),0!==L&&(S>=55?V(t).add('M5','MV'):S>=50?V(t).add('M10','MV'):S>=45?V(t).add('M15','MV'):S>=40?V(t).add('M20','MV'):S>=35?V(t).add('M5','MA','M30'):S>=30?V(t).add('M30'):S>=25?V(t).add('M5','MV','M30'):S>=20?V(t).add('M20','MA'):S>=15?V(t).add('M15','MA'):S>=10?V(t).add('M10','MA'):S>=5&&V(t).add('M5','MA'),v=p.getHours(),S>=25&&(v+=1),v%=12,V(t).add('H'+v.toString()),V(t).add('M'+(S%5).toString())))}function U(){y&&(T&&!I?(T-=1,A+=1):A?(A-=1,I+=1):(I-=1,T+=1),z('rgb('+T+', '+A+', '+I+')'),setTimeout(U,u.value/10))}function j(e){L=e,L?V(g).remove('off'):V(g).add('off'),S=-1,q()}function K(t,n){e.activeElement.blur(),V(t).remove('sor'),V(n).remove('sil'),V(t).add('so'),V(n).add('si')}function J(e,t){V(e).remove('so'),V(t).remove('si'),V(e).add('sor'),V(t).add('sil')}function z(t){e.documentElement.style.setProperty('--main-color',t)}function P(e){e!==y&&(V(O(f)[0]).toggle('h'),V(O(f)[1]).toggle('h')),y=e,y?U():z(i.value)}function Q(e){e!==E&&(V(O(l)[0]).toggle('h'),V(O(l)[1]).toggle('h')),E=e}function Y(e){e!==b&&(V(O(M)[0]).toggle('h'),V(O(M)[1]).toggle('h')),b=e}function $(){let e=parseInt(i.value.substring(1,3),16),t=parseInt(i.value.substring(3,5),16),n=parseInt(i.value.substring(5,7),16);B('wc_c',i.value),B('wc_r',y),B('wc_d',b),B('wc_g',E),B('wc_s',u.value.toString());let r=new XMLHttpRequest;r.open('GET','/update_params?red='+e+'&green='+t+'&blue='+n+'&rainbow='+y+'&darkmode='+b+'&speed='+u.value+'&power='+L+'&ghost='+E,!0),r.send()}function ee(e){let t=new XMLHttpRequest;t.onreadystatechange=function(){4===this.readyState&&200===this.status&&(R=10*(parseInt(t.responseText)-3),R>x&&(x=R,B('wc_sc',x)),C('sSN').innerHTML='Score: '+R+' / High-Score : '+x)},t.open('GET','snake?dir='+e,!0),t.send()}function te(e){let t=new XMLHttpRequest;t.onreadystatechange=function(){4===this.readyState&&200===this.status&&(R=parseInt(t.responseText),R>_&&(_=R,B('wc_te',_)),C('sTE').innerHTML='Score: '+R+' / High-Score : '+_)},t.open('GET','tetris?dir='+e,!0),t.send()}function ne(t){let n='';if(1===t)n='mastermind?c4=0',re(),ae();else if(2===t)n='mastermind?c4=7',re();else{if(e.querySelectorAll('.cdb[data-num=\"1\"], .cdb[data-num=\"2\"], .cdb[data-num=\"3\"], .cdb[data-num=\"4\"], .cdb[data-num=\"5\"], .cdb[data-num=\"6\"]').length<4)return void ae('Muesch zersch aues uswähle.');n='mastermind?c1='+H[0].getAttribute('data-num')+'&c2='+H[1].getAttribute('data-num')+'&c3='+H[2].getAttribute('data-num')+'&c4='+H[3].getAttribute('data-num'),re()}let r=new XMLHttpRequest;r.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(r.responseText);N=e.place,k=e.try,4===N?ae('Bravo! I '+k+' Mau usegfunde.'):11===k?ae('Schad, jetz hesch verlore.'):ae()}},r.open('GET',n,!0),r.send()}function re(){Array.from(H).forEach((function(e){F(e,'data-num','')}))}function ae(e){C('sMM').innerHTML=e||h+'\"white\"/></svg>&nbsp;am richtige Ort&nbsp;'+h+'\"cornflowerblue\"/></svg>&nbsp;di richtigi Farb'}function oe(e){let t;t='1'===e?'wordguessr?new':'2'===e?'wordguessr?exit':'wordguessr?word='+d.value;let n=new XMLHttpRequest;n.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(n.responseText);0===e.score?(V(d).add('error'),setTimeout((function(){V(d).remove('error'),d.value=''}),100)):1===e.score&&(D+=e.score,C('sWG').innerHTML=D+' hesch usegfunde.',V(d).add('ok'),setTimeout((function(){V(d).remove('ok'),d.value=''}),100))}},n.open('GET',t,!0),n.send()}setInterval(q,100),X(C('p'),w,(function(){j(1-L),$()})),X(C('s'),w,(function(){K(n,r)})),X(C('xS'),w,(function(){J(n,r),V(r).remove('sor'),$()})),X(C('SN'),w,(function(){K(r,a),ee(5)})),X(C('xSN'),w,(function(){J(r,a),ee(6)})),X(C('TE'),w,(function(){K(r,o),te(5)})),X(C('xTE'),w,(function(){J(r,o),te(6)})),X(C('MM'),w,(function(){K(r,c),ne(1)})),X(C('xMM'),w,(function(){J(r,c),ne(2)})),X(C('cMM'),w,ne),X(C('WG'),w,(function(){K(r,s),oe('1'),D=0,C('sWG').innerHTML=''})),X(C('xWG'),w,(function(){J(r,s),oe('2')})),X(C('cWG'),w,oe),Array.from(W('snb')).forEach((function(e,t){F(e,'d','M2 2 L9 7 L2 12 Z'),X(e,w,t<4?function(e){ee(e.target.getAttribute('data-num'))}:function(e){te(e.target.getAttribute('data-num'))})})),Array.from(W('n')).forEach((function(e){F(e,'d','M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'),F(e,'transform','scale(0.9) translate(5,5)')})),Array.from(W('y')).forEach((function(e){F(e,'d','M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'),F(e,'transform','scale(0.85) translate(5,5)')})),Array.from(W('play')).forEach((function(e){e.innerHTML='<path d=\"M2 2 L9 7 L2 12 Z\" stroke-width=\"1.4\"/>'})),Array.from(m).forEach((function(e){X(e,w,(function(e){Array.from(m).forEach((function(e){V(e).remove('g')})),V(e.target).add('g'),G=e.target.getAttribute('data-num')})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),Array.from(H).forEach((function(e){X(e,w,(function(e){F(e.target,'data-num',G),ae()})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),e.onkeydown=function(e){let t=0;switch(e.key){case'ArrowUp':t=1;break;case'ArrowRight':t=2;break;case'ArrowDown':t=3;break;case'ArrowLeft':t=4;break;case'Enter':V(s).contains('si')&&oe()}t&&V(a).contains('si')&&(ee(t),V(O(C('ctrl'))[t-1]).add('g'),setTimeout((function(){V(O(C('ctrl'))[t-1]).remove('g')}),200)),t&&V(o).contains('si')&&(te(t),V(O(C('ctrlt'))[t-1]).add('g'),setTimeout((function(){V(O(C('ctrlt'))[t-1]).remove('g')}),200))},X(i,'change',(e=>{z(i.value)})),X(f,w,(e=>{P(1-y)})),X(l,w,(e=>{Q(1-E)})),X(M,w,(e=>{Y(1-b)})),Z('wc_c')&&(i.value=Z('wc_c'),z(i.value)),Z('wc_r')&&P(parseInt(Z('wc_r'))),Z('wc_g')&&Q(parseInt(Z('wc_g'))),Z('wc_d')&&Y(parseInt(Z('wc_d'))),Z('wc_s')&&(u.value=parseInt(Z('wc_s'))),Z('wc_sc')&&(x=Z('wc_sc')),Z('wc_te')&&(_=Z('wc_te')),C('iphone').href=C('icon').href,'E g,S g,D,I g,S g,C g,H g,W,F M5,Ü M5,F M5,V M15,I M15,E M15,R M15,T M15,U M15,T,Z M10,Ä M10,Ä M10,Y,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,U M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,Ö H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,Ü H5,F H5,I H5,T,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,U H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,U H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K'.split(',').forEach((function(n,r){const a=e.createElementNS('http://www.w3.org/2000/svg','text');F(a,'x',r%11*10+7),F(a,'y',10*Math.ceil((r+1)/11)),[113,114,116,117].includes(r)&&F(a,'y',112.5),n.split(' ').forEach((function(e,t){t?V(a).add(e):a.textContent=e})),t.appendChild(a)}));const ce=['ewfGRRDcSajnWORDuCLOCK','ewfGRRDcSajmSNAKExlbdk','ewfGRRDcSajmTETRISlbdk','ewfGRRDcSajMASTERMINDk','ewfGRRDcSajWORDbGUESSR'];Array.from(W('t')).forEach((function(t,n){for(let r=0;r<22;r++){const a=e.createElementNS('http://www.w3.org/2000/svg','text');let o=ce[n].substring(r,r+1),c=o.toUpperCase();F(a,'x',r%11*10+7),F(a,'y',10*Math.ceil((r+1)/11)),a.textContent=c,o===c&&F(a,'class','g'),t.appendChild(a)}}));let se=new XMLHttpRequest;se.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let r=JSON.parse(se.responseText);r.rainbow||(i.value=(e=r.red,t=r.green,n=r.blue,'#'+(1<<24|e<<16|t<<8|n).toString(16).slice(1))),z(i.value),Y(r.darkmode),P(r.rainbow),Q(r.ghost),j(r.power),u.value=r.speed}var e,t,n},se.open('GET','get_params',!0),se.send()}();</script></body></html>"));
+              client.println(F("<!doctype html><html lang='en'><head><meta charset='utf-8'><title>grrd's WordClock</title><link id='icon' rel='icon' href='data:image/png;base64,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'><meta name='description' content='grrd s WordClock is a web WordClock and a user interface for the Wemos Mini D1 Lite Clock'><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'><meta name='theme-color' content='#444'><meta name='apple-mobile-web-app-title' content='WordClock'><link id='iphone' rel='apple-touch-icon'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black'><style>:root{--main-color:#878ade}html{height:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}body{background:linear-gradient(#444,#222);min-width:100vw;margin:0;position:fixed;overflow:hidden;font-family:Arial,sans-serif;font-size:large;color:#fff;text-shadow:1px 1px 2px #000;height:100%}.p{width:100vw;position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(#444,#222)}#c,#ctrl,.t{font:6px sans-serif;fill:#555;text-shadow:none;text-anchor:middle;width:100vmin;margin:auto;display:block}@media (orientation:landscape){#ctrl{width:100%;max-width:60vh}}@media (orientation:portrait){#ctrl{width:100%}}.t{width:100%}[for=speed]{width:100%;margin-bottom:0}.M1,.M2,.M3,.M4{font-size:8px}.H0 .H0,.H1 .H1,.H10 .H10,.H11 .H11,.H2 .H2,.H3 .H3,.H4 .H4,.H5 .H5,.H6 .H6,.H7 .H7,.H8 .H8,.H9 .H9,.M1 .M1,.M10 .M10,.M15 .M15,.M2 .M1,.M2 .M2,.M20 .M20,.M3 .M1,.M3 .M2,.M3 .M3,.M30 .M30,.M4 .M1,.M4 .M2,.M4 .M3,.M4 .M4,.M5 .M5,.MA .MA,.MV .MV,.g{fill:var(--main-color);text-shadow:0 0 10px var(--main-color)}.off .g:not(.colorBtn){fill:#555;text-shadow:none}.d .H0 .H0,.d .H1 .H1,.d .H10 .H10,.d .H11 .H11,.d .H2 .H2,.d .H3 .H3,.d .H4 .H4,.d .H5 .H5,.d .H6 .H6,.d .H7 .H7,.d .H8 .H8,.d .H9 .H9,.d .M1 .M1,.d .M10 .M10,.d .M15 .M15,.d .M2 .M1,.d .M2 .M2,.d .M20 .M20,.d .M3 .M1,.d .M3 .M2,.d .M3 .M3,.d .M30 .M30,.d .M4 .M1,.d .M4 .M2,.d .M4 .M3,.d .M4 .M4,.d .M5 .M5,.d .MA .MA,.d .MV .MV,.d .g{filter:brightness(70%)}a:link{color:var(--main-color)}a:visited{color:var(--main-color);filter:brightness(85%)}a:focus,a:hover{color:var(--main-color);filter:brightness(125%)}a:active{color:var(--main-color);filter:brightness(125%)}#s,#xCT,#xGOA,#xMM,#xS,#xWG{position:absolute;right:4vmin;bottom:4vmin}#p,#xGO{position:absolute;left:4vmin;bottom:4vmin}#sCT,#sMM,#sWG{position:absolute;left:4vmin;bottom:4vmin;display:flex;align-items:center}.sb,.snb,.svgMsg{width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;stroke:#555;stroke-linejoin:round;stroke-linecap:round;stroke-width:6;fill:none;z-index:1000}.dd{transform:rotate(90deg);transition:transform .7s ease-in-out;overflow:hidden}.ddo{transform:rotate(270deg)}ul{list-style-type:none;margin:0;padding-left:20px}li{max-height:calc(4.5vmin + 60px);transition:max-height .7s ease-in-out;overflow:hidden;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;overflow:hidden}li label,li svg{margin-bottom:20px}ul.cl li{max-height:0;transition:max-height .7s ease-in-out}circle{pointer-events:none}input[type=text]{width:calc(100% - 4.5vmin - 40px);border:2px solid #555;border-radius:5px;background-color:transparent;color:#fff;padding:10px;font-size:larger}input[type=text]:focus{border:2px solid #fff;outline:0}input[type=text].error{border:2px solid #f70562}input[type=text].ok{border:2px solid #059c7d}.sb.g,.sb:hover,.snb.g,.snb:hover{stroke:#fff;text-shadow:0 0 10px #fff;cursor:pointer}path.snb{stroke-width:1.4;fill:#333;fill-opacity:0.01}#pCT.tetris .sn{display:none}#pCT.snake .te{display:none}.pC{display:block;position:absolute;overflow:auto;top:0;left:0;right:0;margin:0 auto 0 auto;width:600px;max-width:calc(100vw - 40px);height:100%}#pCS{display:flex;flex-direction:column;justify-content:flex-start}.menu{overflow-y:auto}.c,.c>span,.pb{display:flex;justify-content:space-between;margin-bottom:20px;align-items:center;flex-wrap:wrap;overflow:hidden}.c>span{margin-bottom:3vmin}.pf{margin-top:auto;max-width:calc(100vw - 80px)}#co{appearance:none;background-color:transparent;width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;border:none;cursor:pointer}#co::-webkit-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-moz-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-webkit-color-swatch:hover{border:.45vmin solid #fff}#co::-moz-color-swatch:hover{border:.45vmin solid #fff}.h{display:none}[data-num='1']{fill:#fc034e}[data-num='2']{fill:#fc6f03}[data-num='3']{fill:#fcce03}[data-num='4']{fill:#18fc03}[data-num='5']{fill:#0384fc}[data-num='6']{fill:#f803fc}.show{transform:translateX(0);transition:transform .7s ease-in-out;visibility:visible;opacity:1}.left{transform:translateX(-100vw);visibility:hidden;opacity:0;transition:transform .7s ease-in-out,visibility 0s .7s,opacity 0s .7s}.right{transform:translateX(100vw);visibility:hidden;opacity:0;transition:transform .7s ease-in-out,visibility 0s .7s,opacity 0s .7s}.sl{appearance:none;width:100%;height:4px;border-radius:2px;background:0 0;margin:10px 0;direction:rtl;border:solid calc(2px + .2vmin) #555}.sl::-webkit-slider-thumb{appearance:none;width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-webkit-slider-thumb:hover{outline:solid .45vmin #fff}.sl::-moz-range-thumb{width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-moz-range-thumb:hover{outline:solid .45vmin #fff}</style></head><body><div id='pC' class='p show'><svg id='c' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><g stroke='#555' fill='none' stroke-width='0.7'><path d='M 106 109.8 Q 106 106.4 109.4 106.4'/><path d='M 107.2 109.8 Q 107.2 107.8 109.4 107.8'/></g><circle cx='108.8' cy='109.5' r='0.6' fill='#555'/></svg> <svg id='p' class='sb' viewBox='0 0 74 74'><line x1='37' y1='15' x2='37' y2='27'/><circle cx='37' cy='37' r='33'/><path d='M 48 22 A 18 18 0 1 1 26 22'/></svg> <svg id='s' class='sb' viewBox='0 0 74 74'><path d='M30 3 A 37 37 0 0 1 44 3 L 44 13 A 25 25 0 0 1 54.5 20 L 63 14 A 37 37 0 0 1 70 25.5 L 61 31 A 25 25 0 0 1 61 42.5 L 70 48.5 A 37 37 0 0 1 63 60 L 54.5 54 A 25 25 0 0 1 44 61 L 44 71 A 37 37 0 0 1 30 71 L 30 61 A 25 25 0 0 1 19.5 54 L 11 60 A 37 37 0 0 1 4 48.5 L 13 42.5 A 25 25 0 0 1 13 31 L 4 25.5 A 37 37 0 0 1 11 14 L 19.5 20 A 25 25 0 0 1 30 13 Z'/><circle cx='37' cy='37' r='12'/></svg></div><div id='pS' class='p right'><div id='pCS' class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><div class='menu'><div class='pb'><label for='co'>Weli Farb wosch?</label> <input type='color' id='co' value='#ffffff'/></div><div class='pb'><label>Ir Nacht chli weniger häu.</label> <svg id='dm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></div><div class='pb'><label>Wosch e Special-Effect?</label> <svg id='SE' class='sb play dd' viewBox='-2 -1 12 16'/></div><ul id='LSE' class='cl'><li><label>Geisterstund</label> <svg id='gm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></li><li><label>Farb-Verlouf</label> <svg id='eCW' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Rägeboge</label> <svg id='eRB' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Matrix</label> <svg id='eMA' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Puls</label> <svg id='ePL' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Schribmaschine</label> <svg id='eTW' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label for='speed'>Wie schnäu?</label> <input type='range' id='speed' class='sl' min='50' max='2000'/> <label>gmüetlech</label> <label>jufle</label></li></ul><div class='pb'><label>Wosch es Spili spile?</label> <svg id='GM' class='sb play dd' viewBox='-2 -1 12 16'/></div><ul id='LGM' class='cl'><li><label>Snake</label> <svg id='SN' class='sb play' viewBox='-2 -1 12 16'/></li><li><label>Tetris</label> <svg id='TE' class='sb play' viewBox='-2 -1 12 16'/></li><li><label>Mastermind</label> <svg id='MM' class='sb play' viewBox='-2 -1 12 16'/></li><li><label>Wörtli errate</label> <svg id='WG' class='sb play' viewBox='-2 -1 12 16'/></li></ul></div><div class='pf'><p class='c'>Handgmachti Software us Bärn</p><p class='c'><span>Gérard&nbsp;Tyedmers</span> <span><svg width='24' height='24' viewBox='0 -5 160 170' stroke='#fff' fill='none' stroke-width='10'><circle cx='80' cy='80' r='70'/><path d='M27 32c7 20 93 43 121 28M13 60c-3 30 117 60 135 35M16 106c16 19 84 39 112 24M100 13C34 3 10 130 65 148M100 13C70 33 45 118 65 148M100 13c13 22 5 112-35 135M100 13c60 35 20 147-35 135'/></svg>&nbsp; <a href='https://grrd.ch'>grrd.ch</a> </span><span><svg width='30px' height='24px' viewBox='0 0 222 179' stroke='#fff' fill='none' stroke-width='10' stroke-linecap='round'><g transform='translate(-10,10) rotate(-6)'><rect x='15' y='25' rx='10' ry='10' width='192' height='129'/><path d='M15 40 C131 125, 91 125, 207 40'/><line x1='15' y1='134' x2='77' y2='90'/><line x1='207' y1='134' x2='145' y2='90'/></g></svg>&nbsp; <a href='mailto:grrd@gmx.net'>grrd@gmx.net</a></span></p></div></div><svg id='xS' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></div><div id='pCT' class='p right'><div class='pC'><div><svg class='t sn' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg> <svg class='t te' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><svg id='ctrl' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><g id='ctrltup' class='snb te' stroke-width='6' data-dir='up' transform='scale(0.8) translate(34,0)'><path data-dir='up' stroke='none' fill='#333' fill-opacity='0.01' d='M13 37 A 24 24 0 1 1 13 37.5'></path><path data-dir='up' id='arc' d='M23 45 L17.5 50.5 A 24 24 10 0 1 34 13 L34 4 L50 17 L34 33 L34 24 '></path><use data-dir='up' href='#arc' transform='rotate(180 37 37)'></use></g><path id='ctrlup' data-dir='up' class='snb sn' transform='scale(3.8) translate(8,10) rotate(270)'/><path id='ctrlright' data-dir='right' class='snb' transform='scale(3.8) translate(20,7.5)'/><path id='ctrldown' data-dir='down' class='snb' transform='scale(3.8) translate(22,19) rotate(90)'/><path id='ctrlleft' data-dir='left' class='snb' transform='scale(3.8) translate(10,21.5) rotate(180)'/></svg></div><svg id='xCT' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sCT'></span></div><div id='pGO' class='p right'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label class='c'>Fertig lustig.</label> <label class='c'><span>Di Score: </span><span id='sGO'></span></label> <label class='c'><span>Highscore: </span><span id='hsGO'></span></label> <label class='c'>Wosch nomau?</label></div><svg id='xGO' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <svg id='xGOA' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></div><div id='pMM' class='p right'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label class='c'>Hie chasch d Farb useläse:</label> <span class='c'><svg class='sb cb' data-num='1'/><svg class='sb cb' data-num='2'/><svg class='sb cb' data-num='3'/><svg class='sb cb' data-num='4'/><svg class='sb cb' data-num='5'/><svg class='sb cb' data-num='6'/></span><label class='c'>Hie muesch di Versuech iigäh:</label> <span class='c'><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg id='cMM' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xMM' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sMM'/></div><div id='pWG' class='p right'><div class='pC'><div><svg class='t' viewBox='4 0 106 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><label for='wi' class='c'><br>Weles isch ds gsuechte Wort:</label> <span class='c'><input type='text' id='wi' maxlength='20' oninput='this.value = this.value.toUpperCase().replace(/[^A-ZÄÖÜ]/g, &#39;&#39;)' spellcheck='false' autocomplete='off'> <svg id='cWG' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xWG' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sWG'/></div><script>!function(){'use strict';const e=document,t=N('c'),n=N('pC'),r=N('pS'),o=N('pCT'),a=N('pGO'),c=N('pMM'),s=N('pWG'),i=N('co'),u=N('speed'),d=N('wi'),f=(N('eCW'),N('gm')),l=N('dm'),M=e.getElementsByTagName('body')[0],g=W('cdb'),m=W('cb'),H='click',h='<svg class=\"svgMsg\" viewBox=\"0 0 70 70\"> <circle cx=\"35\" cy=\"35\" r=\"25\" fill=';let w,p,v,L,E=1,b=1,S=1,A=0,y=255,T=0,I=0,x=0,G=0,O='1',k=0,_=0,C=0,R=null;function N(t){return e.getElementById(t)}function W(t){return e.getElementsByClassName(t)}function V(e){return localStorage.getItem(e)}function Z(e,t){return localStorage.setItem(e,t)}function B(e){return e.classList}function D(e){return e.children}function F(e,t,n){e.setAttribute(t,n)}function U(e,t,n){e.addEventListener(t,n)}function K(){w=new Date,b&&(w.getHours()>=22||w.getHours()<7)?B(M).add('d'):B(M).remove('d'),v!==w.getMinutes()&&(v=w.getMinutes(),B(t).remove(...B(t)),0!==E&&(v>=55?B(t).add('M5','MV'):v>=50?B(t).add('M10','MV'):v>=45?B(t).add('M15','MV'):v>=40?B(t).add('M20','MV'):v>=35?B(t).add('M5','MA','M30'):v>=30?B(t).add('M30'):v>=25?B(t).add('M5','MV','M30'):v>=20?B(t).add('M20','MA'):v>=15?B(t).add('M15','MA'):v>=10?B(t).add('M10','MA'):v>=5&&B(t).add('M5','MA'),p=w.getHours(),v>=25&&(p+=1),p%=12,B(t).add('H'+p.toString()),B(t).add('M'+(v%5).toString())))}function X(){1===A&&(y&&!I?(y-=1,T+=1):T?(T-=1,I+=1):(I-=1,y+=1),z('rgb('+y+', '+T+', '+I+')'),setTimeout(X,u.value/10))}function q(e){E=e,E?B(M).remove('off'):B(M).add('off'),v=-1,K()}function j(t,n){e.activeElement.blur(),B(t).remove('show'),B(n).remove('right'),B(t).add('left'),B(n).add('show')}function J(e,t){B(e).remove('left'),B(t).remove('show'),B(e).add('show'),B(t).add('right')}function z(t){e.documentElement.style.setProperty('--main-color',t)}function P(e){A=e==A?0:e,Array.from(W('ef')).forEach((function(e,t){t+1==A?(B(D(e)[0]).add('h'),B(D(e)[1]).remove('h')):(B(D(e)[0]).remove('h'),B(D(e)[1]).add('h'))})),1===A?X():z(i.value)}function Q(e){e!==S&&(B(D(f)[0]).toggle('h'),B(D(f)[1]).toggle('h')),S=e}function Y(e){e!==b&&(B(D(l)[0]).toggle('h'),B(D(l)[1]).toggle('h')),b=e}function $(){let e=parseInt(i.value.substring(1,3),16),t=parseInt(i.value.substring(3,5),16),n=parseInt(i.value.substring(5,7),16);Z('wc_c',i.value),Z('wc_e',A),Z('wc_d',b),Z('wc_g',S),Z('wc_s',u.value.toString());let r=new XMLHttpRequest;r.open('GET','/update_params?red='+e+'&green='+t+'&blue='+n+'&effect='+A+'&darkmode='+b+'&speed='+u.value+'&power='+E+'&ghost='+S,!0),r.send()}function ee(e){R&&1===R.readyState?R.send(e):(ue(),setTimeout((function(){ee(e)}),400))}function te(){B(o).add(L),j(r,o),ee(L),G=V('wc_'+L)?V('wc_'+L):0}function ne(){J(r,o),ee('stop'),setTimeout((function(){B(o).remove(L),L=''}),700)}function re(t){let n='';if(1===t)n='mastermind?c4=0',oe(),ae();else if(2===t)n='mastermind?c4=7',oe();else{if(e.querySelectorAll('.cdb[data-num=\"1\"], .cdb[data-num=\"2\"], .cdb[data-num=\"3\"], .cdb[data-num=\"4\"], .cdb[data-num=\"5\"], .cdb[data-num=\"6\"]').length<4)return void ae('Muesch zersch aues uswähle.');n='mastermind?c1='+g[0].getAttribute('data-num')+'&c2='+g[1].getAttribute('data-num')+'&c3='+g[2].getAttribute('data-num')+'&c4='+g[3].getAttribute('data-num'),oe()}let r=new XMLHttpRequest;r.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(r.responseText);k=e.place,_=e.try,4===k?ae('Bravo! I '+_+' Mau usegfunde.'):11===_?ae('Schad, jetz hesch verlore.'):ae()}},r.open('GET',n,!0),r.send()}function oe(){Array.from(g).forEach((function(e){F(e,'data-num','')}))}function ae(e){N('sMM').innerHTML=e||h+'\"white\"/></svg>&nbsp;am richtige Ort&nbsp;'+h+'\"cornflowerblue\"/></svg>&nbsp;di richtigi Farb'}function ce(e){let t;t='1'===e?'wordguessr?new':'2'===e?'wordguessr?exit':'wordguessr?word='+d.value;let n=new XMLHttpRequest;n.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(n.responseText);0===e.score?(B(d).add('error'),setTimeout((function(){B(d).remove('error'),d.value=''}),100)):1===e.score&&(C+=e.score,N('sWG').innerHTML=C+' hesch usegfunde.',B(d).add('ok'),setTimeout((function(){B(d).remove('ok'),d.value=''}),100))}},n.open('GET',t,!0),n.send()}setInterval(K,100),U(N('p'),H,(function(){q(1-E),$()})),U(N('s'),H,(function(){j(n,r)})),U(N('xS'),H,(function(){J(n,r),B(r).remove('sor'),$()})),U(N('SN'),H,(function(){L='snake',te()})),U(N('TE'),H,(function(){L='tetris',te()})),U(N('xCT'),H,ne),U(N('xGO'),H,(function(){J(o,a),ne(),J(n,r)})),U(N('xGOA'),H,(function(){J(o,a),ee(L)})),U(N('MM'),H,(function(){j(r,c),re(1)})),U(N('xMM'),H,(function(){J(r,c),re(2)})),U(N('cMM'),H,re),U(N('WG'),H,(function(){j(r,s),ce('1'),C=0,N('sWG').innerHTML=''})),U(N('xWG'),H,(function(){J(r,s),ce('2')})),U(N('cWG'),H,ce),Array.from(W('snb')).forEach((function(e){F(e,'d','M2 2 L9 7 L2 12 Z'),U(e,H,(function(e){ee(e.target.getAttribute('data-dir'))}))})),Array.from(W('n')).forEach((function(e){F(e,'d','M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'),F(e,'transform','scale(0.9) translate(5,5)')})),Array.from(W('y')).forEach((function(e){F(e,'d','M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'),F(e,'transform','scale(0.85) translate(5,5)')})),Array.from(W('play')).forEach((function(e){e.innerHTML='<path d=\"M2 2 L9 7 L2 12 Z\" stroke-width=\"1.4\"/>'})),Array.from(m).forEach((function(e){U(e,H,(function(e){Array.from(m).forEach((function(e){B(e).remove('g')})),B(e.target).add('g'),O=e.target.getAttribute('data-num')})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),Array.from(g).forEach((function(e){U(e,H,(function(e){F(e.target,'data-num',O),ae()})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),e.onkeydown=function(e){let t='';switch(e.key){case'ArrowUp':t='up';break;case'ArrowRight':t='right';break;case'ArrowDown':t='down';break;case'ArrowLeft':t='left';break;case'Enter':B(s).contains('show')&&ce()}t&&L&&(ee(t),'up'===t&&'tetris'===L&&(t='tup'),B(N('ctrl'+t)).add('g'),setTimeout((function(){B(N('ctrl'+t)).remove('g')}),200))},U(i,'change',(e=>{z(i.value)})),Array.from(W('ef')).forEach((function(e,t){U(e,H,(function(e){P(t+1)}))})),U(f,H,(e=>{Q(1-S)})),U(l,H,(e=>{Y(1-b)})),U(N('SE'),H,(e=>{B(N('SE')).toggle('ddo'),B(N('LSE')).toggle('cl'),B(N('GM')).remove('ddo'),B(N('LGM')).add('cl')})),U(N('GM'),H,(e=>{B(N('GM')).toggle('ddo'),B(N('LGM')).toggle('cl'),B(N('SE')).remove('ddo'),B(N('LSE')).add('cl')})),V('wc_c')&&(i.value=V('wc_c'),z(i.value)),V('wc_e')&&P(parseInt(V('wc_e'))),V('wc_g')&&Q(parseInt(V('wc_g'))),V('wc_d')&&Y(parseInt(V('wc_d'))),V('wc_s')&&(u.value=parseInt(V('wc_s'))),N('iphone').href=N('icon').href,'E g,S g,D,I g,S g,C g,H g,W,F M5,Ü M5,F M5,V M15,I M15,E M15,R M15,T M15,U M15,T,Z M10,Ä M10,Ä M10,Y,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,U M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,Ö H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,Ü H5,F H5,I H5,T,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,U H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,U H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K'.split(',').forEach((function(n,r){const o=e.createElementNS('http://www.w3.org/2000/svg','text');F(o,'x',r%11*10+7),F(o,'y',10*Math.ceil((r+1)/11)),[113,114,116,117].includes(r)&&F(o,'y',112.5),n.split(' ').forEach((function(e,t){t?B(o).add(e):o.textContent=e})),t.appendChild(o)}));const se='ewfGRRDcSaj',ie=[se+'nWORDuCLOCK',se+'mSNAKExlbdk',se+'mTETRISlbdk','ewfGAMEcsajmsnakOVERdk',se+'MASTERMINDk',se+'WORDbGUESSR'];function ue(){R&&(R.onclose=null,R.onerror=null,R.close()),R=new WebSocket('ws://'+location.hostname+':81/'),R.onmessage=function(e){if(e.data&&0===e.data.indexOf('score:')&&(x=10*parseInt(e.data.split(':')[1]),x>G&&(G=x,Z('wc_'+L,G)),N('sCT').innerHTML='Score: '+x+' / High-Score : '+G),e.data&&0===e.data.indexOf('gameOver')&&(N('sGO').innerHTML=x,N('hsGO').innerHTML=G,j(o,a)),e.data&&e.data.indexOf('effect')){let o=JSON.parse(e.data);i.value=(t=o.red,n=o.green,r=o.blue,'#'+(1<<24|t<<16|n<<8|r).toString(16).slice(1)),z(i.value),Y(o.darkmode),o.effect!==A&&P(o.effect),Q(o.ghost),q(o.power),u.value=o.speed}var t,n,r},R.onclose=function(){setTimeout(ue,2e3)},R.onerror=function(){R&&R.close()}}Array.from(W('t')).forEach((function(t,n){for(let r=0;r<22;r++){const o=e.createElementNS('http://www.w3.org/2000/svg','text');let a=ie[n].substring(r,r+1),c=a.toUpperCase();F(o,'x',r%11*10+7),F(o,'y',10*Math.ceil((r+1)/11)),o.textContent=c,a===c&&F(o,'class','g'),t.appendChild(o)}})),ue()}();</script></body></html>"));
             }
 
             // The HTTP response ends with another blank line
@@ -1282,7 +1529,7 @@ void loop() {
       for (int j = 11; j >= 0; j--) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < 121; i++) {
+        for (int i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1290,7 +1537,7 @@ void loop() {
           }
           // pixel um anzahl Zeilen nach unten verschieben
           ghostPixel = down(ghostPixel,j);
-          pixels.setPixelColor(ghostPixel, dimColor(White, (11 - (float)j) / 11));
+          pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
         }
         pixels.show();
         delay(200);
@@ -1323,7 +1570,7 @@ void loop() {
       for (int j = 0; j < 11; j++) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < 121; i++) {
+        for (int i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1331,7 +1578,7 @@ void loop() {
           }
           // pixel um anzahl Zeilen nach unten verschieben
           ghostPixel = down(ghostPixel,j);
-          pixels.setPixelColor(ghostPixel, dimColor(White, (11 - (float)j) / 11));
+          pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
         }
         pixels.show();
         delay(200);
@@ -1344,25 +1591,22 @@ void loop() {
     } else {
       snakeNext = -1;
       snakeWait = snakeSpeed;
-      if (snakeDir == 1) {
-        // move snake up
+      if (snakeDir == "up") {
         snakeNext = snake[0] - 1 - 2 * (snake[0] % 11);
         if (snakeNext < 0) {
           snakeNext = -3;
         }
-      } else if (snakeDir == 2) {
-        // move snake right
+      } else if (snakeDir == "right") {
         snakeNext = snake[0] + 1 - 2 * ((snake[0] / 11) % 2);
         if (floor(snakeNext / 11) != snake[0] / 11) {
           snakeNext = -3;
         }
-      } else if (snakeDir == 3) {
-        // move snake down
+      } else if (snakeDir == "down") {
         snakeNext = snake[0] + 1 + 2 * (10 - snake[0] % 11);
         if (snakeNext > 120) {
           snakeNext = -3;
         }
-      } else if (snakeDir == 4) {
+      } else if (snakeDir == "left") {
         // move snake left
         snakeNext = snake[0] - 1 + 2 * ((snake[0] / 11) % 2);
         if (floor(snakeNext / 11) != snake[0] / 11 || snakeNext == -1) {
@@ -1383,9 +1627,10 @@ void loop() {
       if (snakeNext == snakeSnack) {
         // found snack
         snakeLen++;
+        sendScoreToClients(snakeLen - 3);
         snake[snakeLen] = -1;
         setSnack();
-        snakeSpeed = snakeSpeed - 175;
+        snakeSpeed = snakeSpeed - 40;
       }
 
       if (snakeNext >= 0) {
@@ -1402,6 +1647,7 @@ void loop() {
 
       if (snakeNext == -3) {
         // game over
+        webSocket.broadcastTXT("gameOver");
         chase(Red);
         inSnake = false;
         lastMinuteWordClock = 61;
@@ -1427,6 +1673,7 @@ void loop() {
     }
     if (gameOver) {
       delay(500);
+      webSocket.broadcastTXT("gameOver");
       chase(Red);
       inTetris = false;
       lastMinuteWordClock = 61;
@@ -1452,23 +1699,33 @@ void loop() {
         wordGuessrAlert = millis() + 100;
       }
     }
-  } else if (rainbow == 1) {
-    if (rainbowWait > 0) {
-      rainbowWait--;
+  } else if (effect == 1) {
+    // colorWheel
+    if (effectWait > 0) {
+      effectWait--;
     } else {
-      rainbowWait = rainbowSpeed;
-      if (rgbRed > 0 && !rgbBlue > 0) {
-          rgbRed--;
-          rgbGreen++;
+      effectWait = effectSpeed;
+      if (rgbRed > 0 && rgbBlue == 0) {
+        rgbRed--;
+        rgbGreen++;
       } else if (rgbGreen > 0) {
-          rgbGreen--;
-          rgbBlue++;
+        rgbGreen--;
+        rgbBlue++;
       } else {
-          rgbBlue--;
-          rgbRed++;
+        rgbBlue--;
+        rgbRed++;
       }
       colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
       colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+      lastMinuteWordClock = 61;
+    }
+  } else if (effect == 2) {
+    // rainbow
+    if (effectWait > 0) {
+      effectWait--;
+    } else {
+      effectWait = effectSpeed / 8;
+      frame++;
       lastMinuteWordClock = 61;
     }
   }
