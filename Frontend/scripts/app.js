@@ -14,13 +14,14 @@
     const clock = ElementById("c");
     const pClock = ElementById("pC");
     const pSettings = ElementById("pS");
-    const pSnake = ElementById("pSN");
+    const pControls = ElementById("pCT");
+    const pGameOver = ElementById("pGO");
     const pMastermind = ElementById("pMM");
     const pWordGuessr = ElementById("pWG");
     const color = ElementById("co");
-    const speed = ElementById("speed");
+    const speed = ElementById("speed"); // speed of effects, 2000 (slow) to 50 (fast)
     const wordInput = ElementById("wi");
-    const rainbowMode =  ElementById("rm");
+    const effectColorWheel =  ElementById("eCW");
     const ghostMode = ElementById("gm");
     const darkMode = ElementById("dm");
     const body = doc.getElementsByTagName("body")[0];
@@ -36,17 +37,18 @@
     let power = 1;
     let dark = 1;
     let ghost = 1;
-    let rainbow = 0;
-    let rainbowRed = 255;
-    let rainbowGreen = 0;
-    let rainbowBlue = 0;
+    let effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
+    let effectColorWheelRed = 255;
+    let effectColorWheelGreen = 0;
+    let effectColorWheelBlue = 0;
+    let game;
     let score = 0;
     let highscore = 0;
     let mastermindColor = "1";
     let mastermindWeiss = 0;
-    //let mastermindGrau = 0;
     let mastermindTry = 0;
     let wordGuessrScore = 0;
+    let webSocket = null;
 
     function ElementById(id) {
         return doc.getElementById(id);
@@ -133,22 +135,22 @@
     setInterval(setTime, 100);
 
     /**
-     * Change the color by one step in rainbow-mode
+     * Change the color by one step in ColorWheel-mode
      */
-    function fChangeRainbow() {
-        if (rainbow) {
-            if (rainbowRed && !rainbowBlue) {
-                rainbowRed -= 1;
-                rainbowGreen += 1;
-            } else if (rainbowGreen) {
-                rainbowGreen -= 1;
-                rainbowBlue += 1;
+    function fChangeColorWheel() {
+        if (effect === 1) {
+            if (effectColorWheelRed && !effectColorWheelBlue) {
+                effectColorWheelRed -= 1;
+                effectColorWheelGreen += 1;
+            } else if (effectColorWheelGreen) {
+                effectColorWheelGreen -= 1;
+                effectColorWheelBlue += 1;
             } else {
-                rainbowBlue -= 1;
-                rainbowRed += 1;
+                effectColorWheelBlue -= 1;
+                effectColorWheelRed += 1;
             }
-            fChangeColor("rgb(" + rainbowRed + ", " + rainbowGreen + ", " + rainbowBlue + ")");
-            setTimeout(fChangeRainbow, speed.value / 10);
+            fChangeColor("rgb(" + effectColorWheelRed + ", " + effectColorWheelGreen + ", " + effectColorWheelBlue + ")");
+            setTimeout(fChangeColorWheel, speed.value / 10);
         }
     }
 
@@ -182,10 +184,10 @@
     function fShowPage(pageHide, pageShow) {
         // Fix for Firefox OnKeydown
         doc.activeElement.blur();
-        fClassList(pageHide).remove("sor");
-        fClassList(pageShow).remove("sil");
-        fClassList(pageHide).add("so");
-        fClassList(pageShow).add("si");
+        fClassList(pageHide).remove("show");
+        fClassList(pageShow).remove("right");
+        fClassList(pageHide).add("left");
+        fClassList(pageShow).add("show");
     }
 
     /**
@@ -194,10 +196,10 @@
      * @param {Element} pageHide : the page to hide
      */
     function fHidePage(pageShow, pageHide) {
-        fClassList(pageShow).remove("so");
-        fClassList(pageHide).remove("si");
-        fClassList(pageShow).add("sor");
-        fClassList(pageHide).add("sil");
+        fClassList(pageShow).remove("left");
+        fClassList(pageHide).remove("show");
+        fClassList(pageShow).add("show");
+        fClassList(pageHide).add("right");
     }
 
     /**
@@ -215,17 +217,27 @@
     }
 
     /**
-     * Set rainbow-mode on or off
-     * @param {int} rain_in : 1 = rainbow on; 0 = rainbow off
+     * Set effect -
+     * @param {int} effect_in : 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
      */
-    function fRainbow(rain_in) {
-        if (rain_in !== rainbow) {
-            fClassList(fChildren(rainbowMode)[0]).toggle("h");
-            fClassList(fChildren(rainbowMode)[1]).toggle("h");
+    function fEffect(effect_in) {
+        if (effect_in == effect) {
+            effect = 0;
+        } else {
+            effect = effect_in;
         }
-        rainbow = rain_in;
-        if (rainbow) {
-            fChangeRainbow();
+        Array.from(ElementsByClassName("ef")).forEach(function (element, index) {
+            if (index + 1 == effect) {
+                fClassList(fChildren(element)[0]).add("h");
+                fClassList(fChildren(element)[1]).remove("h");
+            } else {
+                fClassList(fChildren(element)[0]).remove("h");
+                fClassList(fChildren(element)[1]).add("h");
+            }
+        });
+
+        if (effect === 1) {
+            fChangeColorWheel();
         } else {
             fChangeColor(color.value);
         }
@@ -282,49 +294,80 @@
         let green = parseInt(color.value.substring(3, 5), 16);
         let blue = parseInt(color.value.substring(5, 7), 16);
         localStorageSet("wc_c", color.value);
-        localStorageSet("wc_r", rainbow);
+        localStorageSet("wc_e", effect);
         localStorageSet("wc_d", dark);
         localStorageSet("wc_g", ghost);
         localStorageSet("wc_s", speed.value.toString());
         let xhr = new XMLHttpRequest();
-        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&rainbow=" + rainbow + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
+        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
         xhr.send();
     }
 
     /**
-     * Display the snake-page
+     * Send game-control-input to word-clock
+     * @param {string} cmd : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
      */
-    function fShowSnake() {
-        fShowPage(pSettings, pSnake);
-        fSendSnake(5);
+    function fSendControls(cmd) {
+        //console.log(cmd);
+        if (webSocket && webSocket.readyState === 1) {
+            webSocket.send(cmd);
+        } else {
+            initWebSocket();
+            setTimeout(function () {
+                fSendControls(cmd);
+            }, 400);
+
+        }
     }
 
     /**
-     * Send snake-control-input to word-clock
-     * @param {int} dir : direction for snake to move: 1=up, 2=right, 3=down, 4=left, 5=new game, 6=quit game
+     * Display the controls-page for tetris / snake
      */
-    function fSendSnake(dir) {
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-                score = (parseInt(xhttp.responseText) - 3) * 10;
-                if (score > highscore) {
-                    highscore = score;
-                    localStorageSet("wc_sc", highscore);
-                }
-                ElementById("sSN").innerHTML = "Score: " + score + " / High-Score : " + highscore;
-            }
-        };
-        xhttp.open("GET", "snake?dir=" + dir, true);
-        xhttp.send();
+    function fShowControls() {
+        fClassList(pControls).add(game);
+        fShowPage(pSettings, pControls);
+        fSendControls(game);
+        if (localStorageGet("wc_" + game)) {
+            highscore = localStorageGet("wc_" + game);
+        } else {
+            highscore = 0;
+        }
     }
 
     /**
-     * Hide the snake-page and return to settings-page
+     * Hide the controls-page and return to settings-page
      */
-    function fHideSnake() {
-        fHidePage(pSettings, pSnake);
-        fSendSnake(6);
+    function fHideControls() {
+        fHidePage(pSettings, pControls);
+        fSendControls("stop");
+        setTimeout(function () {
+            fClassList(pControls).remove(game);
+            game = "";
+        }, 700);
+    }
+
+    /**
+     * Display the game-over-page for tetris / snake
+     */
+    function fShowGameOver() {
+        fShowPage(pControls, pGameOver);
+    }
+
+    /**
+     * Hide the game-over-page, start a new game
+     */
+    function fPlayAgain() {
+        fHidePage(pControls, pGameOver);
+        fSendControls(game);
+    }
+
+    /**
+     * Hide the game-over-page, start a new game
+     */
+    function fExitGame() {
+        fHidePage(pControls, pGameOver);
+        fHideControls();
+        fHidePage(pClock, pSettings);
     }
 
     /**
@@ -349,7 +392,7 @@
             urlparams = "mastermind?c4=7"
             fClearMastermind();
         } else {
-            if (doc.querySelectorAll("[data-num='1'], [data-num='2'], [data-num='3'], [data-num='4'], [data-num='5'], [data-num='6']").length < 14) {
+            if (doc.querySelectorAll(".cdb[data-num='1'], .cdb[data-num='2'], .cdb[data-num='3'], .cdb[data-num='4'], .cdb[data-num='5'], .cdb[data-num='6']").length < 4) {
                 fMastermindMessage("Muesch zersch aues uswähle.");
                 return;
             }
@@ -364,7 +407,6 @@
             if (this.readyState === 4 && this.status === 200) {
                 let response = JSON.parse(xhttp.responseText);
                 mastermindWeiss = response.place;
-                //mastermindGrau = response.color;
                 mastermindTry = response.try;
                 if (mastermindWeiss === 4) {
                     fMastermindMessage("Bravo! I " + mastermindTry + " Mau usegfunde.");
@@ -473,8 +515,17 @@
     fEventListener(ElementById("s"), click, fShowSettings);
     fEventListener(ElementById("xS"), click, fHideSettings);
 
-    fEventListener(ElementById("SN"), click, fShowSnake);
-    fEventListener(ElementById("xSN"), click, fHideSnake);
+    fEventListener(ElementById("SN"), click, function () {
+        game = "snake";
+        fShowControls();
+    });
+    fEventListener(ElementById("TE"), click, function () {
+        game = "tetris";
+        fShowControls();
+    });
+    fEventListener(ElementById("xCT"), click, fHideControls);
+    fEventListener(ElementById("xGO"),click, fExitGame);
+    fEventListener(ElementById("xGOA"),click, fPlayAgain);
     fEventListener(ElementById("MM"), click, fShowMastermind);
     fEventListener(ElementById("xMM"), click, fHideMastermind);
     fEventListener(ElementById("cMM"), click, fSendMastermind);
@@ -484,7 +535,7 @@
     Array.from(ElementsByClassName("snb")).forEach(function (element) {
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
         fEventListener(element, click, function (e) {
-            fSendSnake(e.target.getAttribute("data-num"));
+            fSendControls(e.target.getAttribute("data-dir"));
         });
     });
     // no-svg: x
@@ -522,30 +573,33 @@
     });
 
     function fCheckKey(e) {
-        let dir = 0;
+        let dir = "";
         switch (e.key) {
             case "ArrowUp":
-                dir = 1;
+                dir = "up";
                 break;
             case "ArrowRight":
-                dir = 2;
+                dir = "right";
                 break;
             case "ArrowDown":
-                dir = 3;
+                dir = "down";
                 break;
             case "ArrowLeft":
-                dir = 4;
+                dir = "left";
                 break;
             case "Enter":
-                if ( fClassList(pWordGuessr).contains("si")) {
+                if ( fClassList(pWordGuessr).contains("show")) {
                     fSendWordGuessr();
                 }
         }
-        if (dir &&  fClassList(pSnake).contains("si")) {
-            fSendSnake(dir);
-            fClassList(fChildren(ElementById("ctrl"))[dir - 1]).add("g");
+        if (dir && game) {
+            fSendControls(dir);
+            if (dir === "up" && game === "tetris") {
+                dir = "tup";
+            }
+            fClassList(ElementById("ctrl" + dir)).add("g");
             setTimeout(function () {
-                fClassList(fChildren(ElementById("ctrl"))[dir - 1]).remove("g");
+                fClassList(ElementById("ctrl" + dir)).remove("g");
             }, 200);
         }
     }
@@ -554,14 +608,28 @@
     fEventListener(color, "change", (ignore) => {
         fChangeColor(color.value);
     }, false);
-    fEventListener(rainbowMode, click, (ignore) => {
-        fRainbow(1 - rainbow);
+    Array.from(ElementsByClassName("ef")).forEach(function (element, index) {
+        fEventListener(element, click, function (e) {
+            fEffect(index + 1);
+        });
     });
     fEventListener(ghostMode, click, (ignore) => {
         fGhost(1 - ghost);
     });
     fEventListener(darkMode, click, (ignore) => {
         fSetDarkMode(1 - dark);
+    });
+    fEventListener(ElementById("SE"), click, (e) => {
+        fClassList(ElementById("SE")).toggle("ddo");
+        fClassList(ElementById("LSE")).toggle("cl");
+        fClassList(ElementById("GM")).remove("ddo");
+        fClassList(ElementById("LGM")).add("cl");
+    });
+    fEventListener(ElementById("GM"), click, (e) => {
+        fClassList(ElementById("GM")).toggle("ddo");
+        fClassList(ElementById("LGM")).toggle("cl");
+        fClassList(ElementById("SE")).remove("ddo");
+        fClassList(ElementById("LSE")).add("cl");
     });
 
     /**
@@ -571,8 +639,8 @@
         color.value = localStorageGet("wc_c");
         fChangeColor(color.value);
     }
-    if (localStorageGet("wc_r")) {
-        fRainbow(parseInt(localStorageGet("wc_r")));
+    if (localStorageGet("wc_e")) {
+        fEffect(parseInt(localStorageGet("wc_e")));
     }
     if (localStorageGet("wc_g")) {
         fGhost(parseInt(localStorageGet("wc_g")));
@@ -582,9 +650,6 @@
     }
     if (localStorageGet("wc_s")) {
         speed.value = (parseInt(localStorageGet("wc_s")));
-    }
-    if (localStorageGet("wc_sc")) {
-        highscore = localStorageGet("wc_sc");
     }
     ElementById("iphone").href = ElementById("icon").href;
 
@@ -605,8 +670,9 @@
         clock.appendChild(textElement);
     });
 
-    // generate Titles on Pages
-    const pageTitles = ["HELLMIecSajnWORDuCLOCK", "HELLMIecSajmSNAKExlbdk", "HELLMIecSajMASTERMINDk", "HELLMIecSajWORDbGUESSR"];
+    // generate Titles on Pages (grrd: ewfGRRDcSaj, mascha: qwMASCHAbSd)
+    const pageTitleLine1 = "HELLMIecSaj";
+    const pageTitles = [pageTitleLine1 + "nWORDuCLOCK", pageTitleLine1 + "mSNAKExlbdk", pageTitleLine1 + "mTETRISlbdk", "ewfGAMEcsajmsnakOVERdk", pageTitleLine1 + "MASTERMINDk", pageTitleLine1 + "WORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -622,24 +688,55 @@
         }
     });
 
-    /**
-     * Load current settings from word-clock
-     */
-    let xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState === 4 && this.status === 200) {
-            let response = JSON.parse(xhttp.responseText);
-            if (!response.rainbow) {
-                color.value = fRgb2Hex(response.red, response.green, response.blue);
-            }
-            fChangeColor(color.value);
-            fSetDarkMode(response.darkmode);
-            fRainbow(response.rainbow);
-            fGhost(response.ghost);
-            fSetPower(response.power);
-            speed.value = response.speed;
+    function initWebSocket() {
+        if (webSocket) {
+            webSocket.onclose = null;
+            webSocket.onerror = null;
+            webSocket.close();
         }
-    };
-    xhttp.open("GET", "get_params", true);
-    xhttp.send();
-}());
+        webSocket = new WebSocket('ws://' + location.hostname + ':81/');
+        // webSocket.onopen = function(){ console.log('webSocket open'); };
+        webSocket.onmessage = function(e) {
+            if (e.data && e.data.indexOf('score:') === 0) {
+                // get score update for snake / tetris
+                score = parseInt(e.data.split(':')[1]) * 10;
+                if (score > highscore) {
+                    highscore = score;
+                    localStorageSet("wc_" + game, highscore);
+                }
+                ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
+            }
+            if (e.data && e.data.indexOf('gameOver') === 0) {
+                // game over for snake / tetris
+                ElementById("sGO").innerHTML = score;
+                ElementById("hsGO").innerHTML = highscore;
+                fShowGameOver();
+            }
+            if (e.data && e.data.indexOf('effect')) {
+              // get current settings from word-clock
+              let response = JSON.parse(e.data);
+              color.value = fRgb2Hex(response.red, response.green, response.blue);
+              fChangeColor(color.value);
+              fSetDarkMode(response.darkmode);
+              if (response.effect !== effect) {
+                  fEffect(response.effect);
+              }
+              fGhost(response.ghost);
+              fSetPower(response.power);
+              speed.value = response.speed;
+            }
+        };
+        webSocket.onclose = function() {
+            // Try to reconnect after 2 seconds
+            setTimeout(initWebSocket, 2000);
+        };
+        webSocket.onerror = function() {
+            // Close and trigger onclose for reconnection
+            if (webSocket) webSocket.close();
+        };
+    }
+
+    // initialize websocket connection for game controls
+    initWebSocket();
+
+}())
