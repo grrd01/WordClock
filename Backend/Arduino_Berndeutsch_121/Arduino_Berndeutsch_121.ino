@@ -26,10 +26,22 @@
 #include <Timezone.h>           // v1.2.6
 #include <Adafruit_NeoPixel.h>  // v1.15.2
 #include <pgmspace.h>
+#include <EEPROM.h>
 #include "web_interface.h"
 
 // set name for access-point and mdns-server
 const char* version = "wordclock";
+
+// EEPROM addresses for persistent variables
+const int EEPROM_ADDR_POWER = 0;
+const int EEPROM_ADDR_RGB_RED = 1;
+const int EEPROM_ADDR_RGB_GREEN = 2;
+const int EEPROM_ADDR_RGB_BLUE = 3;
+const int EEPROM_ADDR_DARKMODE = 4;
+const int EEPROM_ADDR_GHOST = 5;
+const int EEPROM_ADDR_EFFECT = 6;
+const int EEPROM_ADDR_EFFECTSPEED_LOW = 7;   // effectSpeed is int (2 bytes)
+const int EEPROM_ADDR_EFFECTSPEED_HIGH = 8;
 
 // Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
@@ -1263,6 +1275,49 @@ void setup() {
   pixels.begin();
   wipe();
 
+  // Initialize EEPROM and read stored values
+  EEPROM.begin(512);
+
+  uint8_t storedPower = EEPROM.read(EEPROM_ADDR_POWER);
+  if (storedPower == 0 || storedPower == 1) {
+    power = storedPower;
+  }
+
+  uint8_t storedRed = EEPROM.read(EEPROM_ADDR_RGB_RED);
+  if (storedRed <= 255) {
+    rgbRed = storedRed;
+  }
+
+  uint8_t storedGreen = EEPROM.read(EEPROM_ADDR_RGB_GREEN);
+  if (storedGreen <= 255) {
+    rgbGreen = storedGreen;
+  }
+
+  uint8_t storedBlue = EEPROM.read(EEPROM_ADDR_RGB_BLUE);
+  if (storedBlue <= 255) {
+    rgbBlue = storedBlue;
+  }
+
+  uint8_t storedDarkMode = EEPROM.read(EEPROM_ADDR_DARKMODE);
+  if (storedDarkMode == 0 || storedDarkMode == 1) {
+    darkMode = storedDarkMode;
+  }
+
+  uint8_t storedGhost = EEPROM.read(EEPROM_ADDR_GHOST);
+  if (storedGhost == 0 || storedGhost == 1) {
+    ghost = storedGhost;
+  }
+
+  uint8_t storedEffect = EEPROM.read(EEPROM_ADDR_EFFECT);
+  if (storedEffect <= 5) {
+    effect = storedEffect;
+  }
+
+  int storedEffectSpeed = (EEPROM.read(EEPROM_ADDR_EFFECTSPEED_HIGH) << 8) | EEPROM.read(EEPROM_ADDR_EFFECTSPEED_LOW);
+  if (storedEffectSpeed >= 8 && storedEffectSpeed <= 7808) {
+    effectSpeed = storedEffectSpeed;
+  }
+
   chase(Green); // run basic screen test and show success
 
   setupWifi();
@@ -1421,6 +1476,12 @@ void loop() {
               } else {
                 ghost = 0;
               }
+              // Save ghost to EEPROM if it changed
+              uint8_t storedGhost = EEPROM.read(EEPROM_ADDR_GHOST);
+              if (storedGhost != ghost) {
+                EEPROM.write(EEPROM_ADDR_GHOST, ghost);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "power=") == 1) {
                 power = 1;
               } else {
@@ -1428,25 +1489,68 @@ void loop() {
                 blank();
                 pixels.show();
               }
+              // Save power to EEPROM if it changed
+              uint8_t storedPower = EEPROM.read(EEPROM_ADDR_POWER);
+              if (storedPower != power) {
+                EEPROM.write(EEPROM_ADDR_POWER, power);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
                 effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
+              }
+              // Save effectSpeed to EEPROM if it changed
+              int storedEffectSpeed = (EEPROM.read(EEPROM_ADDR_EFFECTSPEED_HIGH) << 8) | EEPROM.read(EEPROM_ADDR_EFFECTSPEED_LOW);
+              if (storedEffectSpeed != effectSpeed) {
+                EEPROM.write(EEPROM_ADDR_EFFECTSPEED_LOW, effectSpeed & 0xFF);
+                EEPROM.write(EEPROM_ADDR_EFFECTSPEED_HIGH, (effectSpeed >> 8) & 0xFF);
+                EEPROM.commit();
               }
               if (extractParameterValue(url, "darkmode=") == 1) {
                 darkMode = 1;
               } else {
                 darkMode = 0;
               }
+              // Save darkMode to EEPROM if it changed
+              uint8_t storedDarkMode = EEPROM.read(EEPROM_ADDR_DARKMODE);
+              if (storedDarkMode != darkMode) {
+                EEPROM.write(EEPROM_ADDR_DARKMODE, darkMode);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
                 effect = extractParameterValue(url, "effect=");
+              }
+              // Save effect to EEPROM if it changed
+              uint8_t storedEffect = EEPROM.read(EEPROM_ADDR_EFFECT);
+              if (storedEffect != effect) {
+                EEPROM.write(EEPROM_ADDR_EFFECT, effect);
+                EEPROM.commit();
               }
               if (extractParameterValue(url, "blue=") >= 0 && extractParameterValue(url, "blue=") <= 255) {
                 rgbBlue = extractParameterValue(url, "blue=");
               }
+              // Save rgbBlue to EEPROM if it changed
+              uint8_t storedBlue = EEPROM.read(EEPROM_ADDR_RGB_BLUE);
+              if (storedBlue != rgbBlue) {
+                EEPROM.write(EEPROM_ADDR_RGB_BLUE, rgbBlue);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "green=") >= 0 && extractParameterValue(url, "green=") <= 255) {
                 rgbGreen = extractParameterValue(url, "green=");
               }
+              // Save rgbGreen to EEPROM if it changed
+              uint8_t storedGreen = EEPROM.read(EEPROM_ADDR_RGB_GREEN);
+              if (storedGreen != rgbGreen) {
+                EEPROM.write(EEPROM_ADDR_RGB_GREEN, rgbGreen);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "red=") >= 0 && extractParameterValue(url, "red=") <= 255) {
                 rgbRed = extractParameterValue(url, "red=");
+              }
+              // Save rgbRed to EEPROM if it changed
+              uint8_t storedRed = EEPROM.read(EEPROM_ADDR_RGB_RED);
+              if (storedRed != rgbRed) {
+                EEPROM.write(EEPROM_ADDR_RGB_RED, rgbRed);
+                EEPROM.commit();
               }
               colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
               colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
