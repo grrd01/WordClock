@@ -315,7 +315,7 @@ path.snb {
     height: 4px;
     border-radius: 2px;
     background: none;
-    margin: 10px 0;
+    margin: 10px 0 10px 20px;
     direction: rtl;
     border: solid calc(2px + 0.2vmin) #555;
 }
