@@ -21,7 +21,6 @@
     const color = ElementById("co");
     const speed = ElementById("speed"); // speed of effects, 2000 (slow) to 50 (fast)
     const wordInput = ElementById("wi");
-    const effectColorWheel =  ElementById("eCW");
     const ghostMode = ElementById("gm");
     const darkMode = ElementById("dm");
     const body = doc.getElementsByTagName("body")[0];
@@ -56,14 +55,6 @@
 
     function ElementsByClassName(id) {
         return doc.getElementsByClassName(id);
-    }
-
-    function localStorageGet(key) {
-        return localStorage.getItem(key);
-    }
-
-    function localStorageSet(key, value) {
-        return localStorage.setItem(key, value);
     }
 
     function fClassList(element) {
@@ -221,13 +212,13 @@
      * @param {int} effect_in : 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
      */
     function fEffect(effect_in) {
-        if (effect_in == effect) {
+        if (effect_in === effect) {
             effect = 0;
         } else {
             effect = effect_in;
         }
         Array.from(ElementsByClassName("ef")).forEach(function (element, index) {
-            if (index + 1 == effect) {
+            if (index + 1 === effect) {
                 fClassList(fChildren(element)[0]).add("h");
                 fClassList(fChildren(element)[1]).remove("h");
             } else {
@@ -293,11 +284,6 @@
         let red = parseInt(color.value.substring(1, 3), 16);
         let green = parseInt(color.value.substring(3, 5), 16);
         let blue = parseInt(color.value.substring(5, 7), 16);
-        localStorageSet("wc_c", color.value);
-        localStorageSet("wc_e", effect);
-        localStorageSet("wc_d", dark);
-        localStorageSet("wc_g", ghost);
-        localStorageSet("wc_s", speed.value.toString());
         let xhr = new XMLHttpRequest();
         xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
         xhr.send();
@@ -327,11 +313,6 @@
         fClassList(pControls).add(game);
         fShowPage(pSettings, pControls);
         fSendControls(game);
-        if (localStorageGet("wc_" + game)) {
-            highscore = localStorageGet("wc_" + game);
-        } else {
-            highscore = 0;
-        }
     }
 
     /**
@@ -609,7 +590,7 @@
         fChangeColor(color.value);
     }, false);
     Array.from(ElementsByClassName("ef")).forEach(function (element, index) {
-        fEventListener(element, click, function (e) {
+        fEventListener(element, click, function (ignore) {
             fEffect(index + 1);
         });
     });
@@ -619,39 +600,34 @@
     fEventListener(darkMode, click, (ignore) => {
         fSetDarkMode(1 - dark);
     });
-    fEventListener(ElementById("SE"), click, (e) => {
+    fEventListener(ElementById("SE"), click, (ignore) => {
         fClassList(ElementById("SE")).toggle("ddo");
         fClassList(ElementById("LSE")).toggle("cl");
         fClassList(ElementById("GM")).remove("ddo");
         fClassList(ElementById("LGM")).add("cl");
+        fClassList(ElementById("CR")).remove("ddo");
+        fClassList(ElementById("LCR")).add("cl");
     });
-    fEventListener(ElementById("GM"), click, (e) => {
+    fEventListener(ElementById("GM"), click, (ignore) => {
         fClassList(ElementById("GM")).toggle("ddo");
         fClassList(ElementById("LGM")).toggle("cl");
         fClassList(ElementById("SE")).remove("ddo");
         fClassList(ElementById("LSE")).add("cl");
+        fClassList(ElementById("CR")).remove("ddo");
+        fClassList(ElementById("LCR")).add("cl");
+    });
+    fEventListener(ElementById("CR"), click, (ignore) => {
+        fClassList(ElementById("CR")).toggle("ddo");
+        fClassList(ElementById("LCR")).toggle("cl");
+        fClassList(ElementById("SE")).remove("ddo");
+        fClassList(ElementById("LSE")).add("cl");
+        fClassList(ElementById("GM")).remove("ddo");
+        fClassList(ElementById("LGM")).add("cl");
     });
 
-    /**
-     * Reload last settings from local storage
-     */
-    if (localStorageGet("wc_c")) {
-        color.value = localStorageGet("wc_c");
-        fChangeColor(color.value);
-    }
-    if (localStorageGet("wc_e")) {
-        fEffect(parseInt(localStorageGet("wc_e")));
-    }
-    if (localStorageGet("wc_g")) {
-        fGhost(parseInt(localStorageGet("wc_g")));
-    }
-    if (localStorageGet("wc_d")) {
-        fSetDarkMode(parseInt(localStorageGet("wc_d")));
-    }
-    if (localStorageGet("wc_s")) {
-        speed.value = (parseInt(localStorageGet("wc_s")));
-    }
     ElementById("iphone").href = ElementById("icon").href;
+    ElementById("wfl").innerHTML = ElementById("wgt").innerHTML;
+    ElementById("mfl").innerHTML = ElementById("mgt").innerHTML;
 
     clockFace.split(",").forEach(function(element, index1) {
         const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -700,10 +676,6 @@
             if (e.data && e.data.indexOf('score:') === 0) {
                 // get score update for snake / tetris
                 score = parseInt(e.data.split(':')[1]) * 10;
-                if (score > highscore) {
-                    highscore = score;
-                    localStorageSet("wc_" + game, highscore);
-                }
                 ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
             if (e.data && e.data.indexOf('gameOver') === 0) {
