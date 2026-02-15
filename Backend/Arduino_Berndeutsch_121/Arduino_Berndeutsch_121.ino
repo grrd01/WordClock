@@ -1014,7 +1014,7 @@ void setSnack() {
   snakeSnack = -1;
   while (snakeSnack < 0) {
     snakeSnack = random(numPixels);
-    for (uint8_t i = snakeLen - 1; i >= 0; i--) {
+    for (int8_t i = snakeLen - 1; i >= 0; i--) {
       if (snakeSnack == snake[i]){
         // place occupied by snake
         snakeSnack = -1;
@@ -1297,6 +1297,8 @@ void setup() {
   if (storedValue <= 255) {
     rgbBlue = storedValue;
   }
+  colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+  colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
 
   storedValue = EEPROM.read(eepromAddrDarkMode);
   if (storedValue == 0 || storedValue == 1) {
