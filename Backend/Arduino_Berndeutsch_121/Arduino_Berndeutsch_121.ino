@@ -1316,12 +1316,12 @@ void setup() {
   }
 
   storedValue = EEPROM.read(eepromAddrSnakeHigh);
-  if (storedValue <= 255) {
+  if (storedValue < 255) {
     snakeHighScore = storedValue;
   }
 
   storedValue = EEPROM.read(eepromAddrTetrisHigh);
-  if (storedValue <= 255) {
+  if (storedValue < 255) {
     tetrisHighScore = storedValue;
   }
 
