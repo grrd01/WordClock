@@ -32,17 +32,6 @@
 // set name for access-point and mdns-server
 const char* version = "wordclock";
 
-// EEPROM addresses for persistent variables
-const int EEPROM_ADDR_POWER = 0;
-const int EEPROM_ADDR_RGB_RED = 1;
-const int EEPROM_ADDR_RGB_GREEN = 2;
-const int EEPROM_ADDR_RGB_BLUE = 3;
-const int EEPROM_ADDR_DARKMODE = 4;
-const int EEPROM_ADDR_GHOST = 5;
-const int EEPROM_ADDR_EFFECT = 6;
-const int EEPROM_ADDR_EFFECTSPEED_LOW = 7;   // effectSpeed is int (2 bytes)
-const int EEPROM_ADDR_EFFECTSPEED_HIGH = 8;
-
 // Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
@@ -73,6 +62,17 @@ struct Drop {
 Drop drops[11][2]; // 11 Spalten, bis zu 2 Drops pro Spalte
 uint16_t dropCooldown[11]; // Cooldown pro Spalte bis zum nächsten neuen Drop
 
+// EEPROM addresses for persistent variables
+const uint8_t eepromAddrRed = 0;
+const uint8_t eepromAddrGreen = 1;
+const uint8_t eepromAddrBlue = 2;
+const uint8_t eepromAddrDarkMode = 3;
+const uint8_t eepromAddrGhost = 4;
+const uint8_t eepromAddrEffect = 5;
+const uint8_t eepromAddrEffectSpeedLow = 6;   // effectSpeed is int (2 bytes)
+const uint8_t eepromAddrEffectSpeedHigh = 7;
+const uint8_t eepromAddrTetrisHigh = 8;
+const uint8_t eepromAddrSnakeHigh = 9;
 
 // Current time
 unsigned long currentTime = millis();
@@ -190,7 +190,8 @@ int wifiWait = 0;
 
 // Snake variables
 int8_t snake[120];
-int8_t snakeLen = 3;
+uint8_t snakeLen = 3;
+uint8_t snakeHighScore = 0;
 int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
 String snakeDir = ""; // snake, up, right, down, left, stop
@@ -202,7 +203,8 @@ bool inSnake = false;
 // Tetris variables
 uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index
 int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
-int tetrisScore = 0;
+uint8_t tetrisScore = 0;
+uint8_t tetrisHighScore = 0;
 bool inTetris = false;
 unsigned long lastDrop = 0;
 const unsigned long dropInterval = 600; // ms
@@ -958,7 +960,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     blank();
     pixels.show();
     handleRestart();
-    sendScoreToClients(0);
+    sendScoreToClients(0, tetrisHighScore);
   } else if (msg == "snake") {
     // Snake start
     inSnake = true;
@@ -973,7 +975,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakeDir = "";
     snakeNext = -1;
     snakeSpeed = 7000;
-    sendScoreToClients(0);
+    sendScoreToClients(0, snakeHighScore);
     blank();
     lightup(snake, Green);
     setSnack();
@@ -1012,7 +1014,7 @@ void setSnack() {
   snakeSnack = -1;
   while (snakeSnack < 0) {
     snakeSnack = random(numPixels);
-    for (int i = snakeLen - 1; i >= 0; i--) {
+    for (uint8_t i = snakeLen - 1; i >= 0; i--) {
       if (snakeSnack == snake[i]){
         // place occupied by snake
         snakeSnack = -1;
@@ -1026,8 +1028,8 @@ void setSnack() {
 }
 
 // Tetris & Snake: Send current score to all connected WebSocket clients
-void sendScoreToClients(int score) {
-  String msg = "score:" + String(score);
+void sendScoreToClients(uint8_t score, uint8_t highScore) {
+  String msg = "{\"score\":" + String(score) + ", \"high\":" + String(highScore) + "}";
   webSocket.broadcastTXT(msg);
 }
 
@@ -1110,7 +1112,10 @@ void clearLines() {
       }
       for (uint8_t x = 0; x < 11; x++) board[0][x] = 0;
       tetrisScore += 1;
-      sendScoreToClients(tetrisScore);
+      if (tetrisScore > tetrisHighScore) {
+        tetrisHighScore = tetrisScore;
+      }
+      sendScoreToClients(tetrisScore, tetrisHighScore);
     }
   }
 }
@@ -1278,42 +1283,47 @@ void setup() {
   // Initialize EEPROM and read stored values
   EEPROM.begin(512);
 
-  uint8_t storedPower = EEPROM.read(EEPROM_ADDR_POWER);
-  if (storedPower == 0 || storedPower == 1) {
-    power = storedPower;
+  uint8_t storedValue = EEPROM.read(eepromAddrRed);
+  if (storedValue <= 255) {
+    rgbRed = storedValue;
   }
 
-  uint8_t storedRed = EEPROM.read(EEPROM_ADDR_RGB_RED);
-  if (storedRed <= 255) {
-    rgbRed = storedRed;
+  storedValue = EEPROM.read(eepromAddrGreen);
+  if (storedValue <= 255) {
+    rgbGreen = storedValue;
   }
 
-  uint8_t storedGreen = EEPROM.read(EEPROM_ADDR_RGB_GREEN);
-  if (storedGreen <= 255) {
-    rgbGreen = storedGreen;
+  storedValue = EEPROM.read(eepromAddrBlue);
+  if (storedValue <= 255) {
+    rgbBlue = storedValue;
   }
 
-  uint8_t storedBlue = EEPROM.read(EEPROM_ADDR_RGB_BLUE);
-  if (storedBlue <= 255) {
-    rgbBlue = storedBlue;
+  storedValue = EEPROM.read(eepromAddrDarkMode);
+  if (storedValue == 0 || storedValue == 1) {
+    darkMode = storedValue;
   }
 
-  uint8_t storedDarkMode = EEPROM.read(EEPROM_ADDR_DARKMODE);
-  if (storedDarkMode == 0 || storedDarkMode == 1) {
-    darkMode = storedDarkMode;
+  storedValue = EEPROM.read(eepromAddrGhost);
+  if (storedValue == 0 || storedValue == 1) {
+    ghost = storedValue;
   }
 
-  uint8_t storedGhost = EEPROM.read(EEPROM_ADDR_GHOST);
-  if (storedGhost == 0 || storedGhost == 1) {
-    ghost = storedGhost;
+  storedValue = EEPROM.read(eepromAddrEffect);
+  if (storedValue <= 5) {
+    effect = storedValue;
   }
 
-  uint8_t storedEffect = EEPROM.read(EEPROM_ADDR_EFFECT);
-  if (storedEffect <= 5) {
-    effect = storedEffect;
+  storedValue = EEPROM.read(eepromAddrSnakeHigh);
+  if (storedValue <= 255) {
+    snakeHighScore = storedValue;
   }
 
-  int storedEffectSpeed = (EEPROM.read(EEPROM_ADDR_EFFECTSPEED_HIGH) << 8) | EEPROM.read(EEPROM_ADDR_EFFECTSPEED_LOW);
+  storedValue = EEPROM.read(eepromAddrTetrisHigh);
+  if (storedValue <= 255) {
+    tetrisHighScore = storedValue;
+  }
+
+  int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
   if (storedEffectSpeed >= 8 && storedEffectSpeed <= 7808) {
     effectSpeed = storedEffectSpeed;
   }
@@ -1477,9 +1487,9 @@ void loop() {
                 ghost = 0;
               }
               // Save ghost to EEPROM if it changed
-              uint8_t storedGhost = EEPROM.read(EEPROM_ADDR_GHOST);
+              uint8_t storedGhost = EEPROM.read(eepromAddrGhost);
               if (storedGhost != ghost) {
-                EEPROM.write(EEPROM_ADDR_GHOST, ghost);
+                EEPROM.write(eepromAddrGhost, ghost);
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "power=") == 1) {
@@ -1489,20 +1499,14 @@ void loop() {
                 blank();
                 pixels.show();
               }
-              // Save power to EEPROM if it changed
-              uint8_t storedPower = EEPROM.read(EEPROM_ADDR_POWER);
-              if (storedPower != power) {
-                EEPROM.write(EEPROM_ADDR_POWER, power);
-                EEPROM.commit();
-              }
               if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
                 effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
               }
               // Save effectSpeed to EEPROM if it changed
-              int storedEffectSpeed = (EEPROM.read(EEPROM_ADDR_EFFECTSPEED_HIGH) << 8) | EEPROM.read(EEPROM_ADDR_EFFECTSPEED_LOW);
+              int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
               if (storedEffectSpeed != effectSpeed) {
-                EEPROM.write(EEPROM_ADDR_EFFECTSPEED_LOW, effectSpeed & 0xFF);
-                EEPROM.write(EEPROM_ADDR_EFFECTSPEED_HIGH, (effectSpeed >> 8) & 0xFF);
+                EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
+                EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "darkmode=") == 1) {
@@ -1511,45 +1515,45 @@ void loop() {
                 darkMode = 0;
               }
               // Save darkMode to EEPROM if it changed
-              uint8_t storedDarkMode = EEPROM.read(EEPROM_ADDR_DARKMODE);
+              uint8_t storedDarkMode = EEPROM.read(eepromAddrDarkMode);
               if (storedDarkMode != darkMode) {
-                EEPROM.write(EEPROM_ADDR_DARKMODE, darkMode);
+                EEPROM.write(eepromAddrDarkMode, darkMode);
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
                 effect = extractParameterValue(url, "effect=");
               }
               // Save effect to EEPROM if it changed
-              uint8_t storedEffect = EEPROM.read(EEPROM_ADDR_EFFECT);
+              uint8_t storedEffect = EEPROM.read(eepromAddrEffect);
               if (storedEffect != effect) {
-                EEPROM.write(EEPROM_ADDR_EFFECT, effect);
+                EEPROM.write(eepromAddrEffect, effect);
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "blue=") >= 0 && extractParameterValue(url, "blue=") <= 255) {
                 rgbBlue = extractParameterValue(url, "blue=");
               }
               // Save rgbBlue to EEPROM if it changed
-              uint8_t storedBlue = EEPROM.read(EEPROM_ADDR_RGB_BLUE);
+              uint8_t storedBlue = EEPROM.read(eepromAddrBlue);
               if (storedBlue != rgbBlue) {
-                EEPROM.write(EEPROM_ADDR_RGB_BLUE, rgbBlue);
+                EEPROM.write(eepromAddrBlue, rgbBlue);
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "green=") >= 0 && extractParameterValue(url, "green=") <= 255) {
                 rgbGreen = extractParameterValue(url, "green=");
               }
               // Save rgbGreen to EEPROM if it changed
-              uint8_t storedGreen = EEPROM.read(EEPROM_ADDR_RGB_GREEN);
+              uint8_t storedGreen = EEPROM.read(eepromAddrGreen);
               if (storedGreen != rgbGreen) {
-                EEPROM.write(EEPROM_ADDR_RGB_GREEN, rgbGreen);
+                EEPROM.write(eepromAddrGreen, rgbGreen);
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "red=") >= 0 && extractParameterValue(url, "red=") <= 255) {
                 rgbRed = extractParameterValue(url, "red=");
               }
               // Save rgbRed to EEPROM if it changed
-              uint8_t storedRed = EEPROM.read(EEPROM_ADDR_RGB_RED);
+              uint8_t storedRed = EEPROM.read(eepromAddrRed);
               if (storedRed != rgbRed) {
-                EEPROM.write(EEPROM_ADDR_RGB_RED, rgbRed);
+                EEPROM.write(eepromAddrRed, rgbRed);
                 EEPROM.commit();
               }
               colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
@@ -1732,7 +1736,10 @@ void loop() {
       if (snakeNext == snakeSnack) {
         // found snack
         snakeLen++;
-        sendScoreToClients(snakeLen - 3);
+        if (snakeLen - 3 > snakeHighScore) {
+          snakeHighScore = snakeLen - 3;
+        }
+        sendScoreToClients(snakeLen - 3, snakeHighScore);
         snake[snakeLen] = -1;
         setSnack();
         snakeSpeed = snakeSpeed - 40;
@@ -1753,6 +1760,10 @@ void loop() {
       if (snakeNext == -3) {
         // game over
         webSocket.broadcastTXT("gameOver");
+        if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh)) {
+          EEPROM.write(eepromAddrSnakeHigh, snakeHighScore);
+          EEPROM.commit();
+        }
         chase(Red);
         inSnake = false;
         lastMinuteWordClock = 61;
@@ -1779,6 +1790,10 @@ void loop() {
     if (gameOver) {
       delay(500);
       webSocket.broadcastTXT("gameOver");
+      if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh)) {
+        EEPROM.write(eepromAddrTetrisHigh, tetrisHighScore);
+        EEPROM.commit();
+      }
       chase(Red);
       inTetris = false;
       lastMinuteWordClock = 61;

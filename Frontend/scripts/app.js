@@ -673,9 +673,11 @@
         webSocket = new WebSocket('ws://' + location.hostname + ':81/');
         // webSocket.onopen = function(){ console.log('webSocket open'); };
         webSocket.onmessage = function(e) {
-            if (e.data && e.data.indexOf('score:') === 0) {
+            if (e.data && e.data.indexOf('score') > 0) {
                 // get score update for snake / tetris
-                score = parseInt(e.data.split(':')[1]) * 10;
+                let response = JSON.parse(e.data);
+                score = response.score * 10;
+                highscore = response.high * 10;
                 ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
             if (e.data && e.data.indexOf('gameOver') === 0) {
@@ -684,7 +686,7 @@
                 ElementById("hsGO").innerHTML = highscore;
                 fShowGameOver();
             }
-            if (e.data && e.data.indexOf('effect')) {
+            if (e.data && e.data.indexOf('effect') > 0) {
               // get current settings from word-clock
               let response = JSON.parse(e.data);
               color.value = fRgb2Hex(response.red, response.green, response.blue);
