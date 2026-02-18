@@ -840,6 +840,22 @@ void sendNTPpacket(IPAddress &address) {
   ntpUDP.endPacket();
 }
 
+void sendProgmemString(WiFiClient& client, const char* str) {
+  const size_t CHUNK_SIZE = 1024; // Größe der Chunks anpassen zwischen 256-1024 anpassen, je nach verfügbarem RAM
+  char buffer[CHUNK_SIZE];
+  size_t len = strlen_P(str);
+  size_t pos = 0;
+
+  while (pos < len) {
+    size_t remaining = len - pos;
+    size_t toRead = (remaining < CHUNK_SIZE) ? remaining : CHUNK_SIZE;
+    memcpy_P(buffer, str + pos, toRead);
+    client.write((const uint8_t*)buffer, toRead);
+    pos += toRead;
+    yield(); // Gibt dem ESP8266 Zeit für WiFi-Operationen
+  }
+}
+
 /**
  * Initializes timeClient so it queries the NTP server
  * also makes first update to sync the time
@@ -1604,7 +1620,7 @@ void loop() {
               client.println();
 
               // Display the HTML web page from PROGMEM
-              client.println(FPSTR(web_interface));
+              sendProgmemString(client, web_interface);
             }
 
             // The HTTP response ends with another blank line
@@ -1628,7 +1644,6 @@ void loop() {
 
   // sleep and return when power off
   if (power == 0) {
-    delay(500);
     return;
   }
 
