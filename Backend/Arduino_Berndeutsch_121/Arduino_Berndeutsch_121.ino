@@ -1652,10 +1652,10 @@ void loop() {
     if (!inGhost) {
       inGhost = true;
       // loop 11 Zeilen
-      for (uint8_t j = 11; j >= 0; j--) {
+      for (int8_t j = 11; j >= 0; j--) {
         blank();
         // Schleife durch das Array
-        for (uint8_t i = 0; i < numPixels; i++) {
+        for (int8_t i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1693,10 +1693,10 @@ void loop() {
     // hide ghost
     inGhost = false;
     // loop 11 Zeilen
-      for (uint8_t j = 0; j < 11; j++) {
+      for (int8_t j = 0; j < 11; j++) {
         blank();
         // Schleife durch das Array
-        for (uint8_t i = 0; i < numPixels; i++) {
+        for (int8_t i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
