@@ -50,6 +50,7 @@ uint8_t ghost = 1;
 uint8_t effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
 int effectSpeed = 200;
 int effectWait = 200;
+bool lastTouchStage = false;
 uint16_t frame = 0;
 // Matrix-Drops
 struct Drop {
@@ -1296,6 +1297,8 @@ void setup() {
   pixels.begin();
   wipe();
 
+  pinMode(D5, INPUT);
+
   // Initialize EEPROM and read stored values
   EEPROM.begin(512);
 
@@ -1641,6 +1644,32 @@ void loop() {
     client.stop();
   }
   MDNS.update();
+
+  // Touch sensor to toggle power
+  if (digitalRead(D5) == LOW && lastTouchStage == true) {
+    power = 1 - power; // toggle power
+    sendParamsToClients();
+    if (power == 0) {
+      blank();
+      pixels.show();
+    } else {
+      lastMinuteWordClock = 61;
+      if (effect == 3 && wordClockMinute % 5 != 0) {
+        // matrix
+        satzalt[0] = -1;
+        matrixEffect();
+      } else if (effect == 4 && wordClockMinute % 5 != 0) {
+        // pulse
+        satzalt[0] = -1;
+        pulseEffect();
+      } else if (effect == 5 && power == 1) {
+        // typewriter
+        satzalt[0] = -1; 
+        typewriterEffect();
+      }
+    }
+  }
+  lastTouchStage = digitalRead(D5);
 
   // sleep and return when power off
   if (power == 0) {
