@@ -1777,7 +1777,7 @@ void loop() {
       if (snakeNext == -3) {
         // game over
         webSocket.broadcastTXT("gameOver");
-        if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh)) {
+        if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh) || EEPROM.read(eepromAddrSnakeHigh) == 255) {
           EEPROM.write(eepromAddrSnakeHigh, snakeHighScore);
           EEPROM.commit();
         }
@@ -1807,7 +1807,7 @@ void loop() {
     if (gameOver) {
       delay(500);
       webSocket.broadcastTXT("gameOver");
-      if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh)) {
+      if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh) || EEPROM.read(eepromAddrTetrisHigh) == 255) {
         EEPROM.write(eepromAddrTetrisHigh, tetrisHighScore);
         EEPROM.commit();
       }
