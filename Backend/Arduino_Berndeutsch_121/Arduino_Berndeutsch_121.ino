@@ -26,6 +26,8 @@
 #include <Timezone.h>           // v1.2.6
 #include <Adafruit_NeoPixel.h>  // v1.15.2
 #include <pgmspace.h>
+#include <EEPROM.h>
+#include "web_interface.h"
 
 // set name for access-point and mdns-server
 const char* version = "wordclock";
@@ -38,14 +40,14 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 String header;
 
 // Auxiliar variables to store the web parameters
-const int numPixels = 121;
-int rgbRed = 255;
-int rgbGreen = 255;
-int rgbBlue = 255;
-int power = 1;
-int darkMode = 1;
-int ghost = 1;
-int effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
+const uint8_t numPixels = 121;
+uint8_t rgbRed = 255;
+uint8_t rgbGreen = 255;
+uint8_t rgbBlue = 255;
+uint8_t power = 1;
+uint8_t darkMode = 1;
+uint8_t ghost = 1;
+uint8_t effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
 int effectSpeed = 200;
 int effectWait = 200;
 uint16_t frame = 0;
@@ -60,6 +62,17 @@ struct Drop {
 Drop drops[11][2]; // 11 Spalten, bis zu 2 Drops pro Spalte
 uint16_t dropCooldown[11]; // Cooldown pro Spalte bis zum nächsten neuen Drop
 
+// EEPROM addresses for persistent variables
+const uint8_t eepromAddrRed = 0;
+const uint8_t eepromAddrGreen = 1;
+const uint8_t eepromAddrBlue = 2;
+const uint8_t eepromAddrDarkMode = 3;
+const uint8_t eepromAddrGhost = 4;
+const uint8_t eepromAddrEffect = 5;
+const uint8_t eepromAddrEffectSpeedLow = 6;   // effectSpeed is int (2 bytes)
+const uint8_t eepromAddrEffectSpeedHigh = 7;
+const uint8_t eepromAddrTetrisHigh = 8;
+const uint8_t eepromAddrSnakeHigh = 9;
 
 // Current time
 unsigned long currentTime = millis();
@@ -68,15 +81,15 @@ unsigned long previousTime = 0;
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
-int wordClockMinute = 62;
-int wordClockHour = 0;
-int lastMinuteWordClock = 61;
+uint8_t wordClockMinute = 62;
+uint8_t wordClockHour = 0;
+uint8_t lastMinuteWordClock = 61;
 
-const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
+const uint8_t NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
 static const char ntpServerName[] = "0.ch.pool.ntp.org";
 
-const int timeZone = 0;     // Central European Time
+const uint8_t timeZone = 0;     // Central European Time
 
 //Central European Time (Frankfurt, Paris)
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};     //Central European Summer Time
@@ -124,50 +137,50 @@ uint32_t wifiColor = Black;
 | L | Y | B | ° | ° | P | ° | ° | M | K | @ |
  */
 
-static int WordEs[] = {0, 1, -1};
-static int WordIst[] = {3, 4, 5, 6, -1};
-static int WordHalb[] = {39, 38, 37, 36, 35, -1};
+static int8_t WordEs[] = {0, 1, -1};
+static int8_t WordIst[] = {3, 4, 5, 6, -1};
+static int8_t WordHalb[] = {39, 38, 37, 36, 35, -1};
 
-static int WordFix[] = {77, 98, 99, -1};
-static int WordWifi[] = {120, -1};
-static int WordNach[] = {42, 41, -1};
-static int WordVor[] = {30, 31, 32, -1};
+static int8_t WordFix[] = {77, 98, 99, -1};
+static int8_t WordWifi[] = {120, -1};
+static int8_t WordNach[] = {42, 41, -1};
+static int8_t WordVor[] = {30, 31, 32, -1};
 
-static int SymbolWifi[] = {120, -1};
+static int8_t SymbolWifi[] = {120, -1};
 
-static int *WordURL[] = {WordFix, WordWifi};
+static int8_t *WordURL[] = {WordFix, WordWifi};
 
 // Stunde
-static int WordStundeEins[] = {44, 45, 46, -1};                     // EIS
-static int WordStundeZwei[] = {48, 49, 50, 51, -1};                 // ZWÖI
-static int WordStundeDrei[] = {52, 53, 54, -1};                     // DRÜ
-static int WordStundeVier[] = {64, 63, 62, 61, 60, -1};             // VIERI
-static int WordStundeFuenf[] = {59, 58, 57, 56, -1};                // FÜFI
-static int WordStundeSechs[] = {68, 69, 70, 71, 72, 73, -1};        // SÄCHSI
-static int WordStundeSieben[] = {72, 73, 74, 75, 76, -1};           // SIBNI
-static int WordStundeAcht[] = {87, 86, 85, 84, 83, -1};             // ACHTI
-static int WordStundeNeun[] = {82, 81, 80, 79, -1};                 // NÜNI
-static int WordStundeZehn[] = {90, 91, 92, 93, -1};                 // ZÄNI
-static int WordStundeElf[] = {95, 96, 97, 98, -1};                  // EUFI
-static int WordStundeZwoelf[] = {106, 105, 104, 103, 102, 101, -1}; // ZWÖUFI
+static int8_t WordStundeEins[] = {44, 45, 46, -1};                     // EIS
+static int8_t WordStundeZwei[] = {48, 49, 50, 51, -1};                 // ZWÖI
+static int8_t WordStundeDrei[] = {52, 53, 54, -1};                     // DRÜ
+static int8_t WordStundeVier[] = {64, 63, 62, 61, 60, -1};             // VIERI
+static int8_t WordStundeFuenf[] = {59, 58, 57, 56, -1};                // FÜFI
+static int8_t WordStundeSechs[] = {68, 69, 70, 71, 72, 73, -1};        // SÄCHSI
+static int8_t WordStundeSieben[] = {72, 73, 74, 75, 76, -1};           // SIBNI
+static int8_t WordStundeAcht[] = {87, 86, 85, 84, 83, -1};             // ACHTI
+static int8_t WordStundeNeun[] = {82, 81, 80, 79, -1};                 // NÜNI
+static int8_t WordStundeZehn[] = {90, 91, 92, 93, -1};                 // ZÄNI
+static int8_t WordStundeElf[] = {95, 96, 97, 98, -1};                  // EUFI
+static int8_t WordStundeZwoelf[] = {106, 105, 104, 103, 102, 101, -1}; // ZWÖUFI
 
-static int *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, WordStundeDrei, WordStundeVier,
+static int8_t *WordStunden[] = {WordStundeZwoelf, WordStundeEins, WordStundeZwei, WordStundeDrei, WordStundeVier,
                              WordStundeFuenf, WordStundeSechs, WordStundeSieben, WordStundeAcht, WordStundeNeun,
                              WordStundeZehn, WordStundeElf, WordStundeZwoelf
 };
 
 // Minute
-static int WordMinFuenf[] = {8, 9, 10, -1};                   // FÜF
-static int WordMinZehn[] = {14, 13, 12, -1};                  // ZÄÄ
-static int WordMinViertel[] = {21, 20, 19, 18, 17, 16, -1};   // VIERTU
-static int WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};   // ZWÄNZG
-static int WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
+static int8_t WordMinFuenf[] = {8, 9, 10, -1};                   // FÜF
+static int8_t WordMinZehn[] = {14, 13, 12, -1};                  // ZÄÄ
+static int8_t WordMinViertel[] = {21, 20, 19, 18, 17, 16, -1};   // VIERTU
+static int8_t WordMinZwanzig[] = {22, 23, 24, 25, 26, 27, -1};   // ZWÄNZG
+static int8_t WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
 
-static int *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
+static int8_t *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
 // aktueller und letzter Zeit-Satz
-int satzalt[30];
-int satzneu[30];
+int8_t satzalt[30];
+int8_t satzneu[30];
 uint8_t satzindex = 0;
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800);
@@ -176,8 +189,9 @@ Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800
 int wifiWait = 0;
 
 // Snake variables
-int snake[120];
-int snakeLen = 3;
+int8_t snake[120];
+uint8_t snakeLen = 3;
+uint8_t snakeHighScore = 0;
 int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
 String snakeDir = ""; // snake, up, right, down, left, stop
@@ -189,7 +203,8 @@ bool inSnake = false;
 // Tetris variables
 uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index
 int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
-int tetrisScore = 0;
+uint8_t tetrisScore = 0;
+uint8_t tetrisHighScore = 0;
 bool inTetris = false;
 unsigned long lastDrop = 0;
 const unsigned long dropInterval = 600; // ms
@@ -253,7 +268,7 @@ uint8_t currentPiece[4][4]; // Store current piece with rotation applied
 bool gameOver = false;
 
 // Map (x, y) to LED index for serpentine wiring
-int xyToIndex(int x, int y) {
+uint8_t xyToIndex(uint8_t x, uint8_t y) {
   if (y % 2 == 0) {
     return y * 11 + x;
   } else {
@@ -262,8 +277,8 @@ int xyToIndex(int x, int y) {
 }
 
 // Hilfsfunktion: Prüft, ob LED in Array enthalten ist
-bool inArray(int led, int *arr) {
-  for (int i = 0; arr[i] != -1; i++) {
+bool inArray(uint8_t led, int8_t *arr) {
+  for (uint8_t i = 0; arr[i] != -1; i++) {
     if (arr[i] == led) return true;
   }
   return false;
@@ -344,7 +359,7 @@ const char* const wordGuessrWordsAll[] PROGMEM = {wordGuessrWords0, wordGuessrWo
 char wordGuessrWordsBuffer[800]; // Buffer to load one of the 10 wordlists from progmem to ram; must be long enough for longest list
 
 String wordGuessrActiveWord = "";
-int wordGuessrActiveWordIndex[20] = {}; // max 20 letters
+int8_t wordGuessrActiveWordIndex[20] = {}; // max 20 letters
 int wordGuessrScore = 0;
 unsigned long wordGuessrAlert = 0;
 unsigned long wordGuessrStart = 0;
@@ -352,12 +367,12 @@ int wordGuessrHint = 0;
 bool inWordGuessr = false;
 
 // Ghost variables
-int ghostHour = 0;
-int ghostMinute = 0;
+int8_t ghostHour = 0;
+int8_t ghostMinute = 0;
 int ghostStep = 0;
 int ghostChange = 1;
-static int WordGhost[] = {5, 6, 7, 17, 16, 15, 25, 26, 27, 28, 29, 40, 38, 36, 44, 47, 49, 51, 53, 54, 65, 64, 63, 62, 61, 59, 58, 57, 56, 55, 67, 68, 69, 70, 72, 73, 74, 75, 85, 84, 83, 82, 81, 80, 79, 91, 92, 93, 94, 95, 105, 104, 103, 102, 116, 117, 118, -1};
-static int WordGhostEyes[] = {39, 48, 37, 50, -1};
+static int8_t WordGhost[] = {5, 6, 7, 17, 16, 15, 25, 26, 27, 28, 29, 40, 38, 36, 44, 47, 49, 51, 53, 54, 65, 64, 63, 62, 61, 59, 58, 57, 56, 55, 67, 68, 69, 70, 72, 73, 74, 75, 85, 84, 83, 82, 81, 80, 79, 91, 92, 93, 94, 95, 105, 104, 103, 102, 116, 117, 118, -1};
+static int8_t WordGhostEyes[] = {39, 48, 37, 50, -1};
 bool inGhost = false;
 
 /**
@@ -389,7 +404,7 @@ uint32_t scaleColor(uint32_t color, float brightness) {
  * Sets all pixels to the background-color
  */
 void blank() {
-  for (int x = 0; x < pixels.numPixels(); ++x) {
+  for (uint8_t x = 0; x < pixels.numPixels(); ++x) {
     pixels.setPixelColor(x, backgroundColor);
   }
 }
@@ -407,8 +422,8 @@ void wipe() {
  * @param pixel int id of the pixel to move down
  * @param rows int number of rows to move donw
  */
-int down(int pixel, int rows) {
-  for (int i = 0; i < rows; i++) {
+int down(uint8_t pixel, uint8_t rows) {
+  for (uint8_t i = 0; i < rows; i++) {
     pixel = pixel + 1 + 2 * (10 - pixel % 11);
   }
   return pixel;
@@ -418,8 +433,8 @@ int down(int pixel, int rows) {
  * Adds a word to the new time-sentence
  * @param word array with the id's of the pixels
  */
-void addword(int *word) {
-  for (int x = 0; x < pixels.numPixels() + 1; x++) {
+void addword(int8_t *word) {
+  for (uint8_t x = 0; x < pixels.numPixels() + 1; x++) {
     satzneu[satzindex] = (word[x]);
     if (word[x] == -1) {
       break;
@@ -435,8 +450,8 @@ void addword(int *word) {
  * @param word array with the id's of the pixels
  * @param color Adafruit_NeoPixel-Color to display those pixels
  */
-void lightup(int *word, uint32_t color) {
-  for (int x = 0; x < pixels.numPixels() + 1; x++) {
+void lightup(int8_t *word, uint32_t color) {
+  for (uint8_t x = 0; x < pixels.numPixels() + 1; x++) {
     if (word[x] == -1) {
       break;
     } else {
@@ -582,8 +597,8 @@ void pulseEffect() {
 void typewriterEffect() {
   lightup(satzalt, foregroundColor);
   // 1. Löschen: alle LEDs, die nur in satzalt sind
-  for (int y = 10; y >= 0; y--) {
-    for (int x = 10; x >= 0; x--) {
+  for (int8_t y = 10; y >= 0; y--) {
+    for (int8_t x = 10; x >= 0; x--) {
       int idx = xyToIndex(x, y);
       if (inArray(idx, satzalt) && !inArray(idx, satzneu)) {
         dimToBlack(idx, foregroundColor, 8, effectSpeed / 200);
@@ -592,8 +607,8 @@ void typewriterEffect() {
   }
   delay(effectSpeed / 20);
   // 2. Einschalten: alle LEDs, die nur in satzneu sind
-  for (uint8_t y = 0; y < 11; y++) {
-    for (uint8_t x = 0; x < 11; x++) {
+  for (int8_t y = 0; y < 11; y++) {
+    for (int8_t x = 0; x < 11; x++) {
       int idx = xyToIndex(x, y);
       if (inArray(idx, satzneu) && !inArray(idx, satzalt)) {
         pulseOn(idx, foregroundColor, 8, effectSpeed / 200);
@@ -663,7 +678,7 @@ void showMinute() {
     }
     // Checks if the minute ticks should be displayed
     int differenceToLast5Min = wordClockMinute % 5;
-    for (int i = 0; i < differenceToLast5Min; i++) {
+    for (uint8_t i = 0; i < differenceToLast5Min; i++) {
       //pixels.setPixelColor(WordMinTicks[i], foregroundColor);
       satzneu[satzindex] = (WordMinTicks[i]);
       satzindex ++;
@@ -825,6 +840,22 @@ void sendNTPpacket(IPAddress &address) {
   ntpUDP.endPacket();
 }
 
+void sendProgmemString(WiFiClient& client, const char* str) {
+  const size_t CHUNK_SIZE = 1024; // Größe der Chunks anpassen zwischen 256-1024 anpassen, je nach verfügbarem RAM
+  char buffer[CHUNK_SIZE];
+  size_t len = strlen_P(str);
+  size_t pos = 0;
+
+  while (pos < len) {
+    size_t remaining = len - pos;
+    size_t toRead = (remaining < CHUNK_SIZE) ? remaining : CHUNK_SIZE;
+    memcpy_P(buffer, str + pos, toRead);
+    client.write((const uint8_t*)buffer, toRead);
+    pos += toRead;
+    yield(); // Gibt dem ESP8266 Zeit für WiFi-Operationen
+  }
+}
+
 /**
  * Initializes timeClient so it queries the NTP server
  * also makes first update to sync the time
@@ -881,7 +912,7 @@ void setupWifi() {
   Serial.println(WiFi.localIP());
   // Display local ip address on clockface by looping through every character.
   String localIP = WiFi.localIP().toString();
-  for (int i = 0; i < localIP.length(); i++) {
+  for (uint8_t i = 0; i < localIP.length(); i++) {
     blank();
     if (localIP[i] == '0') {
       pixels.setPixelColor(109, foregroundColor);
@@ -945,7 +976,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     blank();
     pixels.show();
     handleRestart();
-    sendScoreToClients(0);
+    sendScoreToClients(0, tetrisHighScore);
   } else if (msg == "snake") {
     // Snake start
     inSnake = true;
@@ -960,7 +991,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakeDir = "";
     snakeNext = -1;
     snakeSpeed = 7000;
-    sendScoreToClients(0);
+    sendScoreToClients(0, snakeHighScore);
     blank();
     lightup(snake, Green);
     setSnack();
@@ -999,7 +1030,7 @@ void setSnack() {
   snakeSnack = -1;
   while (snakeSnack < 0) {
     snakeSnack = random(numPixels);
-    for (int i = snakeLen - 1; i >= 0; i--) {
+    for (int8_t i = snakeLen - 1; i >= 0; i--) {
       if (snakeSnack == snake[i]){
         // place occupied by snake
         snakeSnack = -1;
@@ -1013,8 +1044,8 @@ void setSnack() {
 }
 
 // Tetris & Snake: Send current score to all connected WebSocket clients
-void sendScoreToClients(int score) {
-  String msg = "score:" + String(score);
+void sendScoreToClients(uint8_t score, uint8_t highScore) {
+  String msg = "{\"score\":" + String(score) + ", \"high\":" + String(highScore) + "}";
   webSocket.broadcastTXT(msg);
 }
 
@@ -1025,8 +1056,8 @@ void spawnTetromino() {
   posX = 3; // Centered
   posY = -2;  // Spawn above visible area
   // Copy initial tetromino to current piece
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       currentPiece[i][j] = tetrominos[currentTetromino][i][j];
     }
   }
@@ -1035,8 +1066,8 @@ void spawnTetromino() {
 
 // Tetris: Check collision for current piece at (x, y) with rotation
 bool checkCollision(int x, int y, int rot) {
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (currentPiece[i][j]) {
         int nx = x + j;
         int ny = y + i;
@@ -1052,8 +1083,8 @@ bool checkCollision(int x, int y, int rot) {
 
 // Tetris: Place current piece on the board
 void placeTetromino() {
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
@@ -1067,9 +1098,9 @@ void placeTetromino() {
 
 // Tetris: Clear full lines and animate
 void clearLines() {
-  for (int y = 0; y < 11; y++) {
+  for (uint8_t y = 0; y < 11; y++) {
     bool full = true;
-    for (int x = 0; x < 11; x++) {
+    for (uint8_t x = 0; x < 11; x++) {
       if (!board[y][x]) {
         full = false;
         break;
@@ -1077,27 +1108,30 @@ void clearLines() {
     }
     if (full) {
       // Animate line
-      for (int t = 0; t < 3; t++) {
-        for (int x = 0; x < 11; x++) {
+      for (uint8_t t = 0; t < 3; t++) {
+        for (uint8_t x = 0; x < 11; x++) {
           pixels.setPixelColor(xyToIndex(x, y), White);
         }
         pixels.show();
         delay(80);
-        for (int x = 0; x < 11; x++) {
+        for (uint8_t x = 0; x < 11; x++) {
           pixels.setPixelColor(xyToIndex(x, y), 0);
         }
         pixels.show();
         delay(80);
       }
       // Remove line and shift down
-      for (int yy = y; yy > 0; yy--) {
-        for (int x = 0; x < 11; x++) {
+      for (uint8_t yy = y; yy > 0; yy--) {
+        for (uint8_t x = 0; x < 11; x++) {
           board[yy][x] = board[yy-1][x];
         }
       }
-      for (int x = 0; x < 11; x++) board[0][x] = 0;
+      for (uint8_t x = 0; x < 11; x++) board[0][x] = 0;
       tetrisScore += 1;
-      sendScoreToClients(tetrisScore);
+      if (tetrisScore > tetrisHighScore) {
+        tetrisHighScore = tetrisScore;
+      }
+      sendScoreToClients(tetrisScore, tetrisHighScore);
     }
   }
 }
@@ -1106,16 +1140,16 @@ void clearLines() {
 void drawBoard() {
   pixels.clear();
   // Draw placed blocks
-  for (int y = 0; y < 11; y++) {
-    for (int x = 0; x < 11; x++) {
+  for (uint8_t y = 0; y < 11; y++) {
+    for (uint8_t x = 0; x < 11; x++) {
       if (board[y][x]) {
         pixels.setPixelColor(xyToIndex(x, y), GameColors[board[y][x]-1]);
       }
     }
   }
   // Draw current piece
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (currentPiece[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
@@ -1131,14 +1165,14 @@ void drawBoard() {
 // Tetris: Rotate tetromino (clockwise)
 void rotateTetromino() {
   uint8_t rotated[4][4];
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       rotated[j][3-i] = currentPiece[i][j];
     }
   }
   // Check collision for rotated piece
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       if (rotated[i][j]) {
         int nx = posX + j;
         int ny = posY + i;
@@ -1149,8 +1183,8 @@ void rotateTetromino() {
     }
   }
   // Apply rotation
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
       currentPiece[i][j] = rotated[i][j];
     }
   }
@@ -1174,7 +1208,7 @@ void handleRestart() {
 int wordGuessrFindIndex(char letter) {
   int indices[16]; // max 16 occurences of a letter (i has 15)
   int count = 0;
-  for (int j = 0; j < numPixels; j++) {
+  for (uint8_t j = 0; j < numPixels; j++) {
     if (wordGuessrLettersCopy[j] == letter) {
       indices[count] = j;
       count++;
@@ -1247,7 +1281,7 @@ void clearMastermind() {
   mastermindTry = 0;
   mastermindPlace = 0;
   mastermindColor = 0;
-  for (int i = 0; i < 11; i++) {
+  for (uint8_t i = 0; i < 11; i++) {
     pixels.setPixelColor(down(0, i), Grey);
     pixels.setPixelColor(down(5, i), Grey);
     pixels.setPixelColor(down(10, i), Grey);
@@ -1261,6 +1295,56 @@ void setup() {
   Serial.begin(115200);
   pixels.begin();
   wipe();
+
+  // Initialize EEPROM and read stored values
+  EEPROM.begin(512);
+
+  uint8_t storedValue = EEPROM.read(eepromAddrRed);
+  if (storedValue <= 255) {
+    rgbRed = storedValue;
+  }
+
+  storedValue = EEPROM.read(eepromAddrGreen);
+  if (storedValue <= 255) {
+    rgbGreen = storedValue;
+  }
+
+  storedValue = EEPROM.read(eepromAddrBlue);
+  if (storedValue <= 255) {
+    rgbBlue = storedValue;
+  }
+  colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+  colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+
+  storedValue = EEPROM.read(eepromAddrDarkMode);
+  if (storedValue == 0 || storedValue == 1) {
+    darkMode = storedValue;
+  }
+
+  storedValue = EEPROM.read(eepromAddrGhost);
+  if (storedValue == 0 || storedValue == 1) {
+    ghost = storedValue;
+  }
+
+  storedValue = EEPROM.read(eepromAddrEffect);
+  if (storedValue <= 5) {
+    effect = storedValue;
+  }
+
+  storedValue = EEPROM.read(eepromAddrSnakeHigh);
+  if (storedValue < 255) {
+    snakeHighScore = storedValue;
+  }
+
+  storedValue = EEPROM.read(eepromAddrTetrisHigh);
+  if (storedValue < 255) {
+    tetrisHighScore = storedValue;
+  }
+
+  int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
+  if (storedEffectSpeed >= 8 && storedEffectSpeed <= 7808) {
+    effectSpeed = storedEffectSpeed;
+  }
 
   chase(Green); // run basic screen test and show success
 
@@ -1312,7 +1396,7 @@ void loop() {
                 mastermindCodeTry[0] = extractParameterValue(url, "c1=");
                 mastermindPlace = 0;
                 mastermindColor = 0;
-                for (int i = 0; i < 4; i++) {
+                for (uint8_t i = 0; i < 4; i++) {
                   pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
                   mastermindCodeBackup[i] = mastermindCode[i];
                   // check right position
@@ -1323,8 +1407,8 @@ void loop() {
                     pixels.setPixelColor(down(mastermindPlace + 5, mastermindTry), White);
                   }
                 }
-                for (int i = 0; i < 4; i++) {
-                  for (int j = 0; j < 4; j++) {
+                for (uint8_t i = 0; i < 4; i++) {
+                  for (uint8_t j = 0; j < 4; j++) {
                     // check right color
                     if (mastermindCodeTry[i] == mastermindCodeBackup[j]) {
                       mastermindCodeTry[i] = -1;
@@ -1338,14 +1422,14 @@ void loop() {
               }
               if (mastermindPlace == 4) {
                 // player won
-                for (int i = 0; i < mastermindTry; i++) {
+                for (uint8_t i = 0; i < mastermindTry; i++) {
                   pixels.setPixelColor(down(0, i), Green);
                   pixels.setPixelColor(down(5, i), Green);
                   pixels.setPixelColor(down(10, i), Green);
                 }
               } else if (mastermindTry == 11) {
                 // player lost
-                for (int i = 0; i < mastermindTry; i++) {
+                for (uint8_t i = 0; i < mastermindTry; i++) {
                   pixels.setPixelColor(down(0, i), Red);
                   pixels.setPixelColor(down(5, i), Red);
                   pixels.setPixelColor(down(10, i), Red);
@@ -1420,6 +1504,12 @@ void loop() {
               } else {
                 ghost = 0;
               }
+              // Save ghost to EEPROM if it changed
+              uint8_t storedGhost = EEPROM.read(eepromAddrGhost);
+              if (storedGhost != ghost) {
+                EEPROM.write(eepromAddrGhost, ghost);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "power=") == 1) {
                 power = 1;
               } else {
@@ -1430,22 +1520,59 @@ void loop() {
               if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
                 effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
               }
+              // Save effectSpeed to EEPROM if it changed
+              int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
+              if (storedEffectSpeed != effectSpeed) {
+                EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
+                EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "darkmode=") == 1) {
                 darkMode = 1;
               } else {
                 darkMode = 0;
               }
+              // Save darkMode to EEPROM if it changed
+              uint8_t storedDarkMode = EEPROM.read(eepromAddrDarkMode);
+              if (storedDarkMode != darkMode) {
+                EEPROM.write(eepromAddrDarkMode, darkMode);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
                 effect = extractParameterValue(url, "effect=");
+              }
+              // Save effect to EEPROM if it changed
+              uint8_t storedEffect = EEPROM.read(eepromAddrEffect);
+              if (storedEffect != effect) {
+                EEPROM.write(eepromAddrEffect, effect);
+                EEPROM.commit();
               }
               if (extractParameterValue(url, "blue=") >= 0 && extractParameterValue(url, "blue=") <= 255) {
                 rgbBlue = extractParameterValue(url, "blue=");
               }
+              // Save rgbBlue to EEPROM if it changed
+              uint8_t storedBlue = EEPROM.read(eepromAddrBlue);
+              if (storedBlue != rgbBlue) {
+                EEPROM.write(eepromAddrBlue, rgbBlue);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "green=") >= 0 && extractParameterValue(url, "green=") <= 255) {
                 rgbGreen = extractParameterValue(url, "green=");
               }
+              // Save rgbGreen to EEPROM if it changed
+              uint8_t storedGreen = EEPROM.read(eepromAddrGreen);
+              if (storedGreen != rgbGreen) {
+                EEPROM.write(eepromAddrGreen, rgbGreen);
+                EEPROM.commit();
+              }
               if (extractParameterValue(url, "red=") >= 0 && extractParameterValue(url, "red=") <= 255) {
                 rgbRed = extractParameterValue(url, "red=");
+              }
+              // Save rgbRed to EEPROM if it changed
+              uint8_t storedRed = EEPROM.read(eepromAddrRed);
+              if (storedRed != rgbRed) {
+                EEPROM.write(eepromAddrRed, rgbRed);
+                EEPROM.commit();
               }
               colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
               colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
@@ -1492,8 +1619,8 @@ void loop() {
               client.println(F("Connection: close"));
               client.println();
 
-              // Display the HTML web page
-              client.println(F("<!doctype html><html lang='en'><head><meta charset='utf-8'><title>grrd's WordClock</title><link id='icon' rel='icon' href='data:image/png;base64,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'><meta name='description' content='grrd s WordClock is a web WordClock and a user interface for the Wemos Mini D1 Lite Clock'><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'><meta name='theme-color' content='#444'><meta name='apple-mobile-web-app-title' content='WordClock'><link id='iphone' rel='apple-touch-icon'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black'><style>:root{--main-color:#878ade}html{height:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}body{background:linear-gradient(#444,#222);min-width:100vw;margin:0;position:fixed;overflow:hidden;font-family:Arial,sans-serif;font-size:large;color:#fff;text-shadow:1px 1px 2px #000;height:100%}.p{width:100vw;position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(#444,#222)}#c,#ctrl,.t{font:6px sans-serif;fill:#555;text-shadow:none;text-anchor:middle;width:100vmin;margin:auto;display:block}@media (orientation:landscape){#ctrl{width:100%;max-width:60vh}}@media (orientation:portrait){#ctrl{width:100%}}.t{width:100%}[for=speed]{width:100%;margin-bottom:0}.M1,.M2,.M3,.M4{font-size:8px}.H0 .H0,.H1 .H1,.H10 .H10,.H11 .H11,.H2 .H2,.H3 .H3,.H4 .H4,.H5 .H5,.H6 .H6,.H7 .H7,.H8 .H8,.H9 .H9,.M1 .M1,.M10 .M10,.M15 .M15,.M2 .M1,.M2 .M2,.M20 .M20,.M3 .M1,.M3 .M2,.M3 .M3,.M30 .M30,.M4 .M1,.M4 .M2,.M4 .M3,.M4 .M4,.M5 .M5,.MA .MA,.MV .MV,.g{fill:var(--main-color);text-shadow:0 0 10px var(--main-color)}.off .g:not(.colorBtn){fill:#555;text-shadow:none}.d .H0 .H0,.d .H1 .H1,.d .H10 .H10,.d .H11 .H11,.d .H2 .H2,.d .H3 .H3,.d .H4 .H4,.d .H5 .H5,.d .H6 .H6,.d .H7 .H7,.d .H8 .H8,.d .H9 .H9,.d .M1 .M1,.d .M10 .M10,.d .M15 .M15,.d .M2 .M1,.d .M2 .M2,.d .M20 .M20,.d .M3 .M1,.d .M3 .M2,.d .M3 .M3,.d .M30 .M30,.d .M4 .M1,.d .M4 .M2,.d .M4 .M3,.d .M4 .M4,.d .M5 .M5,.d .MA .MA,.d .MV .MV,.d .g{filter:brightness(70%)}a:link{color:var(--main-color)}a:visited{color:var(--main-color);filter:brightness(85%)}a:focus,a:hover{color:var(--main-color);filter:brightness(125%)}a:active{color:var(--main-color);filter:brightness(125%)}#s,#xCT,#xGOA,#xMM,#xS,#xWG{position:absolute;right:4vmin;bottom:4vmin}#p,#xGO{position:absolute;left:4vmin;bottom:4vmin}#sCT,#sMM,#sWG{position:absolute;left:4vmin;bottom:4vmin;display:flex;align-items:center}.sb,.snb,.svgMsg{width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;stroke:#555;stroke-linejoin:round;stroke-linecap:round;stroke-width:6;fill:none;z-index:1000}.dd{transform:rotate(90deg);transition:transform .7s ease-in-out;overflow:hidden}.ddo{transform:rotate(270deg)}ul{list-style-type:none;margin:0;padding-left:20px}li{max-height:calc(4.5vmin + 60px);transition:max-height .7s ease-in-out;overflow:hidden;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;overflow:hidden}li label,li svg{margin-bottom:20px}ul.cl li{max-height:0;transition:max-height .7s ease-in-out}circle{pointer-events:none}input[type=text]{width:calc(100% - 4.5vmin - 40px);border:2px solid #555;border-radius:5px;background-color:transparent;color:#fff;padding:10px;font-size:larger}input[type=text]:focus{border:2px solid #fff;outline:0}input[type=text].error{border:2px solid #f70562}input[type=text].ok{border:2px solid #059c7d}.sb.g,.sb:hover,.snb.g,.snb:hover{stroke:#fff;text-shadow:0 0 10px #fff;cursor:pointer}path.snb{stroke-width:1.4;fill:#333;fill-opacity:0.01}#pCT.tetris .sn{display:none}#pCT.snake .te{display:none}.pC{display:block;position:absolute;overflow:auto;top:0;left:0;right:0;margin:0 auto 0 auto;width:600px;max-width:calc(100vw - 40px);height:100%}#pCS{display:flex;flex-direction:column;justify-content:flex-start}.menu{overflow-y:auto}.c,.c>span,.pb{display:flex;justify-content:space-between;margin-bottom:20px;align-items:center;flex-wrap:wrap;overflow:hidden}.c>span{margin-bottom:3vmin}.pf{margin-top:auto;max-width:calc(100vw - 80px)}#co{appearance:none;background-color:transparent;width:4.5vmin;height:4.5vmin;min-width:30px;min-height:30px;border:none;cursor:pointer}#co::-webkit-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-moz-color-swatch{border-radius:50%;border:.45vmin solid #555}#co::-webkit-color-swatch:hover{border:.45vmin solid #fff}#co::-moz-color-swatch:hover{border:.45vmin solid #fff}.h{display:none}[data-num='1']{fill:#fc034e}[data-num='2']{fill:#fc6f03}[data-num='3']{fill:#fcce03}[data-num='4']{fill:#18fc03}[data-num='5']{fill:#0384fc}[data-num='6']{fill:#f803fc}.show{transform:translateX(0);transition:transform .7s ease-in-out;visibility:visible;opacity:1}.left{transform:translateX(-100vw);visibility:hidden;opacity:0;transition:transform .7s ease-in-out,visibility 0s .7s,opacity 0s .7s}.right{transform:translateX(100vw);visibility:hidden;opacity:0;transition:transform .7s ease-in-out,visibility 0s .7s,opacity 0s .7s}.sl{appearance:none;width:100%;height:4px;border-radius:2px;background:0 0;margin:10px 0;direction:rtl;border:solid calc(2px + .2vmin) #555}.sl::-webkit-slider-thumb{appearance:none;width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-webkit-slider-thumb:hover{outline:solid .45vmin #fff}.sl::-moz-range-thumb{width:3vmin;height:3vmin;min-width:20px;min-height:20px;border-radius:50%;background:var(--main-color);cursor:pointer;outline:solid .45vmin #555}.sl::-moz-range-thumb:hover{outline:solid .45vmin #fff}</style></head><body><div id='pC' class='p show'><svg id='c' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><g stroke='#555' fill='none' stroke-width='0.7'><path d='M 106 109.8 Q 106 106.4 109.4 106.4'/><path d='M 107.2 109.8 Q 107.2 107.8 109.4 107.8'/></g><circle cx='108.8' cy='109.5' r='0.6' fill='#555'/></svg> <svg id='p' class='sb' viewBox='0 0 74 74'><line x1='37' y1='15' x2='37' y2='27'/><circle cx='37' cy='37' r='33'/><path d='M 48 22 A 18 18 0 1 1 26 22'/></svg> <svg id='s' class='sb' viewBox='0 0 74 74'><path d='M30 3 A 37 37 0 0 1 44 3 L 44 13 A 25 25 0 0 1 54.5 20 L 63 14 A 37 37 0 0 1 70 25.5 L 61 31 A 25 25 0 0 1 61 42.5 L 70 48.5 A 37 37 0 0 1 63 60 L 54.5 54 A 25 25 0 0 1 44 61 L 44 71 A 37 37 0 0 1 30 71 L 30 61 A 25 25 0 0 1 19.5 54 L 11 60 A 37 37 0 0 1 4 48.5 L 13 42.5 A 25 25 0 0 1 13 31 L 4 25.5 A 37 37 0 0 1 11 14 L 19.5 20 A 25 25 0 0 1 30 13 Z'/><circle cx='37' cy='37' r='12'/></svg></div><div id='pS' class='p right'><div id='pCS' class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><div class='menu'><div class='pb'><label for='co'>Weli Farb wosch?</label> <input type='color' id='co' value='#ffffff'/></div><div class='pb'><label>Ir Nacht chli weniger häu.</label> <svg id='dm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></div><div class='pb'><label>Wosch e Special-Effect?</label> <svg id='SE' class='sb play dd' viewBox='-2 -1 12 16'/></div><ul id='LSE' class='cl'><li><label>Geisterstund</label> <svg id='gm' class='sb' viewBox='0 0 70 70'><path class='h n'/><path class='y'/></svg></li><li><label>Farb-Verlouf</label> <svg id='eCW' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Rägeboge</label> <svg id='eRB' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Matrix</label> <svg id='eMA' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Puls</label> <svg id='ePL' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label>Schribmaschine</label> <svg id='eTW' class='ef sb' viewBox='0 0 70 70'><path class='n'/><path class='h y'/></svg></li><li><label for='speed'>Wie schnäu?</label> <input type='range' id='speed' class='sl' min='50' max='2000'/> <label>gmüetlech</label> <label>jufle</label></li></ul><div class='pb'><label>Wosch es Spili spile?</label> <svg id='GM' class='sb play dd' viewBox='-2 -1 12 16'/></div><ul id='LGM' class='cl'><li><label>Snake</label> <svg id='SN' class='sb play' viewBox='-2 -1 12 16'/></li><li><label>Tetris</label> <svg id='TE' class='sb play' viewBox='-2 -1 12 16'/></li><li><label>Mastermind</label> <svg id='MM' class='sb play' viewBox='-2 -1 12 16'/></li><li><label>Wörtli errate</label> <svg id='WG' class='sb play' viewBox='-2 -1 12 16'/></li></ul></div><div class='pf'><p class='c'>Handgmachti Software us Bärn</p><p class='c'><span>Gérard&nbsp;Tyedmers</span> <span><svg width='24' height='24' viewBox='0 -5 160 170' stroke='#fff' fill='none' stroke-width='10'><circle cx='80' cy='80' r='70'/><path d='M27 32c7 20 93 43 121 28M13 60c-3 30 117 60 135 35M16 106c16 19 84 39 112 24M100 13C34 3 10 130 65 148M100 13C70 33 45 118 65 148M100 13c13 22 5 112-35 135M100 13c60 35 20 147-35 135'/></svg>&nbsp; <a href='https://grrd.ch'>grrd.ch</a> </span><span><svg width='30px' height='24px' viewBox='0 0 222 179' stroke='#fff' fill='none' stroke-width='10' stroke-linecap='round'><g transform='translate(-10,10) rotate(-6)'><rect x='15' y='25' rx='10' ry='10' width='192' height='129'/><path d='M15 40 C131 125, 91 125, 207 40'/><line x1='15' y1='134' x2='77' y2='90'/><line x1='207' y1='134' x2='145' y2='90'/></g></svg>&nbsp; <a href='mailto:grrd@gmx.net'>grrd@gmx.net</a></span></p></div></div><svg id='xS' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></div><div id='pCT' class='p right'><div class='pC'><div><svg class='t sn' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg> <svg class='t te' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><svg id='ctrl' viewBox='0 0 115 110' preserveAspectRatio='xMidYMid slice' role='img'><g id='ctrltup' class='snb te' stroke-width='6' data-dir='up' transform='scale(0.8) translate(34,0)'><path data-dir='up' stroke='none' fill='#333' fill-opacity='0.01' d='M13 37 A 24 24 0 1 1 13 37.5'></path><path data-dir='up' id='arc' d='M23 45 L17.5 50.5 A 24 24 10 0 1 34 13 L34 4 L50 17 L34 33 L34 24 '></path><use data-dir='up' href='#arc' transform='rotate(180 37 37)'></use></g><path id='ctrlup' data-dir='up' class='snb sn' transform='scale(3.8) translate(8,10) rotate(270)'/><path id='ctrlright' data-dir='right' class='snb' transform='scale(3.8) translate(20,7.5)'/><path id='ctrldown' data-dir='down' class='snb' transform='scale(3.8) translate(22,19) rotate(90)'/><path id='ctrlleft' data-dir='left' class='snb' transform='scale(3.8) translate(10,21.5) rotate(180)'/></svg></div><svg id='xCT' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sCT'></span></div><div id='pGO' class='p right'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label class='c'>Fertig lustig.</label> <label class='c'><span>Di Score: </span><span id='sGO'></span></label> <label class='c'><span>Highscore: </span><span id='hsGO'></span></label> <label class='c'>Wosch nomau?</label></div><svg id='xGO' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <svg id='xGOA' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></div><div id='pMM' class='p right'><div class='pC'><div><svg class='t' viewBox='5 0 105 25' preserveAspectRatio='xMidYMid slice' role='img'></svg></div><label class='c'>Hie chasch d Farb useläse:</label> <span class='c'><svg class='sb cb' data-num='1'/><svg class='sb cb' data-num='2'/><svg class='sb cb' data-num='3'/><svg class='sb cb' data-num='4'/><svg class='sb cb' data-num='5'/><svg class='sb cb' data-num='6'/></span><label class='c'>Hie muesch di Versuech iigäh:</label> <span class='c'><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg class='sb cdb'/><svg id='cMM' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xMM' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sMM'/></div><div id='pWG' class='p right'><div class='pC'><div><svg class='t' viewBox='4 0 106 25' preserveAspectRatio='xMidYMid slice' role='img'/></div><label for='wi' class='c'><br>Weles isch ds gsuechte Wort:</label> <span class='c'><input type='text' id='wi' maxlength='20' oninput='this.value = this.value.toUpperCase().replace(/[^A-ZÄÖÜ]/g, &#39;&#39;)' spellcheck='false' autocomplete='off'> <svg id='cWG' class='sb' viewBox='0 0 70 70'><path class='y'/></svg></span></div><svg id='xWG' class='sb' viewBox='0 0 70 70'><path class='n'/></svg> <span id='sWG'/></div><script>!function(){'use strict';const e=document,t=N('c'),n=N('pC'),r=N('pS'),o=N('pCT'),a=N('pGO'),c=N('pMM'),s=N('pWG'),i=N('co'),u=N('speed'),d=N('wi'),f=(N('eCW'),N('gm')),l=N('dm'),M=e.getElementsByTagName('body')[0],g=W('cdb'),m=W('cb'),H='click',h='<svg class=\"svgMsg\" viewBox=\"0 0 70 70\"> <circle cx=\"35\" cy=\"35\" r=\"25\" fill=';let w,p,v,L,E=1,b=1,S=1,A=0,y=255,T=0,I=0,x=0,G=0,O='1',k=0,_=0,C=0,R=null;function N(t){return e.getElementById(t)}function W(t){return e.getElementsByClassName(t)}function V(e){return localStorage.getItem(e)}function Z(e,t){return localStorage.setItem(e,t)}function B(e){return e.classList}function D(e){return e.children}function F(e,t,n){e.setAttribute(t,n)}function U(e,t,n){e.addEventListener(t,n)}function K(){w=new Date,b&&(w.getHours()>=22||w.getHours()<7)?B(M).add('d'):B(M).remove('d'),v!==w.getMinutes()&&(v=w.getMinutes(),B(t).remove(...B(t)),0!==E&&(v>=55?B(t).add('M5','MV'):v>=50?B(t).add('M10','MV'):v>=45?B(t).add('M15','MV'):v>=40?B(t).add('M20','MV'):v>=35?B(t).add('M5','MA','M30'):v>=30?B(t).add('M30'):v>=25?B(t).add('M5','MV','M30'):v>=20?B(t).add('M20','MA'):v>=15?B(t).add('M15','MA'):v>=10?B(t).add('M10','MA'):v>=5&&B(t).add('M5','MA'),p=w.getHours(),v>=25&&(p+=1),p%=12,B(t).add('H'+p.toString()),B(t).add('M'+(v%5).toString())))}function X(){1===A&&(y&&!I?(y-=1,T+=1):T?(T-=1,I+=1):(I-=1,y+=1),z('rgb('+y+', '+T+', '+I+')'),setTimeout(X,u.value/10))}function q(e){E=e,E?B(M).remove('off'):B(M).add('off'),v=-1,K()}function j(t,n){e.activeElement.blur(),B(t).remove('show'),B(n).remove('right'),B(t).add('left'),B(n).add('show')}function J(e,t){B(e).remove('left'),B(t).remove('show'),B(e).add('show'),B(t).add('right')}function z(t){e.documentElement.style.setProperty('--main-color',t)}function P(e){A=e==A?0:e,Array.from(W('ef')).forEach((function(e,t){t+1==A?(B(D(e)[0]).add('h'),B(D(e)[1]).remove('h')):(B(D(e)[0]).remove('h'),B(D(e)[1]).add('h'))})),1===A?X():z(i.value)}function Q(e){e!==S&&(B(D(f)[0]).toggle('h'),B(D(f)[1]).toggle('h')),S=e}function Y(e){e!==b&&(B(D(l)[0]).toggle('h'),B(D(l)[1]).toggle('h')),b=e}function $(){let e=parseInt(i.value.substring(1,3),16),t=parseInt(i.value.substring(3,5),16),n=parseInt(i.value.substring(5,7),16);Z('wc_c',i.value),Z('wc_e',A),Z('wc_d',b),Z('wc_g',S),Z('wc_s',u.value.toString());let r=new XMLHttpRequest;r.open('GET','/update_params?red='+e+'&green='+t+'&blue='+n+'&effect='+A+'&darkmode='+b+'&speed='+u.value+'&power='+E+'&ghost='+S,!0),r.send()}function ee(e){R&&1===R.readyState?R.send(e):(ue(),setTimeout((function(){ee(e)}),400))}function te(){B(o).add(L),j(r,o),ee(L),G=V('wc_'+L)?V('wc_'+L):0}function ne(){J(r,o),ee('stop'),setTimeout((function(){B(o).remove(L),L=''}),700)}function re(t){let n='';if(1===t)n='mastermind?c4=0',oe(),ae();else if(2===t)n='mastermind?c4=7',oe();else{if(e.querySelectorAll('.cdb[data-num=\"1\"], .cdb[data-num=\"2\"], .cdb[data-num=\"3\"], .cdb[data-num=\"4\"], .cdb[data-num=\"5\"], .cdb[data-num=\"6\"]').length<4)return void ae('Muesch zersch aues uswähle.');n='mastermind?c1='+g[0].getAttribute('data-num')+'&c2='+g[1].getAttribute('data-num')+'&c3='+g[2].getAttribute('data-num')+'&c4='+g[3].getAttribute('data-num'),oe()}let r=new XMLHttpRequest;r.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(r.responseText);k=e.place,_=e.try,4===k?ae('Bravo! I '+_+' Mau usegfunde.'):11===_?ae('Schad, jetz hesch verlore.'):ae()}},r.open('GET',n,!0),r.send()}function oe(){Array.from(g).forEach((function(e){F(e,'data-num','')}))}function ae(e){N('sMM').innerHTML=e||h+'\"white\"/></svg>&nbsp;am richtige Ort&nbsp;'+h+'\"cornflowerblue\"/></svg>&nbsp;di richtigi Farb'}function ce(e){let t;t='1'===e?'wordguessr?new':'2'===e?'wordguessr?exit':'wordguessr?word='+d.value;let n=new XMLHttpRequest;n.onreadystatechange=function(){if(4===this.readyState&&200===this.status){let e=JSON.parse(n.responseText);0===e.score?(B(d).add('error'),setTimeout((function(){B(d).remove('error'),d.value=''}),100)):1===e.score&&(C+=e.score,N('sWG').innerHTML=C+' hesch usegfunde.',B(d).add('ok'),setTimeout((function(){B(d).remove('ok'),d.value=''}),100))}},n.open('GET',t,!0),n.send()}setInterval(K,100),U(N('p'),H,(function(){q(1-E),$()})),U(N('s'),H,(function(){j(n,r)})),U(N('xS'),H,(function(){J(n,r),B(r).remove('sor'),$()})),U(N('SN'),H,(function(){L='snake',te()})),U(N('TE'),H,(function(){L='tetris',te()})),U(N('xCT'),H,ne),U(N('xGO'),H,(function(){J(o,a),ne(),J(n,r)})),U(N('xGOA'),H,(function(){J(o,a),ee(L)})),U(N('MM'),H,(function(){j(r,c),re(1)})),U(N('xMM'),H,(function(){J(r,c),re(2)})),U(N('cMM'),H,re),U(N('WG'),H,(function(){j(r,s),ce('1'),C=0,N('sWG').innerHTML=''})),U(N('xWG'),H,(function(){J(r,s),ce('2')})),U(N('cWG'),H,ce),Array.from(W('snb')).forEach((function(e){F(e,'d','M2 2 L9 7 L2 12 Z'),U(e,H,(function(e){ee(e.target.getAttribute('data-dir'))}))})),Array.from(W('n')).forEach((function(e){F(e,'d','M10 20 L20 10 L35 25 L50 10 L60 20 L45 35 L60 50 L50 60 L35 45 L20 60 L10 50 L25 35 L10 20 Z'),F(e,'transform','scale(0.9) translate(5,5)')})),Array.from(W('y')).forEach((function(e){F(e,'d','M0 40 L10 30 L20 40 L50 10 L60 20 L20 60 L0 40 Z'),F(e,'transform','scale(0.85) translate(5,5)')})),Array.from(W('play')).forEach((function(e){e.innerHTML='<path d=\"M2 2 L9 7 L2 12 Z\" stroke-width=\"1.4\"/>'})),Array.from(m).forEach((function(e){U(e,H,(function(e){Array.from(m).forEach((function(e){B(e).remove('g')})),B(e.target).add('g'),O=e.target.getAttribute('data-num')})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),Array.from(g).forEach((function(e){U(e,H,(function(e){F(e.target,'data-num',O),ae()})),e.innerHTML='<circle cx=\"35\" cy=\"35\" r=\"25\"/>',F(e,'viewBox','0 0 70 70')})),e.onkeydown=function(e){let t='';switch(e.key){case'ArrowUp':t='up';break;case'ArrowRight':t='right';break;case'ArrowDown':t='down';break;case'ArrowLeft':t='left';break;case'Enter':B(s).contains('show')&&ce()}t&&L&&(ee(t),'up'===t&&'tetris'===L&&(t='tup'),B(N('ctrl'+t)).add('g'),setTimeout((function(){B(N('ctrl'+t)).remove('g')}),200))},U(i,'change',(e=>{z(i.value)})),Array.from(W('ef')).forEach((function(e,t){U(e,H,(function(e){P(t+1)}))})),U(f,H,(e=>{Q(1-S)})),U(l,H,(e=>{Y(1-b)})),U(N('SE'),H,(e=>{B(N('SE')).toggle('ddo'),B(N('LSE')).toggle('cl'),B(N('GM')).remove('ddo'),B(N('LGM')).add('cl')})),U(N('GM'),H,(e=>{B(N('GM')).toggle('ddo'),B(N('LGM')).toggle('cl'),B(N('SE')).remove('ddo'),B(N('LSE')).add('cl')})),V('wc_c')&&(i.value=V('wc_c'),z(i.value)),V('wc_e')&&P(parseInt(V('wc_e'))),V('wc_g')&&Q(parseInt(V('wc_g'))),V('wc_d')&&Y(parseInt(V('wc_d'))),V('wc_s')&&(u.value=parseInt(V('wc_s'))),N('iphone').href=N('icon').href,'E g,S g,D,I g,S g,C g,H g,W,F M5,Ü M5,F M5,V M15,I M15,E M15,R M15,T M15,U M15,T,Z M10,Ä M10,Ä M10,Y,Z M20,W M20,Ä M20,N M20,Z M20,G M20,Q,D,V MV,O MV,R MV,K,A MA,B MA,D,H M30,A M30,U M30,B M30,I M30,T,Z,E H1,I H1,S H1,Q,Z H2,W H2,Ö H2,I H2,D H3,R H3,Ü H3,Z,V H4,I H4,E H4,R H4,I H4,F H5,Ü H5,F H5,I H5,T,G,M,S H6,Ä H6,C H6,H H6,S H6 H7,I H6 H7,B H7,N H7,I H7,A H8,C H8,H H8,T H8,I H8,N H9,Ü H9,N H9,I H9,O,F,C,D,Z H10,Ä H10,N H10,I H10,X,E H11,U H11,F H11,I H11,O,K,G,Z H0,W H0,Ö H0,U H0,F H0,I H0,L,X,L,Y,B,° M1,° M2,P,° M3,° M4,M,K'.split(',').forEach((function(n,r){const o=e.createElementNS('http://www.w3.org/2000/svg','text');F(o,'x',r%11*10+7),F(o,'y',10*Math.ceil((r+1)/11)),[113,114,116,117].includes(r)&&F(o,'y',112.5),n.split(' ').forEach((function(e,t){t?B(o).add(e):o.textContent=e})),t.appendChild(o)}));const se='ewfGRRDcSaj',ie=[se+'nWORDuCLOCK',se+'mSNAKExlbdk',se+'mTETRISlbdk','ewfGAMEcsajmsnakOVERdk',se+'MASTERMINDk',se+'WORDbGUESSR'];function ue(){R&&(R.onclose=null,R.onerror=null,R.close()),R=new WebSocket('ws://'+location.hostname+':81/'),R.onmessage=function(e){if(e.data&&0===e.data.indexOf('score:')&&(x=10*parseInt(e.data.split(':')[1]),x>G&&(G=x,Z('wc_'+L,G)),N('sCT').innerHTML='Score: '+x+' / High-Score : '+G),e.data&&0===e.data.indexOf('gameOver')&&(N('sGO').innerHTML=x,N('hsGO').innerHTML=G,j(o,a)),e.data&&e.data.indexOf('effect')){let o=JSON.parse(e.data);i.value=(t=o.red,n=o.green,r=o.blue,'#'+(1<<24|t<<16|n<<8|r).toString(16).slice(1)),z(i.value),Y(o.darkmode),o.effect!==A&&P(o.effect),Q(o.ghost),q(o.power),u.value=o.speed}var t,n,r},R.onclose=function(){setTimeout(ue,2e3)},R.onerror=function(){R&&R.close()}}Array.from(W('t')).forEach((function(t,n){for(let r=0;r<22;r++){const o=e.createElementNS('http://www.w3.org/2000/svg','text');let a=ie[n].substring(r,r+1),c=a.toUpperCase();F(o,'x',r%11*10+7),F(o,'y',10*Math.ceil((r+1)/11)),o.textContent=c,a===c&&F(o,'class','g'),t.appendChild(o)}})),ue()}();</script></body></html>"));
+              // Display the HTML web page from PROGMEM
+              sendProgmemString(client, web_interface);
             }
 
             // The HTTP response ends with another blank line
@@ -1517,7 +1644,6 @@ void loop() {
 
   // sleep and return when power off
   if (power == 0) {
-    delay(500);
     return;
   }
 
@@ -1526,10 +1652,10 @@ void loop() {
     if (!inGhost) {
       inGhost = true;
       // loop 11 Zeilen
-      for (int j = 11; j >= 0; j--) {
+      for (int8_t j = 11; j >= 0; j--) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < numPixels; i++) {
+        for (int8_t i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1567,10 +1693,10 @@ void loop() {
     // hide ghost
     inGhost = false;
     // loop 11 Zeilen
-      for (int j = 0; j < 11; j++) {
+      for (int8_t j = 0; j < 11; j++) {
         blank();
         // Schleife durch das Array
-        for (int i = 0; i < numPixels; i++) {
+        for (int8_t i = 0; i < numPixels; i++) {
           int ghostPixel = WordGhost[i];
           // Wenn der Wert -1 erreicht wird, die Schleife beenden
           if (WordGhost[i] == -1) {
@@ -1618,7 +1744,7 @@ void loop() {
         snakeDir = snakePrevDir;
         snakeNext = -2;
       }
-      for (int i = snakeLen - 1; i > 1; i--) {
+      for (int8_t i = snakeLen - 1; i > 1; i--) {
         if (snakeNext == snake[i]) {
           // bite own tail
           snakeNext = -3;
@@ -1627,7 +1753,10 @@ void loop() {
       if (snakeNext == snakeSnack) {
         // found snack
         snakeLen++;
-        sendScoreToClients(snakeLen - 3);
+        if (snakeLen - 3 > snakeHighScore) {
+          snakeHighScore = snakeLen - 3;
+        }
+        sendScoreToClients(snakeLen - 3, snakeHighScore);
         snake[snakeLen] = -1;
         setSnack();
         snakeSpeed = snakeSpeed - 40;
@@ -1635,7 +1764,7 @@ void loop() {
 
       if (snakeNext >= 0) {
         // move snake one step forward
-        for (int i = snakeLen - 1; i > 0; i--) {
+        for (int8_t i = snakeLen - 1; i > 0; i--) {
           snake[i] = snake[i-1];
         }
         snake[0] = snakeNext;
@@ -1648,6 +1777,10 @@ void loop() {
       if (snakeNext == -3) {
         // game over
         webSocket.broadcastTXT("gameOver");
+        if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh) || EEPROM.read(eepromAddrSnakeHigh) == 255) {
+          EEPROM.write(eepromAddrSnakeHigh, snakeHighScore);
+          EEPROM.commit();
+        }
         chase(Red);
         inSnake = false;
         lastMinuteWordClock = 61;
@@ -1674,6 +1807,10 @@ void loop() {
     if (gameOver) {
       delay(500);
       webSocket.broadcastTXT("gameOver");
+      if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh) || EEPROM.read(eepromAddrTetrisHigh) == 255) {
+        EEPROM.write(eepromAddrTetrisHigh, tetrisHighScore);
+        EEPROM.commit();
+      }
       chase(Red);
       inTetris = false;
       lastMinuteWordClock = 61;
@@ -1683,7 +1820,7 @@ void loop() {
       // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
       blank();
       lightup(wordGuessrActiveWordIndex, foregroundColor);
-      for (int i = 0; i < wordGuessrHint; i++) {
+      for (uint8_t i = 0; i < wordGuessrHint; i++) {
           pixels.setPixelColor(wordGuessrActiveWordIndex[i], Green);
         }
       pixels.show();
