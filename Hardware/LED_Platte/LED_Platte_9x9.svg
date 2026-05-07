@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="100mm"
+   height="100mm"
+   viewBox="0 0 100 100"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="LED_Platte_9x9.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.6757378"
+     inkscape:cx="468.74876"
+     inkscape:cy="186.48502"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="1912"
+     inkscape:window-y="447"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-4"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-6"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-9" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-2"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-5" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-4-4"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-3-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-6-9"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-9-6" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-20"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-30" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-4-8"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-3-0" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-6-0"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-9-4" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-2-9"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-5-2" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow-4-4-8"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8-3-3-8" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.103607"
+       id="rect1"
+       width="97.896393"
+       height="97.896393"
+       x="0.051803593"
+       y="0.051803414" />
+    <text
+       xml:space="preserve"
+       style="font-size:5px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#000000;stroke:#000000;stroke-width:0.264583"
+       x="101.79607"
+       y="18.340057"
+       id="text2-6-4-3-01"><tspan
+         style="font-size:5px;fill:#000000;stroke-width:0.264583"
+         x="101.79607"
+         y="18.340057"
+         sodipodi:role="line"
+         id="tspan3-4-7-5" /></text>
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.117051"
+       d="M 2.933601,1.4156074e-7 V 98"
+       id="path3" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.11705"
+       d="M 94.933756,1.4156074e-7 V 98"
+       id="path3-4" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,46.500041 H 94.867666"
+       id="path4" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,51.500029 H 94.867666"
+       id="path4-7" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,6.5001344 H 94.867666"
+       id="path4-1" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,11.500122 H 94.867666"
+       id="path4-1-9" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.8675,14.500115 H 94.867656"
+       id="path4-1-90" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.8675,19.500102 H 94.867656"
+       id="path4-1-9-0" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867502,22.500095 H 94.867656"
+       id="path4-1-90-0" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132459"
+       d="M 2.867504,27.500178 H 94.867656"
+       id="path4-1-9-0-5" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867501,30.500077 H 94.867656"
+       id="path4-1-90-0-3" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132459"
+       d="M 2.867504,35.50016 H 94.867656"
+       id="path4-1-9-0-5-3" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867501,38.50006 H 94.867656"
+       id="path4-1-90-0-3-5" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132459"
+       d="M 2.867504,43.500238 H 94.867656"
+       id="path4-1-9-0-5-3-6" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,54.500022 H 94.867666"
+       id="path4-1-8" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,59.500006 H 94.867666"
+       id="path4-1-9-1" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,62.499999 H 94.867666"
+       id="path4-1-90-9" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,67.499986 H 94.867666"
+       id="path4-1-9-0-53" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,70.49998 H 94.867656"
+       id="path4-1-90-0-8" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132459"
+       d="M 2.867504,75.500063 H 94.867656"
+       id="path4-1-9-0-5-0" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,78.499961 H 94.867666"
+       id="path4-1-90-0-3-0" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132459"
+       d="M 2.867504,83.500045 H 94.867656"
+       id="path4-1-9-0-5-3-0" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132269"
+       d="M 2.867504,86.499947 H 94.867666"
+       id="path4-1-90-0-3-5-9" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.132649"
+       d="M 2.867504,91.5001 H 95.132236"
+       id="path4-1-9-0-5-3-6-8" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow)"
+       d="M 43.660451,8.9443561 H 52.52139"
+       id="path6" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-4)"
+       d="m 43.741617,25.124132 h 8.860939"
+       id="path6-7" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-6)"
+       d="M 43.765632,41.040525 H 52.62657"
+       id="path6-1" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-2)"
+       d="M 43.757242,56.99638 H 52.61818"
+       id="path6-9" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-4-4)"
+       d="m 43.838406,73.176154 h 8.86094"
+       id="path6-7-7" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-20)"
+       d="M 53.865413,16.842909 H 45.004472"
+       id="path6-0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-4-8)"
+       d="M 53.784247,33.022686 H 44.923308"
+       id="path6-7-1" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-6-0)"
+       d="M 53.760233,48.939083 H 44.899292"
+       id="path6-1-5" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-2-9)"
+       d="M 53.768622,64.894937 H 44.907683"
+       id="path6-9-6" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-4-4-8)"
+       d="m 53.687457,81.074711 h -8.86094"
+       id="path6-7-7-5" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.245244;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow-6-9)"
+       d="M 43.862422,89.092542 H 52.72336"
+       id="path6-1-6" />
+  </g>
+</svg>
