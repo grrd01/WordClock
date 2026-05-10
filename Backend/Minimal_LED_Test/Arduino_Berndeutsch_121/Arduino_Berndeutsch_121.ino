@@ -9,7 +9,6 @@
 /////////////////////////////////////////////
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>        // v2.4.2
 #include <Adafruit_NeoPixel.h>  // v1.10.4
 
 char version[] = "V1";
