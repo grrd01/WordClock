@@ -870,7 +870,7 @@ void setupTime() {
  * Sets up wifi
  */
 void setupWifi() {
-   WiFi.setHostname(version);
+  WiFi.setHostname(version);
 
   // WiFiManager
   // Local intialization. Once its business is done, there is no need to keep it around
