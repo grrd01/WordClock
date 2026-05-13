@@ -841,19 +841,19 @@ void sendNTPpacket(IPAddress &address) {
 }
 
 void sendProgmemString(WiFiClient& client, const char* str) {
-   const size_t CHUNK_SIZE = 1024; // Größe der Chunks anpassen zwischen 256-1024 anpassen, je nach verfügbarem RAM
-   char buffer[CHUNK_SIZE];
-   size_t len = strlen_P(str);
-   size_t pos = 0;
+  const size_t CHUNK_SIZE = 1024; // Größe der Chunks anpassen zwischen 256-1024 anpassen, je nach verfügbarem RAM
+  char buffer[CHUNK_SIZE];
+  size_t len = strlen_P(str);
+  size_t pos = 0;
 
-   while (pos < len) {
-     size_t remaining = len - pos;
-     size_t toRead = (remaining < CHUNK_SIZE) ? remaining : CHUNK_SIZE;
-     memcpy_P(buffer, str + pos, toRead);
-     client.write((const uint8_t*)buffer, toRead);
-     pos += toRead;
-     yield(); // Gibt dem ESP32 Zeit für WiFi-Operationen
-   }
+  while (pos < len) {
+    size_t remaining = len - pos;
+    size_t toRead = (remaining < CHUNK_SIZE) ? remaining : CHUNK_SIZE;
+    memcpy_P(buffer, str + pos, toRead);
+    client.write((const uint8_t*)buffer, toRead);
+    pos += toRead;
+    yield(); // Gibt dem ESP32 Zeit für WiFi-Operationen
+  }
 }
 
 /**
@@ -872,7 +872,7 @@ void setupTime() {
 void setupWifi() {
    WiFi.setHostname(version);
 
-   // WiFiManager
+  // WiFiManager
   // Local intialization. Once its business is done, there is no need to keep it around
   WiFiManager wifiManager;
 
