@@ -207,7 +207,7 @@ int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
 String snakeDir = ""; // snake, up, right, down, left, stop
 String snakePrevDir = "";
-int snakeSpeed = 7000;        // Bewegungsintervall in Millisekunden
+unsigned long  snakeSpeed;
 unsigned long snakeLastMove = 0;
 bool inSnake = false;
 
@@ -1005,7 +1005,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakeLen = 3;
     snakeDir = "";
     snakeNext = -1;
-    snakeSpeed = 7000;
+    snakeSpeed = 700;
     snakeLastMove = millis();
     sendScoreToClients(0, snakeHighScore);
     blank();
@@ -1731,7 +1731,7 @@ void loop() {
   }
 
   if (inSnake) {
-    if (millis() - snakeLastMove >= (unsigned long)snakeSpeed) {
+    if (millis() - snakeLastMove >= snakeSpeed) {
       snakeLastMove = millis();
       snakeNext = -1;
       if (snakeDir == "up") {
@@ -1776,7 +1776,7 @@ void loop() {
         sendScoreToClients(snakeLen - 3, snakeHighScore);
         snake[snakeLen] = -1;
         setSnack();
-        snakeSpeed = snakeSpeed - 40;
+        snakeSpeed = snakeSpeed - 4;
       }
 
       if (snakeNext >= 0) {
