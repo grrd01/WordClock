@@ -61,6 +61,7 @@ uint8_t ghost = 1;
 uint8_t effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
 int effectSpeed = 200;
 int effectWait = 200;
+bool effectChange = false;
 bool lastTouchStage = false;
 uint16_t frame = 0;
 // Matrix-Drops
@@ -753,10 +754,10 @@ void displayTime() {
         }
       }
     }
-  } else if (effect == 3 && wordClockMinute % 5 == 0) {
+  } else if (effect == 3 && (wordClockMinute % 5 == 0 || satzalt[0] == -1 || effectChange)) {
     // Matrix effect
     matrixEffect();
-  } else if (effect == 4 && wordClockMinute % 5 == 0) {
+  } else if (effect == 4 && (wordClockMinute % 5 == 0 || satzalt[0] == -1 || effectChange)) {
     // Pulse effect
     pulseEffect();
   } else if (effect == 5) {
@@ -766,7 +767,7 @@ void displayTime() {
     // No effect
     lightup(satzneu, foregroundColor);
   }
-
+  effectChange = false;
   displayWifiStatus();
 
   pixels.show();
@@ -1530,6 +1531,9 @@ void loop() {
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "power=") == 1) {
+                if (power == 0) {
+                  satzneu = -1;
+                }
                 power = 1;
               } else {
                 power = 0;
@@ -1558,6 +1562,9 @@ void loop() {
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
+                if (effect != extractParameterValue(url, "effect=")) {
+                  effectChange = true;
+                }
                 effect = extractParameterValue(url, "effect=");
               }
               // Save effect to EEPROM if it changed
@@ -1605,21 +1612,6 @@ void loop() {
               } else if (effect == 2) {
                 // rainbow
                 effectWait = effectSpeed / 8;
-              } else if (effect == 3 && wordClockMinute % 5 != 0 && power == 1) {
-                // matrix
-                memcpy(satzalt, satzneu, sizeof(satzneu));
-                matrixEffect();
-              } else if (effect == 4 && wordClockMinute % 5 != 0 && power == 1) {
-                // pulse
-                memcpy(satzalt, satzneu, sizeof(satzneu));
-                pulseEffect();
-              } else if (effect == 5 && power == 1) {
-                // typewriter
-                satzalt[6] = -1; 
-                blank();
-                lightup(satzalt, foregroundColor);
-                pixels.show();
-                typewriterEffect();
               }
               lastMinuteWordClock = 61;
               client.println(F("HTTP/1.1 200 OK"));
@@ -1673,20 +1665,8 @@ void loop() {
         blank();
         pixels.show();
       } else {
+        satzneu[0] = -1;
         lastMinuteWordClock = 61;
-        if (effect == 3 && wordClockMinute % 5 != 0) {
-          // matrix
-          satzalt[0] = -1;
-          matrixEffect();
-        } else if (effect == 4 && wordClockMinute % 5 != 0) {
-          // pulse
-          satzalt[0] = -1;
-          pulseEffect();
-        } else if (effect == 5) {
-          // typewriter
-          satzalt[0] = -1;
-          typewriterEffect();
-        }
       }
     }
     lastTouchStage = digitalRead(D5);
