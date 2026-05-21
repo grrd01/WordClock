@@ -17,8 +17,17 @@
 // ToDo: WordGuessr: ungültige Worte in der Wortliste erkennen
 
 #include <Arduino.h>
-#include <WiFi.h>
-#include <ESPmDNS.h>
+
+#if defined(ARDUINO_ARCH_ESP8266)
+  #include <ESP8266WiFi.h>
+  #include <ESP8266mDNS.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+  #include <WiFi.h>
+  #include <ESPmDNS.h>
+#else
+  #error Unsupported platform
+#endif
+
 #include <WiFiManager.h>        // v2.0.17
 #include <WiFiUdp.h>
 #include <WebSocketsServer.h>   // v2.7.1
@@ -852,7 +861,7 @@ void sendProgmemString(WiFiClient& client, const char* str) {
     memcpy_P(buffer, str + pos, toRead);
     client.write((const uint8_t*)buffer, toRead);
     pos += toRead;
-    yield(); // Gibt dem ESP32 Zeit für WiFi-Operationen
+    yield(); // Gibt dem Controller Zeit für WiFi-Operationen
   }
 }
 
@@ -870,7 +879,11 @@ void setupTime() {
  * Sets up wifi
  */
 void setupWifi() {
-  WiFi.setHostname(version);
+  #if defined(ARDUINO_ARCH_ESP8266)
+    wifi_station_set_hostname(version);
+  #elif defined(ARDUINO_ARCH_ESP32)
+    WiFi.setHostname(version);
+  #endif
 
   // WiFiManager
   // Local intialization. Once its business is done, there is no need to keep it around
