@@ -1532,7 +1532,7 @@ void loop() {
               }
               if (extractParameterValue(url, "power=") == 1) {
                 if (power == 0) {
-                  satzneu = -1;
+                  satzneu[0] = -1;
                 }
                 power = 1;
               } else {
