@@ -207,8 +207,8 @@ int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
 String snakeDir = ""; // snake, up, right, down, left, stop
 String snakePrevDir = "";
-int snakeSpeed = 7000;
-int snakeWait = 7000;
+int snakeSpeed = 7000;        // Bewegungsintervall in Millisekunden
+unsigned long snakeLastMove = 0;
 bool inSnake = false;
 
 // Tetris variables
@@ -1006,6 +1006,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakeDir = "";
     snakeNext = -1;
     snakeSpeed = 7000;
+    snakeLastMove = millis();
     sendScoreToClients(0, snakeHighScore);
     blank();
     lightup(snake, Green);
@@ -1730,11 +1731,9 @@ void loop() {
   }
 
   if (inSnake) {
-    if (snakeWait > 0) {
-      snakeWait--;
-    } else {
+    if (millis() - snakeLastMove >= (unsigned long)snakeSpeed) {
+      snakeLastMove = millis();
       snakeNext = -1;
-      snakeWait = snakeSpeed;
       if (snakeDir == "up") {
         snakeNext = snake[0] - 1 - 2 * (snake[0] % 11);
         if (snakeNext < 0) {
