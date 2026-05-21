@@ -188,10 +188,9 @@ static int8_t WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
 static int8_t *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
 // aktueller und letzter Zeit-Satz
-int8_t satzalt[30];
-int8_t satzneu[30];
+int8_t satzalt[30] = {-1};
+int8_t satzneu[30] = {-1};
 uint8_t satzindex = 0;
-satzalt[0] = -1;
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800);
 
