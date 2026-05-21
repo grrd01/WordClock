@@ -1564,6 +1564,10 @@ void loop() {
               if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
                 if (effect != extractParameterValue(url, "effect=")) {
                   effectChange = true;
+                  if (extractParameterValue(url, "effect=") == 5) {
+                    // Typewriter
+                    satzneu[0] = -1;
+                  }
                 }
                 effect = extractParameterValue(url, "effect=");
               }
