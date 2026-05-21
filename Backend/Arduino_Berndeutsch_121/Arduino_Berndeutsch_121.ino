@@ -14,9 +14,7 @@
 //
 /////////////////////////////////////////////
 
-// ToDo: Snake zu langsam auf ESP32 -> auf millis() umstellen
 // ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
-// ToDo: Typewriter-Animation erzeugt bei initialem Startup nach Stromunterbruch ein merkwürdiges, zufälliges Lämpli-Muster, welches dann durch den korrekten Satz übertippt wird. Init von Zeitsatz fehlerhaft?
 
 #include <Arduino.h>
 
@@ -193,6 +191,7 @@ static int8_t *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordM
 int8_t satzalt[30];
 int8_t satzneu[30];
 uint8_t satzindex = 0;
+satzalt[0] = -1;
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800);
 
