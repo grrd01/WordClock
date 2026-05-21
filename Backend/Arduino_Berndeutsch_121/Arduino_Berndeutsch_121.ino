@@ -14,7 +14,9 @@
 //
 /////////////////////////////////////////////
 
-// ToDo: WordGuessr: ungültige Worte in der Wortliste erkennen
+// ToDo: Snake zu langsam auf ESP32 -> auf millis() umstellen
+// ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
+// ToDo: Typewriter-Animation erzeugt bei initialem Startup nach Stromunterbruch ein merkwürdiges, zufälliges Lämpli-Muster, welches dann durch den korrekten Satz übertippt wird. Init von Zeitsatz fehlerhaft?
 
 #include <Arduino.h>
 
