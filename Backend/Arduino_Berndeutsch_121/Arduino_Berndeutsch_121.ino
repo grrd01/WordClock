@@ -1653,7 +1653,10 @@ void loop() {
     // Close the connection
     client.stop();
   }
-  MDNS.update();
+
+  #if defined(ARDUINO_ARCH_ESP8266)
+    MDNS.update();
+  #endif
 
   // sleep and return when power off
   if (power == 0) {
