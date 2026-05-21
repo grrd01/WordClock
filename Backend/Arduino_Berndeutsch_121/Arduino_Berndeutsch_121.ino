@@ -14,6 +14,11 @@
 //
 /////////////////////////////////////////////
 
+// set name for access-point and mdns-server
+const char* version = "wordclock";
+// define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
+#define USE_TOUCH_SENSOR 0
+
 // ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
 
 #include <Arduino.h>
@@ -37,9 +42,6 @@
 #include <pgmspace.h>
 #include <EEPROM.h>
 #include "web_interface.h"
-
-// set name for access-point and mdns-server
-const char* version = "wordclock";
 
 // Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
@@ -1663,30 +1665,32 @@ void loop() {
   #endif
 
   // Touch sensor to toggle power
-  if (digitalRead(D5) == LOW && lastTouchStage == true) {
-    power = 1 - power; // toggle power
-    sendParamsToClients();
-    if (power == 0) {
-      blank();
-      pixels.show();
-    } else {
-      lastMinuteWordClock = 61;
-      if (effect == 3 && wordClockMinute % 5 != 0) {
-        // matrix
-        satzalt[0] = -1;
-        matrixEffect();
-      } else if (effect == 4 && wordClockMinute % 5 != 0) {
-        // pulse
-        satzalt[0] = -1;
-        pulseEffect();
-      } else if (effect == 5 && power == 1) {
-        // typewriter
-        satzalt[0] = -1; 
-        typewriterEffect();
+  #if USE_TOUCH_SENSOR
+    if (digitalRead(D5) == LOW && lastTouchStage == true) {
+      power = 1 - power; // toggle power
+      sendParamsToClients();
+      if (power == 0) {
+        blank();
+        pixels.show();
+      } else {
+        lastMinuteWordClock = 61;
+        if (effect == 3 && wordClockMinute % 5 != 0) {
+          // matrix
+          satzalt[0] = -1;
+          matrixEffect();
+        } else if (effect == 4 && wordClockMinute % 5 != 0) {
+          // pulse
+          satzalt[0] = -1;
+          pulseEffect();
+        } else if (effect == 5) {
+          // typewriter
+          satzalt[0] = -1;
+          typewriterEffect();
+        }
       }
     }
-  }
-  lastTouchStage = digitalRead(D5);
+    lastTouchStage = digitalRead(D5);
+  #endif
 
   // sleep and return when power off
   if (power == 0) {
