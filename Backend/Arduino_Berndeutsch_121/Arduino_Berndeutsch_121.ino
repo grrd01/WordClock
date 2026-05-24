@@ -727,6 +727,10 @@ void setForegroundColor() {
  * Displays the current time
  */
 void displayTime() {
+  if (effectChange && effect == 5) {
+    // Typewriter
+    satzneu[0] = -1;
+  }
   satzindex = 0;
   memcpy(satzalt, satzneu, sizeof(satzneu));
   blank();
@@ -1007,7 +1011,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakeLen = 3;
     snakeDir = "";
     snakeNext = -1;
-    snakeSpeed = 700;
+    snakeSpeed = 650;
     snakeLastMove = millis();
     sendScoreToClients(0, snakeHighScore);
     blank();
@@ -1527,6 +1531,7 @@ void loop() {
               // Save ghost to EEPROM if it changed
               uint8_t storedGhost = EEPROM.read(eepromAddrGhost);
               if (storedGhost != ghost) {
+                effectChange = true;
                 EEPROM.write(eepromAddrGhost, ghost);
                 EEPROM.commit();
               }
@@ -1546,6 +1551,7 @@ void loop() {
               // Save effectSpeed to EEPROM if it changed
               int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
               if (storedEffectSpeed != effectSpeed) {
+                effectChange = true;
                 EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
                 EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);
                 EEPROM.commit();
@@ -1562,18 +1568,12 @@ void loop() {
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
-                if (effect != extractParameterValue(url, "effect=")) {
-                  effectChange = true;
-                  if (extractParameterValue(url, "effect=") == 5) {
-                    // Typewriter
-                    satzneu[0] = -1;
-                  }
-                }
                 effect = extractParameterValue(url, "effect=");
               }
               // Save effect to EEPROM if it changed
               uint8_t storedEffect = EEPROM.read(eepromAddrEffect);
               if (storedEffect != effect) {
+                effectChange = true;
                 EEPROM.write(eepromAddrEffect, effect);
                 EEPROM.commit();
               }
@@ -1583,6 +1583,7 @@ void loop() {
               // Save rgbBlue to EEPROM if it changed
               uint8_t storedBlue = EEPROM.read(eepromAddrBlue);
               if (storedBlue != rgbBlue) {
+                effectChange = true;
                 EEPROM.write(eepromAddrBlue, rgbBlue);
                 EEPROM.commit();
               }
@@ -1592,6 +1593,7 @@ void loop() {
               // Save rgbGreen to EEPROM if it changed
               uint8_t storedGreen = EEPROM.read(eepromAddrGreen);
               if (storedGreen != rgbGreen) {
+                effectChange = true;
                 EEPROM.write(eepromAddrGreen, rgbGreen);
                 EEPROM.commit();
               }
@@ -1601,6 +1603,7 @@ void loop() {
               // Save rgbRed to EEPROM if it changed
               uint8_t storedRed = EEPROM.read(eepromAddrRed);
               if (storedRed != rgbRed) {
+                effectChange = true;
                 EEPROM.write(eepromAddrRed, rgbRed);
                 EEPROM.commit();
               }
