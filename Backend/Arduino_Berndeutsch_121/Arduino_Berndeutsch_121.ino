@@ -14,11 +14,25 @@
 //
 /////////////////////////////////////////////
 
-// ToDo: WordGuessr: ungültige Worte in der Wortliste erkennen
+// set name for access-point and mdns-server
+const char* version = "wordclock";
+// define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
+#define USE_TOUCH_SENSOR 0
+
+// ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
+
+#if defined(ARDUINO_ARCH_ESP8266)
+  #include <ESP8266WiFi.h>
+  #include <ESP8266mDNS.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+  #include <WiFi.h>
+  #include <ESPmDNS.h>
+#else
+  #error Unsupported platform
+#endif
+
 #include <WiFiManager.h>        // v2.0.17
 #include <WiFiUdp.h>
 #include <WebSocketsServer.h>   // v2.7.1
@@ -28,9 +42,6 @@
 #include <pgmspace.h>
 #include <EEPROM.h>
 #include "web_interface.h"
-
-// set name for access-point and mdns-server
-const char* version = "wordclock";
 
 // Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
@@ -50,6 +61,8 @@ uint8_t ghost = 1;
 uint8_t effect = 0; // 0 = none, 1 = colorWheel, 2 = rainbow, 3 = matrix, 4 = pulse, 5 = typewriter
 int effectSpeed = 200;
 int effectWait = 200;
+bool effectChange = false;
+bool lastTouchStage = false;
 uint16_t frame = 0;
 // Matrix-Drops
 struct Drop {
@@ -179,8 +192,8 @@ static int8_t WordMinTicks[] = {113, 114, 116, 117, -1};         // ** **
 static int8_t *WordMinuten[] = {WordMinFuenf, WordMinZehn, WordMinViertel, WordMinZwanzig, WordMinFuenf};
 
 // aktueller und letzter Zeit-Satz
-int8_t satzalt[30];
-int8_t satzneu[30];
+int8_t satzalt[30] = {-1};
+int8_t satzneu[30] = {-1};
 uint8_t satzindex = 0;
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, D7, NEO_GRB + NEO_KHZ800);
@@ -196,8 +209,8 @@ int snakeNext = -1;
 int snakeSnack = -2;  // pixel 0-120
 String snakeDir = ""; // snake, up, right, down, left, stop
 String snakePrevDir = "";
-int snakeSpeed = 7000;
-int snakeWait = 7000;
+unsigned long  snakeSpeed;
+unsigned long snakeLastMove = 0;
 bool inSnake = false;
 
 // Tetris variables
@@ -714,6 +727,10 @@ void setForegroundColor() {
  * Displays the current time
  */
 void displayTime() {
+  if (effectChange && effect == 5) {
+    // Typewriter
+    satzneu[0] = -1;
+  }
   satzindex = 0;
   memcpy(satzalt, satzneu, sizeof(satzneu));
   blank();
@@ -741,10 +758,10 @@ void displayTime() {
         }
       }
     }
-  } else if (effect == 3 && wordClockMinute % 5 == 0) {
+  } else if (effect == 3 && (wordClockMinute % 5 == 0 || satzalt[0] == -1 || effectChange)) {
     // Matrix effect
     matrixEffect();
-  } else if (effect == 4 && wordClockMinute % 5 == 0) {
+  } else if (effect == 4 && (wordClockMinute % 5 == 0 || satzalt[0] == -1 || effectChange)) {
     // Pulse effect
     pulseEffect();
   } else if (effect == 5) {
@@ -754,7 +771,7 @@ void displayTime() {
     // No effect
     lightup(satzneu, foregroundColor);
   }
-
+  effectChange = false;
   displayWifiStatus();
 
   pixels.show();
@@ -852,7 +869,7 @@ void sendProgmemString(WiFiClient& client, const char* str) {
     memcpy_P(buffer, str + pos, toRead);
     client.write((const uint8_t*)buffer, toRead);
     pos += toRead;
-    yield(); // Gibt dem ESP8266 Zeit für WiFi-Operationen
+    yield(); // Gibt dem Controller Zeit für WiFi-Operationen
   }
 }
 
@@ -870,7 +887,11 @@ void setupTime() {
  * Sets up wifi
  */
 void setupWifi() {
-  wifi_station_set_hostname(version);
+  #if defined(ARDUINO_ARCH_ESP8266)
+    wifi_station_set_hostname(version);
+  #elif defined(ARDUINO_ARCH_ESP32)
+    WiFi.setHostname(version);
+  #endif
 
   // WiFiManager
   // Local intialization. Once its business is done, there is no need to keep it around
@@ -990,7 +1011,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakeLen = 3;
     snakeDir = "";
     snakeNext = -1;
-    snakeSpeed = 7000;
+    snakeSpeed = 650;
+    snakeLastMove = millis();
     sendScoreToClients(0, snakeHighScore);
     blank();
     lightup(snake, Green);
@@ -1296,6 +1318,8 @@ void setup() {
   pixels.begin();
   wipe();
 
+  pinMode(D5, INPUT);
+
   // Initialize EEPROM and read stored values
   EEPROM.begin(512);
 
@@ -1507,10 +1531,14 @@ void loop() {
               // Save ghost to EEPROM if it changed
               uint8_t storedGhost = EEPROM.read(eepromAddrGhost);
               if (storedGhost != ghost) {
+                effectChange = true;
                 EEPROM.write(eepromAddrGhost, ghost);
                 EEPROM.commit();
               }
               if (extractParameterValue(url, "power=") == 1) {
+                if (power == 0) {
+                  satzneu[0] = -1;
+                }
                 power = 1;
               } else {
                 power = 0;
@@ -1523,6 +1551,7 @@ void loop() {
               // Save effectSpeed to EEPROM if it changed
               int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
               if (storedEffectSpeed != effectSpeed) {
+                effectChange = true;
                 EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
                 EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);
                 EEPROM.commit();
@@ -1544,6 +1573,7 @@ void loop() {
               // Save effect to EEPROM if it changed
               uint8_t storedEffect = EEPROM.read(eepromAddrEffect);
               if (storedEffect != effect) {
+                effectChange = true;
                 EEPROM.write(eepromAddrEffect, effect);
                 EEPROM.commit();
               }
@@ -1553,6 +1583,7 @@ void loop() {
               // Save rgbBlue to EEPROM if it changed
               uint8_t storedBlue = EEPROM.read(eepromAddrBlue);
               if (storedBlue != rgbBlue) {
+                effectChange = true;
                 EEPROM.write(eepromAddrBlue, rgbBlue);
                 EEPROM.commit();
               }
@@ -1562,6 +1593,7 @@ void loop() {
               // Save rgbGreen to EEPROM if it changed
               uint8_t storedGreen = EEPROM.read(eepromAddrGreen);
               if (storedGreen != rgbGreen) {
+                effectChange = true;
                 EEPROM.write(eepromAddrGreen, rgbGreen);
                 EEPROM.commit();
               }
@@ -1571,6 +1603,7 @@ void loop() {
               // Save rgbRed to EEPROM if it changed
               uint8_t storedRed = EEPROM.read(eepromAddrRed);
               if (storedRed != rgbRed) {
+                effectChange = true;
                 EEPROM.write(eepromAddrRed, rgbRed);
                 EEPROM.commit();
               }
@@ -1586,21 +1619,6 @@ void loop() {
               } else if (effect == 2) {
                 // rainbow
                 effectWait = effectSpeed / 8;
-              } else if (effect == 3 && wordClockMinute % 5 != 0 && power == 1) {
-                // matrix
-                memcpy(satzalt, satzneu, sizeof(satzneu));
-                matrixEffect();
-              } else if (effect == 4 && wordClockMinute % 5 != 0 && power == 1) {
-                // pulse
-                memcpy(satzalt, satzneu, sizeof(satzneu));
-                pulseEffect();
-              } else if (effect == 5 && power == 1) {
-                // typewriter
-                satzalt[6] = -1; 
-                blank();
-                lightup(satzalt, foregroundColor);
-                pixels.show();
-                typewriterEffect();
               }
               lastMinuteWordClock = 61;
               client.println(F("HTTP/1.1 200 OK"));
@@ -1640,7 +1658,26 @@ void loop() {
     // Close the connection
     client.stop();
   }
-  MDNS.update();
+
+  #if defined(ARDUINO_ARCH_ESP8266)
+    MDNS.update();
+  #endif
+
+  // Touch sensor to toggle power
+  #if USE_TOUCH_SENSOR
+    if (digitalRead(D5) == LOW && lastTouchStage == true) {
+      power = 1 - power; // toggle power
+      sendParamsToClients();
+      if (power == 0) {
+        blank();
+        pixels.show();
+      } else {
+        satzneu[0] = -1;
+        lastMinuteWordClock = 61;
+      }
+    }
+    lastTouchStage = digitalRead(D5);
+  #endif
 
   // sleep and return when power off
   if (power == 0) {
@@ -1712,11 +1749,9 @@ void loop() {
   }
 
   if (inSnake) {
-    if (snakeWait > 0) {
-      snakeWait--;
-    } else {
+    if (millis() - snakeLastMove >= snakeSpeed) {
+      snakeLastMove = millis();
       snakeNext = -1;
-      snakeWait = snakeSpeed;
       if (snakeDir == "up") {
         snakeNext = snake[0] - 1 - 2 * (snake[0] % 11);
         if (snakeNext < 0) {
@@ -1759,7 +1794,7 @@ void loop() {
         sendScoreToClients(snakeLen - 3, snakeHighScore);
         snake[snakeLen] = -1;
         setSnack();
-        snakeSpeed = snakeSpeed - 40;
+        snakeSpeed = snakeSpeed - 4;
       }
 
       if (snakeNext >= 0) {
