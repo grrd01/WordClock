@@ -1,9 +1,9 @@
 /*
  * ==================================================================================
- * ShanWan Q36 Controller native BLE-Connection
+ * ShanWan Q36 Controller native BLE-Connection (Timer-Release Version)
  * ==================================================================================
  * Configuration:
- * - Board: SeedStudio XIAO ESP32C6
+ * - Board: Seeed Studio XIAO ESP32C6
  * - Controller: ShanWan Q36
  * Pair Controller in V-Mode (ShootingPlus for Android)
  */
@@ -14,14 +14,23 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 
-static BLEUUID hidServiceUUID((uint16_t)0x1812); 
-static BLEUUID inputCharUUID((uint16_t)0x2A4D);
+// Die beiden UUIDs für die beiden Datenkanäle
+static BLEUUID inputCharUUID((uint16_t)0x2A4D); 
+static BLEUUID customCharUUID("94990003-1111-6666-8888-0123456789ab"); // Für Select, Start, Home, R
 
 static boolean doConnect = false;
 static boolean connected = false;
 static BLEAdvertisedDevice* myDevice = nullptr;
 
-static bool yIstGedrueckt = false; // Speichert den aktuellen Zustand von Taste Y
+// Software-Zustandsspeicher für Taste Y
+static bool yIstGedrueckt = false; 
+
+// Globale Variablen für die zeitbasierte Freigabe (Select & Start)
+volatile bool globalSelectGedrueckt = false;
+volatile bool globalStartGedrueckt = false;
+volatile unsigned long globalSelectTimer = 0;
+volatile unsigned long globalStartTimer = 0;
+const unsigned long globalTimeoutMs = 150; // Zeitfenster in ms, nach dem die Taste als losgelassen gilt
 
 // Sicherheits-Callback: Bestätigt dem Controller die Kopplungsanfrage
 class MySecurityCallbacks : public BLESecurityCallbacks {
@@ -57,12 +66,49 @@ class MyClientCallbacks : public BLEClientCallbacks {
 };
 
 static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify) {
+    if (length < 1) return;
+
+    // UUID der aktuellen Charakteristik als String auslesen und klein schreiben
+    String charUUID = pBLERemoteCharacteristic->getUUID().toString().c_str();
+    charUUID.toLowerCase();
+
+    // ==============================================================================
+    // 1. DATEN VOM CUSTOM-KANAL (Select, Start, Home, R...)
+    // ==============================================================================
+    if (charUUID.indexOf("94990003") >= 0) {
+        if (length < 8) return; 
+
+        uint8_t tastenByte = pData[7]; 
+        unsigned long jetzt = millis();
+
+        // --- SELECT GEDRÜCKT ---
+        if (tastenByte == 0x88) {
+            globalSelectTimer = jetzt; // Stoppuhr bei jedem empfangenen Paket zurücksetzen
+            if (!globalSelectGedrueckt) {
+                globalSelectGedrueckt = true;
+                Serial.println("SELECT GEDRÜCKT");
+            }
+        }
+
+        // --- START GEDRÜCKT ---
+        if (tastenByte == 0x8A) {
+            globalStartTimer = jetzt; // Stoppuhr bei jedem empfangenen Paket zurücksetzen
+            if (!globalStartGedrueckt) {
+                globalStartGedrueckt = true;
+                Serial.println("START GEDRÜCKT");
+            }
+        }
+        return; // Callback hier beenden
+    }
+
+    // ==============================================================================
+    // 2. DATEN VOM STANDARD-HID-KANAL (A, B, X, Y, D-Pad...)
+    // ==============================================================================
     if (length < 10) return;
 
     static uint8_t lastData[17] = {0};
     bool changed = false;
 
-    // Wir vergleichen JEDES Byte im Paket auf Änderungen
     for (size_t i = 0; i < length; i++) {
         if (pData[i] != lastData[i]) {
             changed = true;
@@ -71,17 +117,17 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
     }
 
     if (changed) {
-        // 1. Rohdaten wie gewünscht ausgeben
+        // Rohdaten ausgeben
         Serial.print("ROHDATEN: ");
         for (size_t i = 0; i < length; i++) {
             Serial.printf("%02X ", pData[i]);
         }
         Serial.println();
 
-        // 2. Tastenerkennung durchführen
-        uint8_t statusByte = pData[0]; // Erstes Byte (0x03 = gedrückt, 0x02 = losgelassen)
-        uint8_t keyByte = pData[3];    // Viertes Byte (Index 3) für die Tasten-ID
-        uint8_t subByte = pData[2] & 0x0F;    // zweite Stelle des dritten Bytes (Index 2) wo keyByte nicht unique
+        // Tastenerkennung durchführen
+        uint8_t statusByte = pData[0];        // Erstes Byte (0x03 = gedrückt, 0x02 = losgelassen)
+        uint8_t keyByte = pData[3];           // Viertes Byte (Index 3) für die Tasten-ID
+        uint8_t subByte = pData[2] & 0x0F;    // Zweite Stelle des dritten Bytes (Index 2)
 
         // Erkennung für Taste A (Wertebereich 0xEE bis 0xF0 und Sub 04)
         if (keyByte >= 0xEE && keyByte <= 0xF0 && subByte == 0x04) {
@@ -99,7 +145,7 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
                 Serial.println("B LOSGELASSEN");
             }
         }
-        // Erkennung für Taste X (Wertebereich 0xF3 bis 0xF5 und Sub 01)
+        // Erkennung für Taste X (Wertebereich 0xEC bis 0xEE und Sub 01)
         else if (keyByte >= 0xEC && keyByte <= 0xEE && subByte == 0x01) {
             if (statusByte == 0x03) {
                 Serial.println("X GEDRÜCKT");
@@ -109,15 +155,11 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
         }
         // Erkennung für Taste Y (Wertebereich 0xF3 bis 0xF5 und Sub 0D)
         else if (keyByte >= 0xF3 && keyByte <= 0xF5 && subByte == 0x0D) {
-            // Wir reagieren NUR auf das Aktions-Byte (0x03). 
-            // Das darauffolgende Ruhe-Byte (0x02) ignorieren wir.
             if (statusByte == 0x03) {
                 if (!yIstGedrueckt) {
-                    // Die Taste war vorher nicht gedrückt -> Jetzt wird sie gedrückt!
                     yIstGedrueckt = true;
                     Serial.println("Y GEDRÜCKT");
                 } else {
-                    // Die Taste war bereits gedrückt -> Jetzt wird sie losgelassen!
                     yIstGedrueckt = false;
                     Serial.println("Y LOSGELASSEN");
                 }
@@ -180,7 +222,6 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
             }
         }
 
-        // Aktuellen Stand abspeichern
         for (size_t i = 0; i < length; i++) {
             lastData[i] = pData[i];
         }
@@ -192,7 +233,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     String name = advertisedDevice.getName().c_str();
     name.toLowerCase();
     
-    if (name.indexOf("q36") >= 0) {
+    if (name.indexOf("q36") >= 0 || name.indexOf("shanwan") >= 0) {
       Serial.println("\n==================================================");
       Serial.printf("GAMEPAD GEFUNDEN: '%s'\n", advertisedDevice.getName().c_str());
       Serial.println("==================================================");
@@ -217,45 +258,42 @@ bool connectToServer() {
         return false;
     }
     
-    Serial.println("Verbunden! Warte kurz auf Verschlüsselungs-Handshake...");
-    delay(2000); 
-
-    Serial.println("Suche nach HID-Service...");
-    BLERemoteService* pRemoteService = pClient->getService(hidServiceUUID);
-    if (pRemoteService == nullptr) {
-        Serial.println("Fehler: HID Service nicht gefunden.");
-        pClient->disconnect();
-        delete myDevice;
-        myDevice = nullptr;
-        return false;
-    }
-
-    Serial.println("Analysiere Datenkanäle des Gamepads...");
-    std::map<std::string, BLERemoteCharacteristic*>* pCharacteristics = pRemoteService->getCharacteristics();
+    Serial.println("Verbunden! Erhöre MTU...");
+    pClient->setMTU(40); 
     
+    Serial.println("Werte kurz auf Verschlüsselungs-Handshake...");
+    delay(2000);
+
+    Serial.println("Analysiere Services...");
+    auto services = pClient->getServices();
     int activeNotifications = 0;
 
-    for (auto &entry : *pCharacteristics) {
-        BLERemoteCharacteristic* pChara = entry.second;
-        
-        if (pChara->getUUID().equals(inputCharUUID)) {
-            Serial.printf("-> Input-Kanal gefunden (Handle: 0x%02X). ", pChara->getHandle());
-            
-            if (pChara->canNotify()) {
-                pChara->registerForNotify(notifyCallback);
-                
-                // Wir schreiben das "Notify-Descriptor"-Register (0x2902) explizit an
-                BLERemoteDescriptor* pDec = pChara->getDescriptor(BLEUUID((uint16_t)0x2902));
-                if (pDec != nullptr) {
-                    uint8_t val[] = {0x01, 0x00};
-                    pDec->writeValue(val, 2, true);
-                    Serial.print("Descriptor 0x2902 beschrieben! ");
-                }
+    for (auto servicePair : *services) {
+        BLERemoteService* pService = servicePair.second;
+        auto characteristics = pService->getCharacteristics();
 
-                Serial.println("Lauschen aktiviert! [OK]");
-                activeNotifications++;
-            } else {
-                Serial.println("Unterstützt keine Live-Daten. [Skip]");
+        for (auto charPair : *characteristics) {
+            BLERemoteCharacteristic* pChara = charPair.second;
+            BLEUUID uuid = pChara->getUUID();
+
+            if (uuid.equals(inputCharUUID) || uuid.equals(customCharUUID)) {
+                Serial.printf("-> Kanal gefunden: %s (Handle: 0x%02X). ", 
+                              uuid.toString().c_str(), pChara->getHandle());
+                
+                if (pChara->canNotify()) {
+                    pChara->registerForNotify(notifyCallback);
+                    
+                    BLERemoteDescriptor* pDec = pChara->getDescriptor(BLEUUID((uint16_t)0x2902));
+                    if (pDec != nullptr) {
+                        uint8_t val[] = {0x01, 0x00};
+                        pDec->writeValue(val, 2, true);
+                        Serial.print("Descriptor beschrieben! ");
+                    }
+                    Serial.println("Lauschen aktiviert! [OK]");
+                    activeNotifications++;
+                } else {
+                    Serial.println("Unterstützt keine Live-Daten. [Skip]");
+                }
             }
         }
     }
@@ -279,8 +317,6 @@ void setup() {
   Serial.println("Starte XIAO ESP32-C6 (Secure Connection Mode)...");
   
   BLEDevice::init("XIAO-C6-Host");
-
-  // Sicherheits-Callbacks registrieren
   BLEDevice::setSecurityCallbacks(new MySecurityCallbacks());
 
   BLESecurity security;
@@ -288,10 +324,10 @@ void setup() {
   security.setCapability(ESP_IO_CAP_NONE);
 
   BLEScan* pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks()); 
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setInterval(100);
   pBLEScan->setWindow(99);
-  pBLEScan->setActiveScan(true); 
+  pBLEScan->setActiveScan(true);
   pBLEScan->start(15, false);
 }
 
@@ -305,5 +341,23 @@ void loop() {
     }
     doConnect = false;
   }
-  delay(10);
+
+  // ==============================================================================
+  // HINTERGRUND-TIMER FÜR DAS AUTOMATISCHE LOSLASSEN
+  // ==============================================================================
+  unsigned long jetzt = millis();
+  
+  // Wenn SELECT als gedrückt gilt, aber seit 150ms keine Daten mehr kamen
+  if (globalSelectGedrueckt && (jetzt - globalSelectTimer > globalTimeoutMs)) {
+      globalSelectGedrueckt = false;
+      Serial.println("SELECT LOSGELASSEN");
+  }
+  
+  // Wenn START als gedrückt gilt, aber seit 150ms keine Daten mehr kamen
+  if (globalStartGedrueckt && (jetzt - globalStartTimer > globalTimeoutMs)) {
+      globalStartGedrueckt = false;
+      Serial.println("START LOSGELASSEN");
+  }
+
+  delay(1); // Extrem kurzes Delay, damit der Loop blitzschnell reagiert
 }
