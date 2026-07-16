@@ -79,9 +79,10 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
         // 2. Tastenerkennung durchführen
         uint8_t statusByte = pData[0]; // Erstes Byte (0x03 = gedrückt, 0x02 = losgelassen)
         uint8_t keyByte = pData[3];    // Viertes Byte (Index 3) für die Tasten-ID
+        uint8_t subByte = pData[2] & 0x0F;    // zweite Stelle des dritten Bytes (Index 2) wo keyByte nicht unique
 
-        // Erkennung für Taste A (Wertebereich 0xEE bis 0xF0)
-        if (keyByte >= 0xEE && keyByte <= 0xF0) {
+        // Erkennung für Taste A (Wertebereich 0xEE bis 0xF0 und Sub 04)
+        if (keyByte >= 0xEE && keyByte <= 0xF0 && subByte == 0x04) {
             if (statusByte == 0x03) {
                 Serial.println("A GEDRÜCKT");
             } else if (statusByte == 0x02) {
@@ -94,6 +95,22 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
                 Serial.println("B GEDRÜCKT");
             } else if (statusByte == 0x02) {
                 Serial.println("B LOSGELASSEN");
+            }
+        }
+        // Erkennung für Taste X (Wertebereich 0xF3 bis 0xF5 und Sub 01)
+        else if (keyByte >= 0xEC && keyByte <= 0xEE && subByte == 0x01) {
+            if (statusByte == 0x03) {
+                Serial.println("X GEDRÜCKT");
+            } else if (statusByte == 0x02) {
+                Serial.println("X LOSGELASSEN");
+            }
+        }
+        // Erkennung für Taste Y (Wertebereich 0xF3 bis 0xF5)
+        else if (keyByte >= 0xF3 && keyByte <= 0xF5) {
+            if (statusByte == 0x03) {
+                Serial.println("Y GEDRÜCKT");
+            } else if (statusByte == 0x02) {
+                Serial.println("Y LOSGELASSEN");
             }
         }
         // Erkennung für Taste left (Wertebereich 0x70 bis 0x72)
@@ -136,12 +153,12 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
                 Serial.println("L LOSGELASSEN");
             }
         }
-        // Erkennung für Taste Y (Wertebereich 0xF3 bis 0xF5)
-        else if (keyByte >= 0xF3 && keyByte <= 0xF5) {
+        // Erkennung für Taste L2 (Wertebereich 0xEF bis 0xF1 und Sub 06)
+        else if (keyByte >= 0xEF && keyByte <= 0xF1 && subByte == 0x06) {
             if (statusByte == 0x03) {
-                Serial.println("Y GEDRÜCKT");
+                Serial.println("L2 GEDRÜCKT");
             } else if (statusByte == 0x02) {
-                Serial.println("Y LOSGELASSEN");
+                Serial.println("L2 LOSGELASSEN");
             }
         }
         // Erkennung für Taste R2 (Wertebereich 0x16 bis 0x18)
