@@ -21,6 +21,8 @@ static boolean doConnect = false;
 static boolean connected = false;
 static BLEAdvertisedDevice* myDevice = nullptr;
 
+static bool yIstGedrueckt = false; // Speichert den aktuellen Zustand von Taste Y
+
 // Sicherheits-Callback: Bestätigt dem Controller die Kopplungsanfrage
 class MySecurityCallbacks : public BLESecurityCallbacks {
   uint32_t onPassKeyRequest() {
@@ -105,12 +107,20 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
                 Serial.println("X LOSGELASSEN");
             }
         }
-        // Erkennung für Taste Y (Wertebereich 0xF3 bis 0xF5)
-        else if (keyByte >= 0xF3 && keyByte <= 0xF5) {
+        // Erkennung für Taste Y (Wertebereich 0xF3 bis 0xF5 und Sub 0D)
+        else if (keyByte >= 0xF3 && keyByte <= 0xF5 && subByte == 0x0D) {
+            // Wir reagieren NUR auf das Aktions-Byte (0x03). 
+            // Das darauffolgende Ruhe-Byte (0x02) ignorieren wir.
             if (statusByte == 0x03) {
-                Serial.println("Y GEDRÜCKT");
-            } else if (statusByte == 0x02) {
-                Serial.println("Y LOSGELASSEN");
+                if (!yIstGedrueckt) {
+                    // Die Taste war vorher nicht gedrückt -> Jetzt wird sie gedrückt!
+                    yIstGedrueckt = true;
+                    Serial.println("Y GEDRÜCKT");
+                } else {
+                    // Die Taste war bereits gedrückt -> Jetzt wird sie losgelassen!
+                    yIstGedrueckt = false;
+                    Serial.println("Y LOSGELASSEN");
+                }
             }
         }
         // Erkennung für Taste left (Wertebereich 0x70 bis 0x72)
