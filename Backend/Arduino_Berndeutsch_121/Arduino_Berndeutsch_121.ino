@@ -43,13 +43,6 @@ const char* version = "wordclock";
 #include <EEPROM.h>
 #include "web_interface.h"
 
-#if defined(ARDUINO_ARCH_ESP32)
-  #include <BLEDevice.h>
-  #include <BLEUtils.h>
-  #include <BLEScan.h>
-  #include <BLEAdvertisedDevice.h>
-#endif
-
 // Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
@@ -394,137 +387,6 @@ int ghostChange = 1;
 static int8_t WordGhost[] = {5, 6, 7, 17, 16, 15, 25, 26, 27, 28, 29, 40, 38, 36, 44, 47, 49, 51, 53, 54, 65, 64, 63, 62, 61, 59, 58, 57, 56, 55, 67, 68, 69, 70, 72, 73, 74, 75, 85, 84, 83, 82, 81, 80, 79, 91, 92, 93, 94, 95, 105, 104, 103, 102, 116, 117, 118, -1};
 static int8_t WordGhostEyes[] = {39, 48, 37, 50, -1};
 bool inGhost = false;
-
-#if defined(ARDUINO_ARCH_ESP32)
-static BLEUUID controllerHidServiceUUID((uint16_t)0x1812);
-static BLEUUID controllerReportCharUUID((uint16_t)0x2A4D);
-
-static bool controllerBleInitialized = false;
-static bool controllerDoConnect = false;
-static bool controllerConnected = false;
-static BLEAdvertisedDevice* controllerDevice = nullptr;
-
-class ControllerSecurityCallbacks : public BLESecurityCallbacks {
-  uint32_t onPassKeyRequest() { return 0; }
-  void onPassKeyNotify(uint32_t) {}
-  bool onSecurityRequest() { return true; }
-  bool onConnectConfirm() { return true; }
-};
-
-class ControllerClientCallbacks : public BLEClientCallbacks {
-  void onConnect(BLEClient*) {
-    Serial.println("-> Controller physisch verbunden.");
-  }
-
-  void onDisconnect(BLEClient*) {
-    controllerConnected = false;
-    Serial.println("-> Controller-Verbindung verloren.");
-  }
-};
-
-static void controllerNotifyCallback(BLERemoteCharacteristic*, uint8_t* pData, size_t length, bool) {
-  Serial.printf("Controller HID-DATA (L=%d): ", length);
-  for (size_t i = 0; i < length; i++) {
-    Serial.printf("%02X ", pData[i]);
-  }
-  Serial.println();
-}
-
-class ControllerAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
-  void onResult(BLEAdvertisedDevice advertisedDevice) {
-    String name = advertisedDevice.getName().c_str();
-    name.toLowerCase();
-
-    if (name.indexOf("q36") >= 0 || name.indexOf("android") >= 0) {
-      Serial.printf("Controller gefunden: %s\n", advertisedDevice.getName().c_str());
-      BLEDevice::getScan()->stop();
-
-      if (controllerDevice != nullptr) {
-        delete controllerDevice;
-      }
-      controllerDevice = new BLEAdvertisedDevice(advertisedDevice);
-      controllerDoConnect = true;
-    }
-  }
-};
-
-void controllerEnsureBleInit() {
-  if (controllerBleInitialized) {
-    return;
-  }
-
-  BLEDevice::init("WordClock-BLE-Host");
-  BLEDevice::setSecurityCallbacks(new ControllerSecurityCallbacks());
-
-  BLESecurity security;
-  security.setAuthenticationMode(ESP_LE_AUTH_BOND);
-  security.setCapability(ESP_IO_CAP_NONE);
-
-  controllerBleInitialized = true;
-}
-
-void controllerStartPairingScan() {
-  controllerEnsureBleInit();
-
-  BLEScan* pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new ControllerAdvertisedDeviceCallbacks());
-  pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99);
-  pBLEScan->setActiveScan(true);
-  pBLEScan->start(15, false);
-}
-
-bool controllerConnectToServer() {
-  if (controllerDevice == nullptr) {
-    return false;
-  }
-
-  BLEClient* pClient = BLEDevice::createClient();
-  pClient->setClientCallbacks(new ControllerClientCallbacks());
-
-  if (!pClient->connect(controllerDevice)) {
-    Serial.println("Controller-Verbindung fehlgeschlagen.");
-    delete controllerDevice;
-    controllerDevice = nullptr;
-    return false;
-  }
-
-  pClient->setMTU(40);
-  delay(2000);
-
-  int activeChannels = 0;
-  auto services = pClient->getServices();
-  for (auto servicePair : *services) {
-    BLERemoteService* pService = servicePair.second;
-    if (pService->getUUID().equals(controllerHidServiceUUID) || true) {
-      auto characteristics = pService->getCharacteristics();
-      for (auto charPair : *characteristics) {
-        BLERemoteCharacteristic* pChara = charPair.second;
-        if (pChara->getUUID().equals(controllerReportCharUUID) && pChara->canNotify()) {
-          pChara->registerForNotify(controllerNotifyCallback);
-
-          BLERemoteDescriptor* pDec = pChara->getDescriptor(BLEUUID((uint16_t)0x2902));
-          if (pDec != nullptr) {
-            uint8_t val[] = {0x01, 0x00};
-            pDec->writeValue(val, 2, true);
-          }
-          Serial.printf("-> Controller-HID-Kanal aktiv (Handle: 0x%02X)\n", pChara->getHandle());
-          activeChannels++;
-        }
-      }
-    }
-  }
-
-  delete controllerDevice;
-  controllerDevice = nullptr;
-
-  controllerConnected = activeChannels > 0;
-  if (controllerConnected) {
-    Serial.println("Controller-Pairing abgeschlossen und Kanal aktiv.");
-  }
-  return controllerConnected;
-}
-#endif
 
 /**
  * Runs through all pixels
@@ -1519,13 +1381,6 @@ void setup() {
  * Listen for requests over the web interface and display current time in a loop
  */
 void loop() {
-#if defined(ARDUINO_ARCH_ESP32)
-  if (controllerDoConnect) {
-    controllerConnectToServer();
-    controllerDoConnect = false;
-  }
-#endif
-
   WiFiClient client = server.available();   // Listen for incoming clients
   webSocket.loop();
   if (client) {                             // If a new client connects,
@@ -1667,20 +1522,6 @@ void loop() {
               client.println(F("}"));
             } else if (header.indexOf("pair_controller") >= 0) {
               // Pairing bluetooth controller
-#if defined(ARDUINO_ARCH_ESP32)
-              controllerStartPairingScan();
-              client.println(F("HTTP/1.1 200 OK"));
-              client.println(F("Content-type:application/json"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(F("{\"status\":\"pairing_started\"}"));
-#else
-              client.println(F("HTTP/1.1 501 Not Implemented"));
-              client.println(F("Content-type:application/json"));
-              client.println(F("Connection: close"));
-              client.println();
-              client.println(F("{\"status\":\"pairing_not_supported_on_this_board\"}"));
-#endif
             } else if (header.indexOf("update_params") >= 0) {
               // Get new params from client:
               const char *url = header.c_str();
