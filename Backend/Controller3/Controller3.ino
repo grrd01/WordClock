@@ -34,7 +34,11 @@ bool findQ36Address(std::string &addrOut) {
   scan->setInterval(45);
   scan->setWindow(15);
 
-  NimBLEScanResults results = scan->start(3, false);
+  if (!scan->start(3, false)) {
+    return false;
+  }
+
+  NimBLEScanResults results = scan->getResults();
   for (int i = 0; i < results.getCount(); ++i) {
     const NimBLEAdvertisedDevice *d = results.getDevice(i);
 
