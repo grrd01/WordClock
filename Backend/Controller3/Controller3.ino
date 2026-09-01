@@ -28,7 +28,7 @@ void notifyCb(NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isN
   Serial.println();
 }
 
-bool findQ36Address(std::string &addrOut) {
+bool findQ36Address(NimBLEAddress &addrOut) {
   NimBLEScan *scan = NimBLEDevice::getScan();
   scan->setActiveScan(true);
   scan->setInterval(45);
@@ -43,7 +43,7 @@ bool findQ36Address(std::string &addrOut) {
     const NimBLEAdvertisedDevice *d = results.getDevice(i);
 
     if (looksLikeQ36(d->getName())) {
-      addrOut = d->getAddress().toString();
+      addrOut = d->getAddress();
       scan->clearResults();
       return true;
     }
@@ -53,12 +53,11 @@ bool findQ36Address(std::string &addrOut) {
   return false;
 }
 
-bool connectAndSubscribe(const std::string &addrText) {
+bool connectAndSubscribe(const NimBLEAddress &addr) {
   if (gClient == nullptr) {
     gClient = NimBLEDevice::createClient();
   }
 
-  NimBLEAddress addr(addrText);
   Serial.print("Connecting to ");
   Serial.println(addr.toString().c_str());
 
@@ -114,7 +113,7 @@ void loop() {
     return;
   }
 
-  std::string addr;
+  NimBLEAddress addr;
   if (!findQ36Address(addr)) {
     Serial.println("Q36 not found, rescanning...");
     delay(500);
