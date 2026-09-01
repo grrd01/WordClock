@@ -1,141 +1,113 @@
 #include <NimBLEDevice.h>
 
-static const char *TARGET_A = "ShanWan";
-static const char *TARGET_B = "Q36";
+static NimBLEUUID hidServiceUUID((uint16_t)0x1812);
+static NimBLEUUID reportCharUUID((uint16_t)0x2A4D);
 
-NimBLEClient *gClient = nullptr;
+static NimBLEClient* pClient = nullptr;
+static bool doConnect = false;
+static NimBLEAdvertisedDevice* targetDevice = nullptr;
 
-bool looksLikeQ36(const std::string &name) {
-  return (!name.empty() &&
-          (name.find(TARGET_A) != std::string::npos ||
-           name.find(TARGET_B) != std::string::npos));
-}
+class ClientCallbacks : public NimBLEClientCallbacks {
+  void onConnect(NimBLEClient* pClient) override {
+    Serial.println(">> Verbunden!");
+  }
 
-void notifyCb(NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isNotify) {
-  Serial.print(isNotify ? "N " : "I ");
-  Serial.print(c->getUUID().toString().c_str());
-  Serial.print(" : ");
+  void onDisconnect(NimBLEClient* pClient, int reason) override {
+    Serial.printf(">> Verbindung getrennt! Reason: %d\n", reason);
+    NimBLEDevice::getScan()->start(0, false);
+  }
 
-  for (size_t i = 0; i < len; ++i) {
-    if (data[i] < 16) {
-      Serial.print('0');
+  void onAuthenticationComplete(NimBLEConnInfo& connInfo) override {
+    if (connInfo.isEncrypted()) {
+      Serial.println(">> Security/Pairing ERFOLGREICH!");
+    } else {
+      Serial.println(">> Security/Pairing FEHLGESCHLAGEN!");
     }
-    Serial.print(data[i], HEX);
-    if (i + 1 < len) {
-      Serial.print(' ');
-    }
+  }
+};
+
+void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+  Serial.print("Data [");
+  Serial.print(length);
+  Serial.print("]: ");
+  for (size_t i = 0; i < length; i++) {
+    if (pData[i] < 0x10) Serial.print("0");
+    Serial.print(pData[i], HEX);
+    Serial.print(" ");
   }
   Serial.println();
 }
 
-bool findQ36Address(NimBLEAddress &addrOut) {
-  NimBLEScan *scan = NimBLEDevice::getScan();
-  scan->setActiveScan(true);
-  scan->setInterval(100);
-  scan->setWindow(90);
-
-  if (!scan->start(5, false)) {
-    return false;
-  }
-
-  NimBLEScanResults results = scan->getResults();
-  Serial.print("Scan results: ");
-  Serial.println(results.getCount());
-
-  for (int i = 0; i < results.getCount(); ++i) {
-    const NimBLEAdvertisedDevice *d = results.getDevice(i);
-    const std::string name = d->getName();
-    const bool nameMatch = looksLikeQ36(name);
-    const bool hidMatch = d->isAdvertisingService(NimBLEUUID((uint16_t)0x1812));
-
-    if (!name.empty()) {
-      Serial.print("Seen: ");
-      Serial.print(name.c_str());
-      Serial.print(" @ ");
-      Serial.println(d->getAddress().toString().c_str());
-    }
-
-    if (nameMatch || hidMatch) {
-      Serial.print("Candidate found: ");
-      Serial.println(d->getAddress().toString().c_str());
-      addrOut = d->getAddress();
-      scan->clearResults();
-      return true;
+class ScanCallbacks : public NimBLEScanCallbacks {
+  void onDiscovered(const NimBLEAdvertisedDevice* advertisedDevice) override {
+    if (advertisedDevice->isAdvertisingService(hidServiceUUID) || 
+        advertisedDevice->getName().find("ShanWan") != std::string::npos ||
+        advertisedDevice->getName().find("Q36") != std::string::npos) {
+      
+      Serial.printf("Controller gefunden: %s [%s]\n", 
+                    advertisedDevice->getName().c_str(), 
+                    advertisedDevice->getAddress().toString().c_str());
+      
+      NimBLEDevice::getScan()->stop();
+      targetDevice = const_cast<NimBLEAdvertisedDevice*>(advertisedDevice);
+      doConnect = true;
     }
   }
-
-  scan->clearResults();
-  return false;
-}
-
-bool connectAndSubscribe(const NimBLEAddress &addr) {
-  if (gClient == nullptr) {
-    gClient = NimBLEDevice::createClient();
-  }
-
-  Serial.print("Connecting to ");
-  Serial.println(addr.toString().c_str());
-
-  if (!gClient->connect(addr)) {
-    Serial.println("Connect failed");
-    return false;
-  }
-
-  NimBLERemoteService *hid = gClient->getService(NimBLEUUID((uint16_t)0x1812));
-  if (hid == nullptr) {
-    Serial.println("HID service 0x1812 not found");
-    gClient->disconnect();
-    return false;
-  }
-
-  NimBLERemoteCharacteristic *report = hid->getCharacteristic(NimBLEUUID((uint16_t)0x2A4D));
-  if (report == nullptr) {
-    Serial.println("Report char 0x2A4D not found");
-    gClient->disconnect();
-    return false;
-  }
-
-  bool subscribed = false;
-  if (report->canNotify()) {
-    subscribed = report->subscribe(true, notifyCb);
-  } else if (report->canIndicate()) {
-    subscribed = report->subscribe(false, notifyCb);
-  }
-
-  if (!subscribed) {
-    Serial.println("Subscribe failed");
-    gClient->disconnect();
-    return false;
-  }
-
-  Serial.println("Connected. Waiting for raw HID reports...");
-  return true;
-}
+};
 
 void setup() {
   Serial.begin(115200);
-  delay(800);
+  delay(1000);
+  Serial.println("Suche ShanWan Q36 Controller...");
 
-  Serial.println();
-  Serial.println("Q36 minimal BLE host (ESP32-C6)");
+  NimBLEDevice::init("ESP32C6_HID_Host");
+  
+  // Bonding und No Input/Output für BLE HID Gamepad
+  NimBLEDevice::setSecurityAuth(true, true, true);
+  NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
 
-  NimBLEDevice::init("");
+  NimBLEScan* pScan = NimBLEDevice::getScan();
+  pScan->setScanCallbacks(new ScanCallbacks());
+  pScan->setActiveScan(true);
+  pScan->start(0, false);
 }
 
 void loop() {
-  if (gClient != nullptr && gClient->isConnected()) {
-    delay(20);
-    return;
-  }
+  if (doConnect) {
+    doConnect = false;
+    pClient = NimBLEDevice::createClient();
+    pClient->setClientCallbacks(new ClientCallbacks());
 
-  NimBLEAddress addr;
-  if (!findQ36Address(addr)) {
-    Serial.println("Q36 not found, rescanning...");
-    delay(500);
-    return;
-  }
+    if (pClient->connect(targetDevice)) {
+      Serial.println(">> Starte Encryption...");
+      
+      // NimBLE v2.x: Security über ConnHandle starten
+      NimBLEDevice::startSecurity(pClient->getConnHandle());
 
-  connectAndSubscribe(addr);
-  delay(500);
+      int retry = 0;
+      while (!pClient->getConnInfo().isEncrypted() && retry < 30) {
+        delay(200);
+        retry++;
+      }
+
+      BLERemoteService* pService = pClient->getService(hidServiceUUID);
+      if (pService) {
+        for (auto pChar : pService->getCharacteristics()) {
+          if (pChar->getUUID().equals(reportCharUUID)) {
+            if (pChar->canNotify() || pChar->canIndicate()) {
+              if (pChar->subscribe(true, notifyCB)) {
+                Serial.println(">> Subscribed fuer Button-Data!");
+              }
+            }
+          }
+        }
+      } else {
+        Serial.println(">> HID Service nicht gefunden!");
+      }
+    } else {
+      Serial.println(">> Verbindung fehlgeschlagen.");
+      NimBLEDevice::getScan()->start(0, false);
+    }
+  }
+  delay(10);
 }
-
