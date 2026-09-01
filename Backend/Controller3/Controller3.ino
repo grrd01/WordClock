@@ -31,18 +31,33 @@ void notifyCb(NimBLERemoteCharacteristic *c, uint8_t *data, size_t len, bool isN
 bool findQ36Address(NimBLEAddress &addrOut) {
   NimBLEScan *scan = NimBLEDevice::getScan();
   scan->setActiveScan(true);
-  scan->setInterval(45);
-  scan->setWindow(15);
+  scan->setInterval(100);
+  scan->setWindow(90);
 
-  if (!scan->start(3, false)) {
+  if (!scan->start(5, false)) {
     return false;
   }
 
   NimBLEScanResults results = scan->getResults();
+  Serial.print("Scan results: ");
+  Serial.println(results.getCount());
+
   for (int i = 0; i < results.getCount(); ++i) {
     const NimBLEAdvertisedDevice *d = results.getDevice(i);
+    const std::string name = d->getName();
+    const bool nameMatch = looksLikeQ36(name);
+    const bool hidMatch = d->isAdvertisingService(NimBLEUUID((uint16_t)0x1812));
 
-    if (looksLikeQ36(d->getName())) {
+    if (!name.empty()) {
+      Serial.print("Seen: ");
+      Serial.print(name.c_str());
+      Serial.print(" @ ");
+      Serial.println(d->getAddress().toString().c_str());
+    }
+
+    if (nameMatch || hidMatch) {
+      Serial.print("Candidate found: ");
+      Serial.println(d->getAddress().toString().c_str());
       addrOut = d->getAddress();
       scan->clearResults();
       return true;
