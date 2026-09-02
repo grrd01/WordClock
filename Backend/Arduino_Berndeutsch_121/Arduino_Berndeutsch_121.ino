@@ -1,6 +1,6 @@
 /////////////////////////////////////////////
 //
-// LOLIN (WEMOS) D1 mini Lite (ESP8266) Wordclock Program
+// Wordclock Program for Wemos D1 Mini (ESP8266) or XIAO ESP32C6
 // Based on sripts and snippets from:
 // Rui Santos http://randomnerdtutorials.com
 // neotrace https://www.instructables.com/id/WORK-IN-PROGRESS-Ribba-Word-Clock-With-Wemos-D1-Mi/
@@ -8,6 +8,8 @@
 //
 // Kurt Meister, 2018-12-24 | Edit: 2023-04-29
 // Thanks to Manuel Meister for refactoring and adding automated summertime conversion.
+//
+// To compile, choose Tools - Partition Scheme - Huge APP (3MB No OTA/1MB SPIFFS) 
 //
 // Gérard Tyedmers, 2024-01-15 
 // Web-Interface added (http://wordclock.local/)
