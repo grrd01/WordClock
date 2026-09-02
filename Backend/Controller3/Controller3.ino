@@ -1,3 +1,9 @@
+/*
+ * ==================================================================================
+ * ShanWan Q36 HID-Mode Decoder (Für "Q36 for Android" Modus)
+ * Controller im D-Modus pairen
+ * ==================================================================================
+ */
 #include <NimBLEDevice.h>
 
 static NimBLEClient* pClient = nullptr;
