@@ -12,7 +12,8 @@
 // To compile, choose Tools - Partition Scheme - Huge APP (3MB No OTA/1MB SPIFFS) 
 //
 // Gérard Tyedmers, 2024-01-15 
-// Web-Interface added (http://wordclock.local/)
+// - Web-Interface added (http://wordclock.local/)
+// - ESP32-Support added
 //
 /////////////////////////////////////////////
 
@@ -23,6 +24,8 @@ const char* version = "wordclockxs";
 #define USE_CONTROLLER 1
 
 // ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
+// ToDo: nach Games kommt zuerst veraltete Zeitangabe
+// ToDo: neues Tetris beginnt mit GameOver, wenn vorher Tetris kurz vor schluss abgebrochen wurde
 
 #include <Arduino.h>
 
@@ -1394,7 +1397,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
 
   // 1. Tasten losgelassen
   if (dpad == 0xFF && btnMain == 0x00 && btnSub == 0x00) {
-    // Serial.println("Taste losgelassen");
+    // Serial.println(F("Taste losgelassen"));
     return;
   }
 
@@ -1402,7 +1405,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
   if (dpad != 0xFF) {
     switch (dpad) {
       case 0x00: 
-        // Serial.println("Taste UP gedrueckt"); 
+        // Serial.println(F("Taste UP gedrueckt")); 
         if (inSnake) {
           snakePrevDir = snakeDir;
           snakeDir = "up";
@@ -1411,7 +1414,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         }
         return;
       case 0x02: 
-        // Serial.println("Taste RIGHT gedrueckt"); 
+        // Serial.println(F("Taste RIGHT gedrueckt")); 
         if (inSnake) {
           snakePrevDir = snakeDir;
           snakeDir ="right";
@@ -1420,7 +1423,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         }
         return;
       case 0x04: 
-        // Serial.println("Taste DOWN gedrueckt"); 
+        // Serial.println(F("Taste DOWN gedrueckt")); 
         if (inSnake) {
           snakePrevDir = snakeDir;
           snakeDir = "down";
@@ -1429,7 +1432,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         }
         return;
       case 0x06: 
-        // Serial.println("Taste LEFT gedrueckt"); 
+        // Serial.println(F("Taste LEFT gedrueckt")); 
         if (inSnake) {
           snakePrevDir = snakeDir;
           snakeDir = "left";
@@ -1443,31 +1446,31 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
   // 3. Haupt-Buttons (A, B, X, Y, L, R)
   switch (btnMain) {
     case 0x01: 
-      // Serial.println("Taste A gedrueckt"); 
+      // Serial.println(F("Taste A gedrueckt")); 
       if (inTetris) {
         tetrisRotateLeft();
       }
       return;
     case 0x02: 
-      // Serial.println("Taste B gedrueckt"); 
+      // Serial.println(F("Taste B gedrueckt")); 
       if (inTetris) {
         tetrisRotateRight();
       }
       return;
     case 0x08: 
-      // Serial.println("Taste X gedrueckt"); 
+      // Serial.println(F("Taste X gedrueckt")); 
       return;
     case 0x10: 
-      Serial.println("Taste Y gedrueckt"); 
+      // Serial.println(F("Taste Y gedrueckt")); 
       return;
     case 0x40: 
-      // Serial.println("Taste L gedrueckt"); 
+      // Serial.println(F("Taste L gedrueckt")); 
       if (inTetris) {
         tetrisRotateLeft();
       }
       return;
     case 0x80: 
-      // Serial.println("Taste R gedrueckt"); 
+      // Serial.println(F("Taste R gedrueckt")); 
       if (inTetris) {
         tetrisRotateRight();
       }
@@ -1477,13 +1480,13 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
   // 4. Schulter- & Zusatz-Buttons (L2, R2, SL, SR)
   switch (btnSub) {
     case 0x01: 
-      // Serial.println("Taste L2 gedrueckt"); 
+      // Serial.println(F("Taste L2 gedrueckt")); 
       return;
     case 0x02: 
-      // Serial.println("Taste R2 gedrueckt"); 
+      // Serial.println(F("Taste R2 gedrueckt")); 
       return;
     case 0x04: 
-      // Serial.println("Taste SL gedrueckt"); 
+      // Serial.println(F("Taste SL gedrueckt")); 
       if (inSnake) {
         inSnake = false;
         lastMinuteWordClock = 61;
@@ -1492,7 +1495,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       }
       return;
     case 0x08: 
-      // Serial.println("Taste SR gedrueckt"); 
+      // Serial.println(F("Taste SR gedrueckt")); 
       if (inTetris) {
         inTetris = false;
         lastMinuteWordClock = 61;
@@ -1508,21 +1511,21 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
 
 class ClientCallbacks : public NimBLEClientCallbacks {
   void onConnect(NimBLEClient* pClient) override {
-    Serial.println(">> Verbunden!");
+    // Serial.println(F(">> Verbunden!"));
   }
 
   void onDisconnect(NimBLEClient* pClient, int reason) override {
-    Serial.printf(">> Verbindung getrennt! Reason: %d\n", reason);
+    // Serial.printf(">> Verbindung getrennt! Reason: %d\n", reason);
     startDiscovery = false;
     NimBLEDevice::getScan()->start(0, false);
   }
 
   void onAuthenticationComplete(NimBLEConnInfo& connInfo) override {
     if (connInfo.isEncrypted()) {
-      Serial.println(">> Security/Pairing ERFOLGREICH! Starte Service-Discovery...");
+      Serial.println(F(">> Security/Pairing ERFOLGREICH! Starte Service-Discovery..."));
       startDiscovery = true; // Signalisiere Hauptschleife: Jetzt sicher abfragen!
     } else {
-      Serial.println(">> Security/Pairing FEHLGESCHLAGEN!");
+      Serial.println(F(">> Security/Pairing FEHLGESCHLAGEN!"));
     }
   }
 };
@@ -1532,9 +1535,9 @@ class ScanCallbacks : public NimBLEScanCallbacks {
     if (advertisedDevice->getName().find("ShanWan") != std::string::npos ||
         advertisedDevice->getName().find("Q36") != std::string::npos) {
 
-      Serial.printf("Controller gefunden: %s [%s]\n",
-                    advertisedDevice->getName().c_str(),
-                    advertisedDevice->getAddress().toString().c_str());
+      // Serial.printf("Controller gefunden: %s [%s]\n",
+      //              advertisedDevice->getName().c_str(),
+      //              advertisedDevice->getAddress().toString().c_str());
 
       NimBLEDevice::getScan()->stop();
       targetDevice = const_cast<NimBLEAdvertisedDevice*>(advertisedDevice);
@@ -2081,7 +2084,10 @@ void loop() {
       }
       if (snakeNext == snakeSnack) {
         // found snack
-        snakeLen++;
+        if (snakeLen < 120) {
+          snakeLen++;
+        }
+        
         if (snakeLen - 3 > snakeHighScore) {
           snakeHighScore = snakeLen - 3;
         }
