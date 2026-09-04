@@ -317,12 +317,13 @@
 
     /**
      * Hide the settings-page and return to clock-page
-     */
+     
     function fPairController() {
         let xhr = new XMLHttpRequest();
         xhr.open("GET", "/pair_controller", true);
         xhr.send();
     }
+    */
 
     /**
      * Hide the controls-page and return to settings-page

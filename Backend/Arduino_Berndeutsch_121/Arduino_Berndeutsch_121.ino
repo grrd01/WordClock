@@ -17,7 +17,7 @@
 /////////////////////////////////////////////
 
 // set name for access-point and mdns-server
-const char* version = "wordclock";
+const char* version = "wordclockxs";
 // define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
 #define USE_TOUCH_SENSOR 0
 #define USE_CONTROLLER 1
@@ -228,7 +228,6 @@ bool inSnake = false;
 
 // Tetris variables
 uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index
-int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
 uint8_t tetrisScore = 0;
 uint8_t tetrisHighScore = 0;
 bool inTetris = false;
@@ -990,6 +989,40 @@ void sendParamsToClients() {
   webSocket.broadcastTXT(msg);
 }
 
+void startTetris() {
+  // Tetris start
+  inTetris = true;
+  inMastermind = false;
+  inWordGuessr = false;
+  inSnake = false;
+  blank();
+  pixels.show();
+  handleRestart();
+  sendScoreToClients(0, tetrisHighScore);
+}
+
+void startSnake() {
+  // Snake start
+  inSnake = true;
+  inMastermind = false;
+  inWordGuessr = false;
+  inTetris = false;
+  snake[0] = 49;
+  snake[1] = 60;
+  snake[2] = 71;
+  snake[3] = -1;
+  snakeLen = 3;
+  snakeDir = "";
+  snakeNext = -1;
+  snakeSpeed = 650;
+  snakeLastMove = millis();
+  sendScoreToClients(0, snakeHighScore);
+  blank();
+  lightup(snake, Green);
+  setSnack();
+  pixels.show();
+}
+
 /*
  * WebSocket event handler: receive control commands from client
  */
@@ -1002,35 +1035,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
   if (type != WStype_TEXT) return;
   String msg = String((char*)payload);
   if (msg == "tetris") {
-    // Tetris start
-    inTetris = true;
-    inMastermind = false;
-    inWordGuessr = false;
-    inSnake = false;
-    blank();
-    pixels.show();
-    handleRestart();
-    sendScoreToClients(0, tetrisHighScore);
+    startTetris();
   } else if (msg == "snake") {
-    // Snake start
-    inSnake = true;
-    inMastermind = false;
-    inWordGuessr = false;
-    inTetris = false;
-    snake[0] = 49;
-    snake[1] = 60;
-    snake[2] = 71;
-    snake[3] = -1;
-    snakeLen = 3;
-    snakeDir = "";
-    snakeNext = -1;
-    snakeSpeed = 650;
-    snakeLastMove = millis();
-    sendScoreToClients(0, snakeHighScore);
-    blank();
-    lightup(snake, Green);
-    setSnack();
-    pixels.show();
+    startSnake();
   } else if (msg == "stop") {
      // Tetris or Snake exit
     inTetris = false;
@@ -1040,21 +1047,13 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakePrevDir = snakeDir;
     snakeDir = msg;
   } else if (inTetris && msg == "left") {
-    if (!checkCollision(posX - 1, posY, rotation)) { posX--; if(!gameOver) drawBoard(); }
+    tetrisLeft();
   } else if (inTetris && msg == "right") {
-    if (!checkCollision(posX + 1, posY, rotation)) { posX++; if(!gameOver) drawBoard(); }
+    tetrisRight();
   } else if (inTetris && msg == "up") {
-    rotateTetromino();
+    tetrisRotateRight();
   } else if (inTetris && msg == "down") {
-    if (!checkCollision(posX, posY + 1, rotation)) {
-      posY++;
-    } else {
-      placeTetromino();
-      clearLines();
-      spawnTetromino();
-      if (checkCollision(posX, posY, rotation)) gameOver = true;
-    }
-    if (!gameOver) drawBoard();
+    tetrisDown();
   } 
 }
 
@@ -1197,12 +1196,59 @@ void drawBoard() {
   pixels.show();
 }
 
+void tetrisRight() {
+  if (!checkCollision(posX + 1, posY, rotation)) { posX++; if(!gameOver) drawBoard(); }
+}
+void tetrisLeft() {
+  if (!checkCollision(posX - 1, posY, rotation)) { posX--; if(!gameOver) drawBoard(); }
+}
+void tetrisDown() {
+    if (!checkCollision(posX, posY + 1, rotation)) {
+      posY++;
+    } else {
+      placeTetromino();
+      clearLines();
+      spawnTetromino();
+      if (checkCollision(posX, posY, rotation)) gameOver = true;
+    }
+    if (!gameOver) drawBoard();
+}
+
 // Tetris: Rotate tetromino (clockwise)
-void rotateTetromino() {
+void tetrisRotateRight() {
   uint8_t rotated[4][4];
   for (uint8_t i = 0; i < 4; i++) {
     for (uint8_t j = 0; j < 4; j++) {
       rotated[j][3-i] = currentPiece[i][j];
+    }
+  }
+  // Check collision for rotated piece
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      if (rotated[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx < 0 || nx >= 11 || ny >= 11 || (ny >= 0 && board[ny][nx])) {
+          return; // Collision, do not rotate
+        }
+      }
+    }
+  }
+  // Apply rotation
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      currentPiece[i][j] = rotated[i][j];
+    }
+  }
+  drawBoard();
+}
+
+// Tetris: Rotate tetromino (counterclockwise)
+void tetrisRotateLeft() {
+  uint8_t rotated[4][4];
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      rotated[3-j][i] = currentPiece[i][j];
     }
   }
   // Check collision for rotated piece
@@ -1348,40 +1394,116 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
 
   // 1. Tasten losgelassen
   if (dpad == 0xFF && btnMain == 0x00 && btnSub == 0x00) {
-    Serial.println("Taste losgelassen");
+    // Serial.println("Taste losgelassen");
     return;
   }
 
   // 2. Steuerkreuz (D-Pad)
   if (dpad != 0xFF) {
     switch (dpad) {
-      case 0x00: Serial.println("Taste UP gedrueckt"); return;
-      case 0x02: Serial.println("Taste RIGHT gedrueckt"); return;
-      case 0x04: Serial.println("Taste DOWN gedrueckt"); return;
-      case 0x06: Serial.println("Taste LEFT gedrueckt"); return;
+      case 0x00: 
+        // Serial.println("Taste UP gedrueckt"); 
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir = "up";
+        } else if (inTetris) {
+          tetrisRotateRight();
+        }
+        return;
+      case 0x02: 
+        // Serial.println("Taste RIGHT gedrueckt"); 
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir ="right";
+        } else if (inTetris) {
+          tetrisRight();
+        }
+        return;
+      case 0x04: 
+        // Serial.println("Taste DOWN gedrueckt"); 
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir = "down";
+        } else if (inTetris) {
+          tetrisDown();
+        }
+        return;
+      case 0x06: 
+        // Serial.println("Taste LEFT gedrueckt"); 
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir = "left";
+        } else if (inTetris) {
+          tetrisLeft();
+        }
+        return;
     }
   }
 
   // 3. Haupt-Buttons (A, B, X, Y, L, R)
   switch (btnMain) {
-    case 0x01: Serial.println("Taste A gedrueckt"); return;
-    case 0x02: Serial.println("Taste B gedrueckt"); return;
-    case 0x08: Serial.println("Taste X gedrueckt"); return;
-    case 0x10: Serial.println("Taste Y gedrueckt"); return;
-    case 0x40: Serial.println("Taste L gedrueckt"); return;
-    case 0x80: Serial.println("Taste R gedrueckt"); return;
+    case 0x01: 
+      // Serial.println("Taste A gedrueckt"); 
+      if (inTetris) {
+        tetrisRotateLeft();
+      }
+      return;
+    case 0x02: 
+      // Serial.println("Taste B gedrueckt"); 
+      if (inTetris) {
+        tetrisRotateRight();
+      }
+      return;
+    case 0x08: 
+      // Serial.println("Taste X gedrueckt"); 
+      return;
+    case 0x10: 
+      Serial.println("Taste Y gedrueckt"); 
+      return;
+    case 0x40: 
+      // Serial.println("Taste L gedrueckt"); 
+      if (inTetris) {
+        tetrisRotateLeft();
+      }
+      return;
+    case 0x80: 
+      // Serial.println("Taste R gedrueckt"); 
+      if (inTetris) {
+        tetrisRotateRight();
+      }
+      return;
   }
 
   // 4. Schulter- & Zusatz-Buttons (L2, R2, SL, SR)
   switch (btnSub) {
-    case 0x01: Serial.println("Taste L2 gedrueckt"); return;
-    case 0x02: Serial.println("Taste R2 gedrueckt"); return;
-    case 0x04: Serial.println("Taste SL gedrueckt"); return;
-    case 0x08: Serial.println("Taste SR gedrueckt"); return;
+    case 0x01: 
+      // Serial.println("Taste L2 gedrueckt"); 
+      return;
+    case 0x02: 
+      // Serial.println("Taste R2 gedrueckt"); 
+      return;
+    case 0x04: 
+      // Serial.println("Taste SL gedrueckt"); 
+      if (inSnake) {
+        inSnake = false;
+        lastMinuteWordClock = 61;
+      } else {
+        startSnake();
+      }
+      return;
+    case 0x08: 
+      // Serial.println("Taste SR gedrueckt"); 
+      if (inTetris) {
+        inTetris = false;
+        lastMinuteWordClock = 61;
+      } else {
+        startTetris();
+      }
+      return;
   }
 
   // Falls eine unerkannte Kombination gedrueckt wird
-  Serial.printf("Unbekannt: [4]=0x%02X [5]=0x%02X [6]=0x%02X\n", dpad, btnMain, btnSub);
+  // Serial.printf("Unbekannt: [4]=0x%02X [5]=0x%02X [6]=0x%02X\n", dpad, btnMain, btnSub);
 }
 
 class ClientCallbacks : public NimBLEClientCallbacks {
