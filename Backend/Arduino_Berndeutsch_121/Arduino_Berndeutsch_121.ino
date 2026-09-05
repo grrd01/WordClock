@@ -21,6 +21,7 @@
 const char* version = "wordclockxs";
 // define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
 #define USE_TOUCH_SENSOR 0
+// define if a ShanWan Q36 Bluetooth can be paired: Controller switch: 1 = yes, 0 = no
 #define USE_CONTROLLER 1
 
 // ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
@@ -994,13 +995,17 @@ void sendParamsToClients() {
 
 void startTetris() {
   // Tetris start
-  inTetris = true;
+  memset(board, 0, sizeof(board));
+  tetrisScore = 0;
+  gameOver = false;
   inMastermind = false;
   inWordGuessr = false;
   inSnake = false;
   blank();
   pixels.show();
-  handleRestart();
+  spawnTetromino();
+  drawBoard();
+  inTetris = true;
   sendScoreToClients(0, tetrisHighScore);
 }
 
@@ -1045,6 +1050,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
      // Tetris or Snake exit
     inTetris = false;
     inSnake = false;
+    satzneu[0] = -1;
     lastMinuteWordClock = 61;
   } else if (inSnake) {
     snakePrevDir = snakeDir;
@@ -1275,15 +1281,6 @@ void tetrisRotateLeft() {
   drawBoard();
 }
 
-// Tetris: Restart the game
-void handleRestart() {
-  memset(board, 0, sizeof(board));
-  tetrisScore = 0;
-  gameOver = false;
-  spawnTetromino();
-  drawBoard();
-}
-
 /*
  * Wordguessr: find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
  * @param letter the letter to find
@@ -1489,6 +1486,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       // Serial.println(F("Taste SL gedrueckt")); 
       if (inSnake) {
         inSnake = false;
+        satzneu[0] = -1;
         lastMinuteWordClock = 61;
       } else {
         startSnake();
@@ -1498,6 +1496,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       // Serial.println(F("Taste SR gedrueckt")); 
       if (inTetris) {
         inTetris = false;
+        satzneu[0] = -1;
         lastMinuteWordClock = 61;
       } else {
         startTetris();
@@ -2117,6 +2116,7 @@ void loop() {
           EEPROM.commit();
         }
         chase(Red);
+        satzneu[0] = -1;
         inSnake = false;
         lastMinuteWordClock = 61;
       }
@@ -2147,6 +2147,7 @@ void loop() {
         EEPROM.commit();
       }
       chase(Red);
+      satzneu[0] = -1;
       inTetris = false;
       lastMinuteWordClock = 61;
     }

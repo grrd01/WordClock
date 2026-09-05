@@ -278,7 +278,7 @@
     }
 
     /**
-     * Hide the settings-page and return to clock-page
+     * Send current settings to wordclock
      */
     function fUpdateParams() {
         let red = parseInt(color.value.substring(1, 3), 16);
@@ -314,16 +314,6 @@
         fShowPage(pSettings, pControls);
         fSendControls(game);
     }
-
-    /**
-     * Hide the settings-page and return to clock-page
-     
-    function fPairController() {
-        let xhr = new XMLHttpRequest();
-        xhr.open("GET", "/pair_controller", true);
-        xhr.send();
-    }
-    */
 
     /**
      * Hide the controls-page and return to settings-page
@@ -523,7 +513,6 @@
     fEventListener(ElementById("WG"), click, fShowWordGuessr);
     fEventListener(ElementById("xWG"), click, fHideWordGuessr);
     fEventListener(ElementById("cWG"), click, fSendWordGuessr);
-    fEventListener(ElementById("CP"), click, fPairController);
     Array.from(ElementsByClassName("snb")).forEach(function (element) {
         fSetAttribute(element, "d", "M2 2 L9 7 L2 12 Z");
         fEventListener(element, click, function (e) {
