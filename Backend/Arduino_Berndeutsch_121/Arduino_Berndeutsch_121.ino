@@ -1136,7 +1136,7 @@ void placeTetromino() {
 
 // Tetris: Clear full lines and animate
 void clearLines() {
-  for (int8_t y = 10; y >= 0; y--) {
+  for (uint8_t y = 0; y < 11; y++) {
     bool full = true;
     for (uint8_t x = 0; x < 11; x++) {
       if (!board[y][x]) {
@@ -1144,33 +1144,33 @@ void clearLines() {
         break;
       }
     }
-
-    if (!full) continue;
-
-    // Animate line
-    for (uint8_t t = 0; t < 3; t++) {
-      for (uint8_t x = 0; x < 11; x++) pixels.setPixelColor(xyToIndex(x, y), White);
-      pixels.show();
-      delay(80);
-      for (uint8_t x = 0; x < 11; x++) pixels.setPixelColor(xyToIndex(x, y), 0);
-      pixels.show();
-      delay(80);
-    }
-
-    // Remove line and shift everything above down
-    for (int8_t yy = y; yy > 0; yy--) {
-      for (uint8_t x = 0; x < 11; x++) {
-        board[yy][x] = board[yy - 1][x];
+    if (full) {
+      // Animate line
+      for (uint8_t t = 0; t < 3; t++) {
+        for (uint8_t x = 0; x < 11; x++) {
+          pixels.setPixelColor(xyToIndex(x, y), White);
+        }
+        pixels.show();
+        delay(80);
+        for (uint8_t x = 0; x < 11; x++) {
+          pixels.setPixelColor(xyToIndex(x, y), 0);
+        }
+        pixels.show();
+        delay(80);
       }
+      // Remove line and shift down
+      for (uint8_t yy = y; yy > 0; yy--) {
+        for (uint8_t x = 0; x < 11; x++) {
+          board[yy][x] = board[yy-1][x];
+        }
+      }
+      for (uint8_t x = 0; x < 11; x++) board[0][x] = 0;
+      tetrisScore += 1;
+      if (tetrisScore > tetrisHighScore) {
+        tetrisHighScore = tetrisScore;
+      }
+      sendScoreToClients(tetrisScore, tetrisHighScore);
     }
-    for (uint8_t x = 0; x < 11; x++) board[0][x] = 0;
-
-    tetrisScore += 1;
-    if (tetrisScore > tetrisHighScore) tetrisHighScore = tetrisScore;
-    sendScoreToClients(tetrisScore, tetrisHighScore);
-
-    // Wichtig: gleiche y-Position nochmal prüfen (dort ist jetzt neue Zeile)
-    y++;
   }
 }
 
