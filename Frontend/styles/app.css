@@ -197,12 +197,20 @@ path.snb {
     fill-opacity: 0.01;
 }
 
-#pCT.tetris .sn {
+#pCT.tetris .sn, #pCT.tetris .sg {
     display: none;
 }
 
-#pCT.snake .te {
+#pCT.snake .te, #pCT.snake .sg {
     display: none;
+}
+
+#pCT.samegame .te, #pCT.samegame .sn {
+    display: none;
+}
+
+#pCT.samegame #ctrlup {
+    display: block;
 }
 
 .pC {

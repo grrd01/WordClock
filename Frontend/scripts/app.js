@@ -504,6 +504,10 @@
         game = "tetris";
         fShowControls();
     });
+    fEventListener(ElementById("SG"), click, function () {
+        game = "samegame";
+        fShowControls();
+    });
     fEventListener(ElementById("xCT"), click, fHideControls);
     fEventListener(ElementById("xGO"),click, fExitGame);
     fEventListener(ElementById("xGOA"),click, fPlayAgain);
@@ -648,7 +652,7 @@
 
     // generate Titles on Pages (grrd: ewfGRRDcSaj, mascha: qwMASCHAbSd)
     const pageTitleLine1 = "ewfGRRDcSaj";
-    const pageTitles = [pageTitleLine1 + "nWORDuCLOCK", pageTitleLine1 + "mSNAKExlbdk", pageTitleLine1 + "mTETRISlbdk", "ewfGAMEcsajmsnakOVERdk", pageTitleLine1 + "MASTERMINDk", pageTitleLine1 + "WORDbGUESSR"];
+    const pageTitles = [pageTitleLine1 + "nWORDuCLOCK", pageTitleLine1 + "mSNAKExlbdk", pageTitleLine1 + "mTETRISlbdk", pageTitleLine1 + "SAMEGAMEbdk", "ewfGAMEcsajmsnakOVERdk", pageTitleLine1 + "MASTERMINDk", pageTitleLine1 + "WORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
