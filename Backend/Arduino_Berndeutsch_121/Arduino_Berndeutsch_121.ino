@@ -24,9 +24,8 @@ const char* version = "wordclockxs";
 // define if a ShanWan Q36 Bluetooth can be paired: Controller switch: 1 = yes, 0 = no
 #define USE_CONTROLLER 1
 
-// ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
-// ToDo: nach Games kommt zuerst veraltete Zeitangabe
-// ToDo: neues Tetris beginnt mit GameOver, wenn vorher Tetris kurz vor schluss abgebrochen wurde
+// ToDo: Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen 
+// ToDo: Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
 
 #include <Arduino.h>
 
@@ -172,13 +171,9 @@ static int8_t WordIst[] = {3, 4, 5, 6, -1};
 static int8_t WordHalb[] = {39, 38, 37, 36, 35, -1};
 
 static int8_t WordFix[] = {77, 98, 99, -1};
-static int8_t WordWifi[] = {120, -1};
+static int8_t SymbolWifi[] = {120, -1};
 static int8_t WordNach[] = {42, 41, -1};
 static int8_t WordVor[] = {30, 31, 32, -1};
-
-static int8_t SymbolWifi[] = {120, -1};
-
-static int8_t *WordURL[] = {WordFix, WordWifi};
 
 // Stunde
 static int8_t WordStundeEins[] = {44, 45, 46, -1};                     // EIS
@@ -921,7 +916,7 @@ void setupWifi() {
 
   // Displays Wifi Connect screen
   lightup(WordFix, White);
-  lightup(WordWifi, Blue);
+  lightup(SymbolWifi, Blue);
   pixels.show();
 
   // fetches ssid and pass from eeprom and tries to connect
@@ -1511,20 +1506,22 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
 class ClientCallbacks : public NimBLEClientCallbacks {
   void onConnect(NimBLEClient* pClient) override {
     // Serial.println(F(">> Verbunden!"));
+    setWifiStatus(Yellow, 1000);
   }
 
   void onDisconnect(NimBLEClient* pClient, int reason) override {
     // Serial.printf(">> Verbindung getrennt! Reason: %d\n", reason);
+    setWifiStatus(Red, 1000);
     startDiscovery = false;
     NimBLEDevice::getScan()->start(0, false);
   }
 
   void onAuthenticationComplete(NimBLEConnInfo& connInfo) override {
     if (connInfo.isEncrypted()) {
-      Serial.println(F(">> Security/Pairing ERFOLGREICH! Starte Service-Discovery..."));
+      // Serial.println(F(">> Security/Pairing ERFOLGREICH! Starte Service-Discovery..."));
       startDiscovery = true; // Signalisiere Hauptschleife: Jetzt sicher abfragen!
     } else {
-      Serial.println(F(">> Security/Pairing FEHLGESCHLAGEN!"));
+      // Serial.println(F(">> Security/Pairing FEHLGESCHLAGEN!"));
     }
   }
 };
@@ -1920,10 +1917,10 @@ void loop() {
         pClient->setClientCallbacks(new ClientCallbacks());
 
         if (pClient->connect(targetDevice)) {
-          Serial.println(">> Starte Encryption...");
+          // Serial.println(F(">> Starte Encryption..."));
           NimBLEDevice::startSecurity(pClient->getConnHandle());
         } else {
-          Serial.println(">> Verbindung fehlgeschlagen.");
+          // Serial.println(F(">> Verbindung fehlgeschlagen."));
           NimBLEDevice::getScan()->start(0, false);
         }
       }
@@ -1933,28 +1930,30 @@ void loop() {
         startDiscovery = false;
 
         // Kurze Pause, damit der BLE-Stack nach Key-Exchange bereit ist
-        delay(500);
+        delay(300);
+        setWifiStatus(Yellow, 1);
+        delay(200);
+        setWifiStatus(Black, 1);
 
         int totalSubscribed = 0;
-
         for (auto pService : pClient->getServices(true)) {
-          Serial.printf("Durchsuche Service: %s\n", pService->getUUID().toString().c_str());
-
+          // Serial.printf("Durchsuche Service: %s\n", pService->getUUID().toString().c_str());
           for (auto pChar : pService->getCharacteristics(true)) {
             // Prüfe ob Characteristic Benachrichtigungen senden kann
             if (pChar->canNotify() || pChar->canIndicate()) {
               // Explizit auf Subscriben mit Antwort erzwingen
               if (pChar->subscribe(true, notifyCB)) {
                 totalSubscribed++;
-                Serial.printf("   --> ERFOLG: Subscribed auf Char: %s\n", pChar->getUUID().toString().c_str());
+                // Serial.printf("   --> ERFOLG: Subscribed auf Char: %s\n", pChar->getUUID().toString().c_str());
               } else {
-                Serial.printf("   --> FEHLER beim Subscriben auf Char: %s\n", pChar->getUUID().toString().c_str());
+                // Serial.printf("   --> FEHLER beim Subscriben auf Char: %s\n", pChar->getUUID().toString().c_str());
               }
             }
           }
         }
 
-        Serial.printf(">> Fertig! Insgesamt auf %d Kanaele subscribed.\n", totalSubscribed);
+        // Serial.printf(">> Fertig! Insgesamt auf %d Kanaele subscribed.\n", totalSubscribed);
+        setWifiStatus(Green, 1000);
       }
   #endif
 
@@ -2131,9 +2130,7 @@ void loop() {
         placeTetromino();
         clearLines();
         spawnTetromino();
-        if (checkCollision(posX, posY, rotation)) {
-          gameOver = true;
-        }
+        if (checkCollision(posX, posY, rotation)) gameOver = true;
       }
       if (!gameOver) {
         drawBoard();
