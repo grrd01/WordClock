@@ -89,10 +89,10 @@ void setup() {
 }
 
 void setupColors() {
-  gameColors[0] = strip.Color(255, 80, 80);   // red
-  gameColors[1] = strip.Color(255, 210, 0);   // yellow
-  gameColors[2] = strip.Color(0, 210, 120);   // green
-  gameColors[3] = strip.Color(70, 140, 255);  // blue
+  gameColors[0] = strip.Color(100, 0, 5);   // red
+  gameColors[1] = strip.Color(100, 90, 0);   // yellow
+  gameColors[2] = strip.Color(10, 95, 0);   // green
+  gameColors[3] = strip.Color(0, 20, 85);  // blue
 }
 
 String statusToString() {
@@ -327,7 +327,8 @@ void broadcastState() {
 }
 
 void sendStateToClient(uint8_t num) {
-  webSocket.sendTXT(num, buildStateJson());
+  String state = buildStateJson();
+  webSocket.sendTXT(num, state);
 }
 
 void handleState() {
