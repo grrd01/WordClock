@@ -1136,7 +1136,7 @@ void placeTetromino() {
 
 // Tetris: Clear full lines and animate
 void clearLines() {
-  for (uint8_t y = 0; y < 11; y++) {
+  for (int8_t y = 10; y >= 0; y--) {
     bool full = true;
     for (uint8_t x = 0; x < 11; x++) {
       if (!board[y][x]) {
@@ -1144,33 +1144,33 @@ void clearLines() {
         break;
       }
     }
-    if (full) {
-      // Animate line
-      for (uint8_t t = 0; t < 3; t++) {
-        for (uint8_t x = 0; x < 11; x++) {
-          pixels.setPixelColor(xyToIndex(x, y), White);
-        }
-        pixels.show();
-        delay(80);
-        for (uint8_t x = 0; x < 11; x++) {
-          pixels.setPixelColor(xyToIndex(x, y), 0);
-        }
-        pixels.show();
-        delay(80);
-      }
-      // Remove line and shift down
-      for (uint8_t yy = y; yy > 0; yy--) {
-        for (uint8_t x = 0; x < 11; x++) {
-          board[yy][x] = board[yy-1][x];
-        }
-      }
-      for (uint8_t x = 0; x < 11; x++) board[0][x] = 0;
-      tetrisScore += 1;
-      if (tetrisScore > tetrisHighScore) {
-        tetrisHighScore = tetrisScore;
-      }
-      sendScoreToClients(tetrisScore, tetrisHighScore);
+
+    if (!full) continue;
+
+    // Animate line
+    for (uint8_t t = 0; t < 3; t++) {
+      for (uint8_t x = 0; x < 11; x++) pixels.setPixelColor(xyToIndex(x, y), White);
+      pixels.show();
+      delay(80);
+      for (uint8_t x = 0; x < 11; x++) pixels.setPixelColor(xyToIndex(x, y), 0);
+      pixels.show();
+      delay(80);
     }
+
+    // Remove line and shift everything above down
+    for (int8_t yy = y; yy > 0; yy--) {
+      for (uint8_t x = 0; x < 11; x++) {
+        board[yy][x] = board[yy - 1][x];
+      }
+    }
+    for (uint8_t x = 0; x < 11; x++) board[0][x] = 0;
+
+    tetrisScore += 1;
+    if (tetrisScore > tetrisHighScore) tetrisHighScore = tetrisScore;
+    sendScoreToClients(tetrisScore, tetrisHighScore);
+
+    // Wichtig: gleiche y-Position nochmal prüfen (dort ist jetzt neue Zeile)
+    y++;
   }
 }
 
@@ -2109,7 +2109,7 @@ void loop() {
 
       if (snakeNext == -3) {
         // game over
-        webSocket.broadcastTXT("gameOver");
+        webSocket.broadcastTXT("snakeGameOver");
         if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh) || EEPROM.read(eepromAddrSnakeHigh) == 255) {
           EEPROM.write(eepromAddrSnakeHigh, snakeHighScore);
           EEPROM.commit();
@@ -2138,7 +2138,7 @@ void loop() {
     }
     if (gameOver) {
       delay(500);
-      webSocket.broadcastTXT("gameOver");
+      webSocket.broadcastTXT("tetrisGameOver");
       if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh) || EEPROM.read(eepromAddrTetrisHigh) == 255) {
         EEPROM.write(eepromAddrTetrisHigh, tetrisHighScore);
         EEPROM.commit();
