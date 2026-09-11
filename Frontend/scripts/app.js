@@ -576,6 +576,14 @@
                 if ( fClassList(pWordGuessr).contains("show")) {
                     fSendWordGuessr();
                 }
+                if ( fClassList(pControls).contains("samegame")) {
+                    dir = "fire";
+                }
+                break;
+            case " ":
+                if ( fClassList(pControls).contains("samegame")) {
+                    dir = "fire";
+                }
         }
         if (dir && game) {
             fSendControls(dir);

@@ -160,7 +160,7 @@ ul.cl li {
     transition: max-height 0.7s ease-in-out;
 }
 
-circle {
+circle:not(#ctrlfire) {
     pointer-events: none
 }
 
@@ -195,6 +195,14 @@ path.snb {
     stroke-width:1.4;
     fill: #333;
     fill-opacity: 0.01;
+}
+
+rect.snb {
+    stroke-width:5.3;
+    fill: #333;
+    fill-opacity: 0.01;
+    width: 34px;
+    height: 30.5px;
 }
 
 #pCT.tetris .sn, #pCT.tetris .sg {
