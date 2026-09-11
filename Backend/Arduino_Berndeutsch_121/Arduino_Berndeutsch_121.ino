@@ -43,6 +43,9 @@ const char* version = "wordclock";
 #include <EEPROM.h>
 #include "web_interface.h"
 
+#define MATRIX_WIDTH 11
+#define MATRIX_HEIGHT 11
+
 // Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
@@ -214,6 +217,7 @@ unsigned long snakeLastMove = 0;
 bool inSnake = false;
 
 // SameGame variables
+#define COLOR_COUNT 4
 bool inSameGame = false;
 enum GameStatus {
   STATUS_PLAYING,
@@ -221,8 +225,6 @@ enum GameStatus {
   STATUS_STUCK
 };
 
-uint8_t board[MATRIX_HEIGHT][MATRIX_WIDTH] = {0};
-uint32_t gameColors[COLOR_COUNT];
 GameStatus gameStatus = STATUS_PLAYING;
 int score = 0;
 int movesMade = 0;
@@ -232,14 +234,13 @@ bool cursorBlinkVisible = true;
 unsigned long lastBlinkToggle = 0;
 const unsigned long blinkInterval = 350;
 
-String statusToString();
 bool boardIsEmpty();
 bool hasPossibleMove();
 int collectGroup(int startX, int startY, int groupX[], int groupY[]);
 bool inBounds(int x, int y);
 
 // Tetris variables
-uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index
+uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index, shared with SameGame
 int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
 uint8_t tetrisScore = 0;
 uint8_t tetrisHighScore = 0;
@@ -1368,19 +1369,19 @@ void startSameGame() {
 
 // SameGame: Update game status based on current board state
 void drawSameGameBoard() {
-  strip.clear();
+  pixels.clear();
   for (int y = 0; y < MATRIX_HEIGHT; y++) {
 	for (int x = 0; x < MATRIX_WIDTH; x++) {
 	  uint8_t colorIndex = board[y][x];
 	  if (colorIndex > 0) {
-		strip.setPixelColor(xyToIndex(x, y), gameColors[colorIndex - 1]);
+		pixels.setPixelColor(xyToIndex(x, y), GameColors[colorIndex - 1]);
 	  }
 	}
   }
   if (cursorBlinkVisible && inBounds(cursorX, cursorY)) {
-  strip.setPixelColor(xyToIndex(cursorX, cursorY), strip.Color(255, 255, 255));
+  pixels.setPixelColor(xyToIndex(cursorX, cursorY), pixels.Color(255, 255, 255));
   }
-  strip.show();
+  pixels.show();
 }
 
 // SameGame: Collect all connected blocks of the same color starting from (startX, startY)
@@ -1390,8 +1391,8 @@ int collectGroup(int startX, int startY, int groupX[], int groupY[]) {
   }
 
   bool visited[MATRIX_HEIGHT][MATRIX_WIDTH] = {false};
-  int queueX[LED_COUNT];
-  int queueY[LED_COUNT];
+  int queueX[numPixels];
+  int queueY[numPixels];
   int head = 0;
   int tail = 0;
   int groupSize = 0;
@@ -1480,14 +1481,25 @@ void collapseColumns() {
   }
 }
 
+// SameGame: Update game status based on current board state
+void updateGameStatus() {
+  if (boardIsEmpty()) {
+	gameStatus = STATUS_WON;
+  } else if (!hasPossibleMove()) {
+	gameStatus = STATUS_STUCK;
+  } else {
+	gameStatus = STATUS_PLAYING;
+  }
+}
+
 // SameGame: Remove group of same color blocks at (x, y)
 bool removeGroupAt(int x, int y) {
   if (!inBounds(x, y) || board[y][x] == 0 || gameStatus != STATUS_PLAYING) {
 	return false;
   }
 
-  int groupX[LED_COUNT];
-  int groupY[LED_COUNT];
+  int groupX[numPixels];
+  int groupY[numPixels];
   int groupSize = collectGroup(x, y, groupX, groupY);
 
   if (groupSize < 2) {
@@ -1513,6 +1525,17 @@ bool removeGroupAt(int x, int y) {
 void broadcastState() {
   String state = buildStateJson();
   webSocket.broadcastTXT(state);
+}
+
+// SameGame: Convert game status to string representation
+String statusToString() {
+  if (gameStatus == STATUS_WON) {
+	return "won";
+  }
+  if (gameStatus == STATUS_STUCK) {
+	return "stuck";
+  }
+  return "playing";
 }
 
 // SameGame: Build JSON representation of current game state
