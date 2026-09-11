@@ -1653,6 +1653,7 @@ void loop() {
               } else if (inMastermind && mastermindCodeTry[3] == 7) {
                 // exit current mastermind game
                 inMastermind = false;
+                satzneu[0] = -1;
                 lastMinuteWordClock = 61;
               } else if (inMastermind && mastermindCodeTry[3] != 0 && mastermindCodeTry[3] != 7) {
                 // restart a new game if needed
@@ -1734,6 +1735,7 @@ void loop() {
               } else if (header.indexOf("exit") >= 0 && inWordGuessr) {
                 // exit current wordguessr game
                 inWordGuessr = false;
+                satzneu[0] = -1;
                 lastMinuteWordClock = 61;
                 wordGuessrScore = -2;
               } else if (inWordGuessr) {
@@ -2158,8 +2160,8 @@ void loop() {
         }
       pixels.show();
       wordGuessrAlert = 0;
-    } else if (millis() > wordGuessrStart + (wordGuessrHint + 1) * 30000) {
-      // nach 30 Sekunden einen weiteren Buchstaben als Hint grün färben
+    } else if (millis() > wordGuessrStart + (wordGuessrHint + 1) * 20000) {
+      // nach 20 Sekunden einen weiteren Buchstaben als Hint grün färben
       pixels.setPixelColor(wordGuessrActiveWordIndex[wordGuessrHint], Green);
       pixels.show();
       wordGuessrHint++;
