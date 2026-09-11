@@ -1049,9 +1049,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
   } else if (msg == "samegame") {
     // SameGame start
     inSameGame = true;
+    inTetris = false;
     inSnake = false;
     inMastermind = false;
-    inSameGame = false;
     inWordGuessr = false;
     startSameGame();
   } else if (msg == "stop") {
