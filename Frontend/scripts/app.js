@@ -343,12 +343,16 @@
     }
 
     /**
-     * Hide the game-over-page, start a new game
+     * Hide the game-over-page, go back to clock mode
      */
     function fExitGame() {
         fHidePage(pControls, pGameOver);
-        fHideControls();
+        fHidePage(pSettings, pControls);
         fHidePage(pClock, pSettings);
+        setTimeout(function () {
+            fClassList(pControls).remove(game);
+            game = "";
+        }, 700);
     }
 
     /**
