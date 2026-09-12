@@ -17,7 +17,7 @@
 // set name for access-point and mdns-server
 const char* version = "wordclock";
 // define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
-#define USE_TOUCH_SENSOR 0
+#define USE_TOUCH_SENSOR 1
 
 // ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
 
@@ -89,6 +89,8 @@ const uint8_t eepromAddrEffectSpeedLow = 6;   // effectSpeed is int (2 bytes)
 const uint8_t eepromAddrEffectSpeedHigh = 7;
 const uint8_t eepromAddrTetrisHigh = 8;
 const uint8_t eepromAddrSnakeHigh = 9;
+const uint8_t eepromAddrSameGameHighLow = 10;  // sameGameHighScore is int (2 bytes)
+const uint8_t eepromAddrSameGameHighHigh = 11;
 
 // Current time
 unsigned long currentTime = millis();
@@ -226,16 +228,14 @@ enum GameStatus {
 };
 
 GameStatus gameStatus = STATUS_PLAYING;
-int score = 0;
+int sameGameScore = 0;
+int sameGameHighScore = 0;
 int movesMade = 0;
 int cursorX = MATRIX_WIDTH / 2;
 int cursorY = MATRIX_HEIGHT / 2;
 bool cursorBlinkVisible = true;
 unsigned long lastBlinkToggle = 0;
 const unsigned long blinkInterval = 350;
-
-bool boardIsEmpty();
-bool hasPossibleMove();
 int collectGroup(int startX, int startY, int groupX[], int groupY[]);
 bool inBounds(int x, int y);
 
@@ -1355,7 +1355,7 @@ void fillRandomBoard() {
 // SameGame: Start a new game
 void startSameGame() {
   memset(board, 0, sizeof(board));
-  score = 0;
+  sameGameScore = 0;
   movesMade = 0;
   cursorX = MATRIX_WIDTH / 2;
   cursorY = MATRIX_HEIGHT / 2;
@@ -1485,10 +1485,27 @@ void collapseColumns() {
 void updateGameStatus() {
   if (boardIsEmpty()) {
 	gameStatus = STATUS_WON;
+    chase(Green);
+    inSameGame = false;
+    satzneu[0] = -1;
+    lastMinuteWordClock = 61;
   } else if (!hasPossibleMove()) {
 	gameStatus = STATUS_STUCK;
+    chase(Red);
+    inSameGame = false;
+    satzneu[0] = -1;
+    lastMinuteWordClock = 61;
   } else {
 	gameStatus = STATUS_PLAYING;
+  }
+  if (gameStatus == STATUS_WON || gameStatus == STATUS_STUCK) {
+    // Save SameGameHighScore to EEPROM
+    int storedValueInt = (EEPROM.read(eepromAddrSameGameHighHigh) << 8) | EEPROM.read(eepromAddrSameGameHighLow);
+    if (storedValueInt > sameGameHighScore) {
+      EEPROM.write(eepromAddrSameGameHighLow, sameGameHighScore & 0xFF);
+      EEPROM.write(eepromAddrSameGameHighHigh, (sameGameHighScore >> 8) & 0xFF);
+      EEPROM.commit();
+    }
   }
 }
 
@@ -1510,7 +1527,8 @@ bool removeGroupAt(int x, int y) {
 	board[groupY[i]][groupX[i]] = 0;
   }
 
-  score += groupSize * groupSize;
+  sameGameScore += groupSize * groupSize;
+  if (sameGameScore > sameGameHighScore) sameGameHighScore = sameGameScore;
   movesMade++;
 
   applyGravity();
@@ -1530,22 +1548,21 @@ void broadcastState() {
 // SameGame: Convert game status to string representation
 String statusToString() {
   if (gameStatus == STATUS_WON) {
-	return "won";
+	return "gameOverWon";
   }
   if (gameStatus == STATUS_STUCK) {
-	return "stuck";
+	return "gameOverStuck";
   }
   return "playing";
 }
 
 // SameGame: Build JSON representation of current game state
 String buildStateJson() {
-  String json = "{\"score\":" + String(score);
+  String json = "{\"score\":" + String(sameGameScore);
+  json += ",\"high\":" + String(sameGameHighScore);
   json += ",\"moves\":" + String(movesMade);
   json += ",\"status\":\"" + statusToString() + "\"";
-  json += ",\"cursorX\":" + String(cursorX);
-  json += ",\"cursorY\":" + String(cursorY);
-  json += "\"}";
+  json += "}";
   return json;
 }
 
@@ -1694,9 +1711,14 @@ void setup() {
     tetrisHighScore = storedValue;
   }
 
-  int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
-  if (storedEffectSpeed >= 8 && storedEffectSpeed <= 7808) {
-    effectSpeed = storedEffectSpeed;
+  int storedValueInt = (EEPROM.read(eepromAddrSameGameHighHigh) << 8) | EEPROM.read(eepromAddrSameGameHighLow);
+  if (storedValueInt >= 8 && storedValueInt <= 7808) {
+    sameGameHighScore = storedValueInt;
+  }
+
+  storedValueInt = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
+  if (storedValueInt >= 8 && storedValueInt <= 7808) {
+    effectSpeed = storedValueInt;
   }
 
   chase(Green); // run basic screen test and show success
@@ -1879,8 +1901,8 @@ void loop() {
                 effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
               }
               // Save effectSpeed to EEPROM if it changed
-              int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
-              if (storedEffectSpeed != effectSpeed) {
+              int storedValueInt = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
+              if (storedValueInt != effectSpeed) {
                 effectChange = true;
                 EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
                 EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);

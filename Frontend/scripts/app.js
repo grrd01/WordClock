@@ -686,16 +686,23 @@
         // webSocket.onopen = function(){ console.log('webSocket open'); };
         webSocket.onmessage = function(e) {
             if (e.data && e.data.indexOf('score') > 0) {
-                // get score update for snake / tetris
+                // get score update for snake / tetris / samegame
                 let response = JSON.parse(e.data);
                 score = response.score * 10;
                 highscore = response.high * 10;
                 ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
-            if (e.data && e.data.indexOf('gameOver') === 0) {
-                // game over for snake / tetris
+            if (e.data && e.data.indexOf('gameOver') >= 0) {
+                // game over for snake / tetris / samegame
                 ElementById("sGO").innerHTML = score;
                 ElementById("hsGO").innerHTML = highscore;
+                if (score === highscore) {
+                    ElementById("msg").innerHTML = "Bravo! Du hesch e neue High-Score!";
+                } else if (e.data.indexOf('Won') >= 0) {
+                    ElementById("msg").innerHTML = "Bravo! Du hesch gwunne!";
+                } else {
+                    ElementById("msg").innerHTML = "Fertig lustig.";
+                }
                 fShowGameOver();
             }
             if (e.data && e.data.indexOf('effect') > 0) {
