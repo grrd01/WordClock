@@ -17,9 +17,7 @@
 // set name for access-point and mdns-server
 const char* version = "wordclock";
 // define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
-#define USE_TOUCH_SENSOR 1
-
-// ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
+#define USE_TOUCH_SENSOR 0
 
 #include <Arduino.h>
 
@@ -160,13 +158,9 @@ static int8_t WordIst[] = {3, 4, 5, 6, -1};
 static int8_t WordHalb[] = {39, 38, 37, 36, 35, -1};
 
 static int8_t WordFix[] = {77, 98, 99, -1};
-static int8_t WordWifi[] = {120, -1};
+static int8_t SymbolWifi[] = {120, -1};
 static int8_t WordNach[] = {42, 41, -1};
 static int8_t WordVor[] = {30, 31, 32, -1};
-
-static int8_t SymbolWifi[] = {120, -1};
-
-static int8_t *WordURL[] = {WordFix, WordWifi};
 
 // Stunde
 static int8_t WordStundeEins[] = {44, 45, 46, -1};                     // EIS
@@ -230,9 +224,9 @@ enum GameStatus {
 GameStatus gameStatus = STATUS_PLAYING;
 int sameGameScore = 0;
 int sameGameHighScore = 0;
-int movesMade = 0;
-int cursorX = MATRIX_WIDTH / 2;
-int cursorY = MATRIX_HEIGHT / 2;
+uint8_t movesMade = 0;
+uint8_t cursorX = MATRIX_WIDTH / 2;
+uint8_t cursorY = MATRIX_HEIGHT / 2;
 bool cursorBlinkVisible = true;
 unsigned long lastBlinkToggle = 0;
 const unsigned long blinkInterval = 350;
@@ -931,7 +925,7 @@ void setupWifi() {
 
   // Displays Wifi Connect screen
   lightup(WordFix, White);
-  lightup(WordWifi, Blue);
+  lightup(SymbolWifi, Blue);
   pixels.show();
 
   // fetches ssid and pass from eeprom and tries to connect
@@ -1059,6 +1053,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     inTetris = false;
     inSnake = false;
     inSameGame = false;
+    satzneu[0] = -1;
     lastMinuteWordClock = 61;
   } else if (inSnake) {
     snakePrevDir = snakeDir;
@@ -1533,9 +1528,9 @@ bool removeGroupAt(int x, int y) {
 
   applyGravity();
   collapseColumns();
+  drawSameGameBoard();
   updateGameStatus();
 
-  drawSameGameBoard();
   return true;
 }
 
@@ -1759,6 +1754,7 @@ void loop() {
               } else if (inMastermind && mastermindCodeTry[3] == 7) {
                 // exit current mastermind game
                 inMastermind = false;
+                satzneu[0] = -1;
                 lastMinuteWordClock = 61;
               } else if (inMastermind && mastermindCodeTry[3] != 0 && mastermindCodeTry[3] != 7) {
                 // restart a new game if needed
@@ -1841,6 +1837,7 @@ void loop() {
               } else if (header.indexOf("exit") >= 0 && inWordGuessr) {
                 // exit current wordguessr game
                 inWordGuessr = false;
+                satzneu[0] = -1;
                 lastMinuteWordClock = 61;
                 wordGuessrScore = -2;
               } else if (inWordGuessr) {
@@ -2170,6 +2167,7 @@ void loop() {
         }
         chase(Red);
         inSnake = false;
+        satzneu[0] = -1;
         lastMinuteWordClock = 61;
       }
 
@@ -2200,6 +2198,7 @@ void loop() {
       }
       chase(Red);
       inTetris = false;
+      satzneu[0] = -1;
       lastMinuteWordClock = 61;
     }
   } else if (inSameGame) {
