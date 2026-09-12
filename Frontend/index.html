@@ -126,6 +126,10 @@
                     <svg id="MM" class="sb play" viewBox="-2 -1 12 16"/>
                 </li>
                 <li>
+                    <label>SameGame</label>
+                    <svg id="SG" class="sb play" viewBox="-2 -1 12 16"/>
+                </li>
+                <li>
                     <label>Wörtli errate</label>
                     <svg id="WG" class="sb play" viewBox="-2 -1 12 16"/>
                 </li>
@@ -176,6 +180,7 @@
         <div>
             <svg class="t sn" viewBox="5 0 105 25" preserveAspectRatio="xMidYMid slice" role="img"></svg>
             <svg class="t te" viewBox="5 0 105 25" preserveAspectRatio="xMidYMid slice" role="img"></svg>
+            <svg class="t sg" viewBox="5 0 105 25" preserveAspectRatio="xMidYMid slice" role="img"></svg>
         </div>
         <svg id="ctrl" viewBox="0 0 115 110" preserveAspectRatio="xMidYMid slice" role="img">
             <g id="ctrltup" class="snb te" stroke-width="6" data-dir="up" transform="scale(0.8) translate(34,0)">
@@ -187,6 +192,7 @@
             <path id="ctrlright" data-dir="right" class="snb" transform="scale(3.8) translate(20,7.5)"/>
             <path id="ctrldown" data-dir="down" class="snb" transform="scale(3.8) translate(22,19) rotate(90)"/>
             <path id="ctrlleft" data-dir="left" class="snb" transform="scale(3.8) translate(10,21.5) rotate(180)"/>
+            <rect id="ctrlfire" data-dir="fire" class="snb sg" x="40" y="40"/>
         </svg>
     </div>
 
@@ -200,7 +206,7 @@
         <div>
             <svg class="t" viewBox="5 0 105 25" preserveAspectRatio="xMidYMid slice" role="img"></svg>
         </div>
-        <label class="c">Fertig lustig.</label>
+        <label id="msg" class="c"></label>
         <label class="c"><span>Di Score: </span><span id="sGO"></span></label>
         <label class="c"><span>Highscore: </span><span id="hsGO"></span></label>
         <label class="c">Wosch nomau?</label>
@@ -220,7 +226,7 @@
         </div>
         <label  class="c">Hie chasch d Farb useläse:</label>
         <span class="c">
-                <svg class="sb cb" data-num="1"/>
+                <svg class="sb cb g" data-num="1"/>
                 <svg class="sb cb" data-num="2"/>
                 <svg class="sb cb" data-num="3"/>
                 <svg class="sb cb" data-num="4"/>

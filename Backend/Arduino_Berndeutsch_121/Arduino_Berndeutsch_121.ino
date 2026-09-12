@@ -17,7 +17,7 @@
 // set name for access-point and mdns-server
 const char* version = "wordclock";
 // define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
-#define USE_TOUCH_SENSOR 0
+#define USE_TOUCH_SENSOR 1
 
 // ToDo: Power off/on: bei Pulse-Animation kommt zuerst veraltete Zeitangabe
 
@@ -42,6 +42,9 @@ const char* version = "wordclock";
 #include <pgmspace.h>
 #include <EEPROM.h>
 #include "web_interface.h"
+
+#define MATRIX_WIDTH 11
+#define MATRIX_HEIGHT 11
 
 // Set web server port number to 80, WebSocketsServer to 81
 WiFiServer server(80);
@@ -86,6 +89,8 @@ const uint8_t eepromAddrEffectSpeedLow = 6;   // effectSpeed is int (2 bytes)
 const uint8_t eepromAddrEffectSpeedHigh = 7;
 const uint8_t eepromAddrTetrisHigh = 8;
 const uint8_t eepromAddrSnakeHigh = 9;
+const uint8_t eepromAddrSameGameHighLow = 10;  // sameGameHighScore is int (2 bytes)
+const uint8_t eepromAddrSameGameHighHigh = 11;
 
 // Current time
 unsigned long currentTime = millis();
@@ -213,8 +218,29 @@ unsigned long  snakeSpeed;
 unsigned long snakeLastMove = 0;
 bool inSnake = false;
 
+// SameGame variables
+#define COLOR_COUNT 4
+bool inSameGame = false;
+enum GameStatus {
+  STATUS_PLAYING,
+  STATUS_WON,
+  STATUS_STUCK
+};
+
+GameStatus gameStatus = STATUS_PLAYING;
+int sameGameScore = 0;
+int sameGameHighScore = 0;
+int movesMade = 0;
+int cursorX = MATRIX_WIDTH / 2;
+int cursorY = MATRIX_HEIGHT / 2;
+bool cursorBlinkVisible = true;
+unsigned long lastBlinkToggle = 0;
+const unsigned long blinkInterval = 350;
+int collectGroup(int startX, int startY, int groupX[], int groupY[]);
+bool inBounds(int x, int y);
+
 // Tetris variables
-uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index
+uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index, shared with SameGame
 int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
 uint8_t tetrisScore = 0;
 uint8_t tetrisHighScore = 0;
@@ -992,6 +1018,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     // Tetris start
     inTetris = true;
     inMastermind = false;
+    inSameGame = false;
     inWordGuessr = false;
     inSnake = false;
     blank();
@@ -1002,6 +1029,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     // Snake start
     inSnake = true;
     inMastermind = false;
+    inSameGame = false;
     inWordGuessr = false;
     inTetris = false;
     snake[0] = 49;
@@ -1018,10 +1046,19 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     lightup(snake, Green);
     setSnack();
     pixels.show();
+  } else if (msg == "samegame") {
+    // SameGame start
+    inSameGame = true;
+    inTetris = false;
+    inSnake = false;
+    inMastermind = false;
+    inWordGuessr = false;
+    startSameGame();
   } else if (msg == "stop") {
      // Tetris or Snake exit
     inTetris = false;
     inSnake = false;
+    inSameGame = false;
     lastMinuteWordClock = 61;
   } else if (inSnake) {
     snakePrevDir = snakeDir;
@@ -1042,7 +1079,18 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       if (checkCollision(posX, posY, rotation)) gameOver = true;
     }
     if (!gameOver) drawBoard();
-  } 
+  } else if (inSameGame && msg == "left") {
+    moveCursor(-1, 0);
+  } else if (inSameGame && msg == "right") {
+    moveCursor(1, 0);
+  } else if (inSameGame && msg == "up") {
+    moveCursor(0, -1);
+  } else if (inSameGame && msg == "down") {
+    moveCursor(0, 1);
+  } else if (inSameGame && msg == "fire") {
+    removeGroupAt(cursorX, cursorY);
+    broadcastState();
+  }
 }
 
 /*
@@ -1222,6 +1270,303 @@ void handleRestart() {
   drawBoard();
 }
 
+// SameGame: Move Cursor
+void moveCursor(int dx, int dy) {
+  int newX = cursorX + dx;
+  int newY = cursorY + dy;
+
+  if (newX < 0) {
+	newX = 0;
+  } else if (newX >= MATRIX_WIDTH) {
+	newX = MATRIX_WIDTH - 1;
+  }
+
+  if (newY < 0) {
+	newY = 0;
+  } else if (newY >= MATRIX_HEIGHT) {
+	newY = MATRIX_HEIGHT - 1;
+  }
+
+  if (newX == cursorX && newY == cursorY) {
+	return;
+  }
+
+  cursorX = newX;
+  cursorY = newY;
+  cursorBlinkVisible = true;
+  lastBlinkToggle = millis();
+  drawSameGameBoard();
+}
+
+// SameGame: Check if (x, y) is within the board bounds
+bool inBounds(int x, int y) {
+  return x >= 0 && x < MATRIX_WIDTH && y >= 0 && y < MATRIX_HEIGHT;
+}
+
+// SameGame: Check if the board is empty
+bool boardIsEmpty() {
+  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+	for (int x = 0; x < MATRIX_WIDTH; x++) {
+	  if (board[y][x] != 0) {
+		return false;
+	  }
+	}
+  }
+  return true;
+}
+
+// SameGame: Check if there are any possible moves left on the board
+bool hasPossibleMove() {
+  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+	for (int x = 0; x < MATRIX_WIDTH; x++) {
+	  uint8_t color = board[y][x];
+	  if (!color) {
+		continue;
+	  }
+	  if (x + 1 < MATRIX_WIDTH && board[y][x + 1] == color) {
+		return true;
+	  }
+	  if (y + 1 < MATRIX_HEIGHT && board[y + 1][x] == color) {
+		return true;
+	  }
+	}
+  }
+  return false;
+}
+
+// SameGame: Fill the board with random colors, ensuring at least one possible move exists
+void fillRandomBoard() {
+  int attempts = 0;
+  do {
+	for (int y = 0; y < MATRIX_HEIGHT; y++) {
+	  for (int x = 0; x < MATRIX_WIDTH; x++) {
+		board[y][x] = random(1, COLOR_COUNT + 1);
+	  }
+	}
+	attempts++;
+  } while (!hasPossibleMove() && attempts < 64);
+
+  if (!hasPossibleMove()) {
+	board[0][0] = 1;
+	board[0][1] = 1;
+  }
+}
+
+// SameGame: Start a new game
+void startSameGame() {
+  memset(board, 0, sizeof(board));
+  sameGameScore = 0;
+  movesMade = 0;
+  cursorX = MATRIX_WIDTH / 2;
+  cursorY = MATRIX_HEIGHT / 2;
+  cursorBlinkVisible = true;
+  lastBlinkToggle = millis();
+  gameStatus = STATUS_PLAYING;
+  fillRandomBoard();
+  drawSameGameBoard();
+  broadcastState();
+}
+
+// SameGame: Update game status based on current board state
+void drawSameGameBoard() {
+  pixels.clear();
+  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+	for (int x = 0; x < MATRIX_WIDTH; x++) {
+	  uint8_t colorIndex = board[y][x];
+	  if (colorIndex > 0) {
+		pixels.setPixelColor(xyToIndex(x, y), GameColors[colorIndex - 1]);
+	  }
+	}
+  }
+  if (cursorBlinkVisible && inBounds(cursorX, cursorY)) {
+  pixels.setPixelColor(xyToIndex(cursorX, cursorY), pixels.Color(255, 255, 255));
+  }
+  pixels.show();
+}
+
+// SameGame: Collect all connected blocks of the same color starting from (startX, startY)
+int collectGroup(int startX, int startY, int groupX[], int groupY[]) {
+  if (!inBounds(startX, startY) || board[startY][startX] == 0) {
+	return 0;
+  }
+
+  bool visited[MATRIX_HEIGHT][MATRIX_WIDTH] = {false};
+  int queueX[numPixels];
+  int queueY[numPixels];
+  int head = 0;
+  int tail = 0;
+  int groupSize = 0;
+  uint8_t color = board[startY][startX];
+
+  queueX[tail] = startX;
+  queueY[tail] = startY;
+  tail++;
+  visited[startY][startX] = true;
+
+  while (head < tail) {
+	int x = queueX[head];
+	int y = queueY[head];
+	head++;
+
+	groupX[groupSize] = x;
+	groupY[groupSize] = y;
+	groupSize++;
+
+	const int dx[4] = {1, -1, 0, 0};
+	const int dy[4] = {0, 0, 1, -1};
+	for (int i = 0; i < 4; i++) {
+	  int nx = x + dx[i];
+	  int ny = y + dy[i];
+	  if (inBounds(nx, ny) && !visited[ny][nx] && board[ny][nx] == color) {
+		visited[ny][nx] = true;
+		queueX[tail] = nx;
+		queueY[tail] = ny;
+		tail++;
+	  }
+	}
+  }
+
+  return groupSize;
+}
+
+// SameGame: Apply gravity to the board, making blocks fall down
+void applyGravity() {
+  for (int x = 0; x < MATRIX_WIDTH; x++) {
+	int writeY = MATRIX_HEIGHT - 1;
+	for (int y = MATRIX_HEIGHT - 1; y >= 0; y--) {
+	  if (board[y][x] != 0) {
+		board[writeY][x] = board[y][x];
+		if (writeY != y) {
+		  board[y][x] = 0;
+		}
+		writeY--;
+	  }
+	}
+	while (writeY >= 0) {
+	  board[writeY][x] = 0;
+	  writeY--;
+	}
+  }
+}
+
+// SameGame: Collapse empty columns to the left
+void collapseColumns() {
+  int writeX = 0;
+  for (int readX = 0; readX < MATRIX_WIDTH; readX++) {
+	bool columnHasBlocks = false;
+	for (int y = 0; y < MATRIX_HEIGHT; y++) {
+	  if (board[y][readX] != 0) {
+		columnHasBlocks = true;
+		break;
+	  }
+	}
+
+	if (!columnHasBlocks) {
+	  continue;
+	}
+
+	if (writeX != readX) {
+	  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+		board[y][writeX] = board[y][readX];
+		board[y][readX] = 0;
+	  }
+	}
+	writeX++;
+  }
+
+  for (int x = writeX; x < MATRIX_WIDTH; x++) {
+	for (int y = 0; y < MATRIX_HEIGHT; y++) {
+	  board[y][x] = 0;
+	}
+  }
+}
+
+// SameGame: Update game status based on current board state
+void updateGameStatus() {
+  if (boardIsEmpty()) {
+	gameStatus = STATUS_WON;
+    chase(Green);
+    inSameGame = false;
+    satzneu[0] = -1;
+    lastMinuteWordClock = 61;
+  } else if (!hasPossibleMove()) {
+	gameStatus = STATUS_STUCK;
+    chase(Red);
+    inSameGame = false;
+    satzneu[0] = -1;
+    lastMinuteWordClock = 61;
+  } else {
+	gameStatus = STATUS_PLAYING;
+  }
+  if (gameStatus == STATUS_WON || gameStatus == STATUS_STUCK) {
+    // Save SameGameHighScore to EEPROM
+    int storedValueInt = (EEPROM.read(eepromAddrSameGameHighHigh) << 8) | EEPROM.read(eepromAddrSameGameHighLow);
+    if (storedValueInt > sameGameHighScore) {
+      EEPROM.write(eepromAddrSameGameHighLow, sameGameHighScore & 0xFF);
+      EEPROM.write(eepromAddrSameGameHighHigh, (sameGameHighScore >> 8) & 0xFF);
+      EEPROM.commit();
+    }
+  }
+}
+
+// SameGame: Remove group of same color blocks at (x, y)
+bool removeGroupAt(int x, int y) {
+  if (!inBounds(x, y) || board[y][x] == 0 || gameStatus != STATUS_PLAYING) {
+	return false;
+  }
+
+  int groupX[numPixels];
+  int groupY[numPixels];
+  int groupSize = collectGroup(x, y, groupX, groupY);
+
+  if (groupSize < 2) {
+	return false;
+  }
+
+  for (int i = 0; i < groupSize; i++) {
+	board[groupY[i]][groupX[i]] = 0;
+  }
+
+  sameGameScore += groupSize * groupSize;
+  if (sameGameScore > sameGameHighScore) sameGameHighScore = sameGameScore;
+  movesMade++;
+
+  applyGravity();
+  collapseColumns();
+  updateGameStatus();
+
+  drawSameGameBoard();
+  return true;
+}
+
+// SameGame: Broadcast current game state to all connected WebSocket clients
+void broadcastState() {
+  String state = buildStateJson();
+  webSocket.broadcastTXT(state);
+}
+
+// SameGame: Convert game status to string representation
+String statusToString() {
+  if (gameStatus == STATUS_WON) {
+	return "gameOverWon";
+  }
+  if (gameStatus == STATUS_STUCK) {
+	return "gameOverStuck";
+  }
+  return "playing";
+}
+
+// SameGame: Build JSON representation of current game state
+String buildStateJson() {
+  String json = "{\"score\":" + String(sameGameScore);
+  json += ",\"high\":" + String(sameGameHighScore);
+  json += ",\"moves\":" + String(movesMade);
+  json += ",\"status\":\"" + statusToString() + "\"";
+  json += "}";
+  return json;
+}
+
+
 /*
  * Wordguessr: find a random index of a letter in the wordGuessrLetters, return -1 if letter is not in the word
  * @param letter the letter to find
@@ -1295,6 +1640,7 @@ void clearMastermind() {
   inWordGuessr = false;
   inSnake = false;
   inTetris = false;
+  inSameGame = false;
   randomSeed(micros());
   mastermindCode[0] = random(1,7);
   mastermindCode[1] = random(1,7);
@@ -1365,9 +1711,14 @@ void setup() {
     tetrisHighScore = storedValue;
   }
 
-  int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
-  if (storedEffectSpeed >= 8 && storedEffectSpeed <= 7808) {
-    effectSpeed = storedEffectSpeed;
+  int storedValueInt = (EEPROM.read(eepromAddrSameGameHighHigh) << 8) | EEPROM.read(eepromAddrSameGameHighLow);
+  if (storedValueInt >= 8 && storedValueInt <= 7808) {
+    sameGameHighScore = storedValueInt;
+  }
+
+  storedValueInt = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
+  if (storedValueInt >= 8 && storedValueInt <= 7808) {
+    effectSpeed = storedValueInt;
   }
 
   chase(Green); // run basic screen test and show success
@@ -1481,6 +1832,7 @@ void loop() {
                   inWordGuessr = true;
                   inSnake = false;
                   inTetris = false;
+                  inSameGame = false;
                   inMastermind = false;
                   wordGuessrNewGuess();
                   wordGuessrAlert = millis();
@@ -1549,8 +1901,8 @@ void loop() {
                 effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
               }
               // Save effectSpeed to EEPROM if it changed
-              int storedEffectSpeed = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
-              if (storedEffectSpeed != effectSpeed) {
+              int storedValueInt = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
+              if (storedValueInt != effectSpeed) {
                 effectChange = true;
                 EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
                 EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);
@@ -1850,6 +2202,12 @@ void loop() {
       inTetris = false;
       lastMinuteWordClock = 61;
     }
+  } else if (inSameGame) {
+    if (millis() - lastBlinkToggle >= blinkInterval) {
+      lastBlinkToggle = millis();
+      cursorBlinkVisible = !cursorBlinkVisible;
+      drawSameGameBoard();
+    }
   } else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
       // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
@@ -1902,7 +2260,7 @@ void loop() {
     }
   }
 
-  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris) {
+  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris && !inSameGame) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
       getLocalTime();
       displayTime();

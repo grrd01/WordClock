@@ -504,6 +504,10 @@
         game = "tetris";
         fShowControls();
     });
+    fEventListener(ElementById("SG"), click, function () {
+        game = "samegame";
+        fShowControls();
+    });
     fEventListener(ElementById("xCT"), click, fHideControls);
     fEventListener(ElementById("xGO"),click, fExitGame);
     fEventListener(ElementById("xGOA"),click, fPlayAgain);
@@ -571,6 +575,14 @@
             case "Enter":
                 if ( fClassList(pWordGuessr).contains("show")) {
                     fSendWordGuessr();
+                }
+                if ( fClassList(pControls).contains("samegame")) {
+                    dir = "fire";
+                }
+                break;
+            case " ":
+                if ( fClassList(pControls).contains("samegame")) {
+                    dir = "fire";
                 }
         }
         if (dir && game) {
@@ -648,7 +660,7 @@
 
     // generate Titles on Pages (grrd: ewfGRRDcSaj, mascha: qwMASCHAbSd)
     const pageTitleLine1 = "ewfGRRDcSaj";
-    const pageTitles = [pageTitleLine1 + "nWORDuCLOCK", pageTitleLine1 + "mSNAKExlbdk", pageTitleLine1 + "mTETRISlbdk", "ewfGAMEcsajmsnakOVERdk", pageTitleLine1 + "MASTERMINDk", pageTitleLine1 + "WORDbGUESSR"];
+    const pageTitles = [pageTitleLine1 + "nWORDuCLOCK", pageTitleLine1 + "mSNAKExlbdk", pageTitleLine1 + "mTETRISlbdk", pageTitleLine1 + "SAMEGAMEbdk", "ewfGAMEcsajmsnakOVERdk", pageTitleLine1 + "MASTERMINDk", pageTitleLine1 + "WORDbGUESSR"];
     Array.from(ElementsByClassName("t")).forEach(function (element, index) {
         for (let step = 0; step < 22; step++) {
             const textElement = doc.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -674,16 +686,23 @@
         // webSocket.onopen = function(){ console.log('webSocket open'); };
         webSocket.onmessage = function(e) {
             if (e.data && e.data.indexOf('score') > 0) {
-                // get score update for snake / tetris
+                // get score update for snake / tetris / samegame
                 let response = JSON.parse(e.data);
                 score = response.score * 10;
                 highscore = response.high * 10;
                 ElementById("sCT").innerHTML = "Score: " + score + " / High-Score : " + highscore;
             }
-            if (e.data && e.data.indexOf('gameOver') === 0) {
-                // game over for snake / tetris
+            if (e.data && e.data.indexOf('gameOver') >= 0) {
+                // game over for snake / tetris / samegame
                 ElementById("sGO").innerHTML = score;
                 ElementById("hsGO").innerHTML = highscore;
+                if (score === highscore) {
+                    ElementById("msg").innerHTML = "Bravo! Du hesch e neue High-Score!";
+                } else if (e.data.indexOf('Won') >= 0) {
+                    ElementById("msg").innerHTML = "Bravo! Du hesch gwunne!";
+                } else {
+                    ElementById("msg").innerHTML = "Fertig lustig.";
+                }
                 fShowGameOver();
             }
             if (e.data && e.data.indexOf('effect') > 0) {

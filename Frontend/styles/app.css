@@ -160,7 +160,7 @@ ul.cl li {
     transition: max-height 0.7s ease-in-out;
 }
 
-circle {
+circle:not(#ctrlfire) {
     pointer-events: none
 }
 
@@ -197,12 +197,28 @@ path.snb {
     fill-opacity: 0.01;
 }
 
-#pCT.tetris .sn {
+rect.snb {
+    stroke-width:5.3;
+    fill: #333;
+    fill-opacity: 0.01;
+    width: 34px;
+    height: 30.5px;
+}
+
+#pCT.tetris .sn, #pCT.tetris .sg {
     display: none;
 }
 
-#pCT.snake .te {
+#pCT.snake .te, #pCT.snake .sg {
     display: none;
+}
+
+#pCT.samegame .te, #pCT.samegame .sn {
+    display: none;
+}
+
+#pCT.samegame #ctrlup {
+    display: block;
 }
 
 .pC {
