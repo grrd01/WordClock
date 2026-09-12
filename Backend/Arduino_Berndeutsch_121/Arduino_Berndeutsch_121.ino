@@ -17,7 +17,7 @@
 // set name for access-point and mdns-server
 const char* version = "wordclock";
 // define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
-#define USE_TOUCH_SENSOR 1
+#define USE_TOUCH_SENSOR 0
 
 #include <Arduino.h>
 
