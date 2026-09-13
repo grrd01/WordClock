@@ -1052,6 +1052,27 @@ void startSnake() {
   pixels.show();
 }
 
+void startSameGame () {
+  // SameGame start
+  inSameGame = true;
+  inTetris = false;
+  inSnake = false;
+  inMastermind = false;
+  inWordGuessr = false;
+  memset(board, 0, sizeof(board));
+  sameGameScore = 0;
+  movesMade = 0;
+  cursorX = MATRIX_WIDTH / 2;
+  cursorY = MATRIX_HEIGHT / 2;
+  cursorBlinkVisible = true;
+  lastBlinkToggle = millis();
+  gameStatus = STATUS_PLAYING;
+  fillRandomBoard();
+  drawSameGameBoard();
+  broadcastState();
+}
+
+
 /*
  * WebSocket event handler: receive control commands from client
  */
@@ -1069,15 +1090,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
   } else if (msg == "snake") {
     startSnake();
   } else if (msg == "samegame") {
-    // SameGame start
-    inSameGame = true;
-    inTetris = false;
-    inSnake = false;
-    inMastermind = false;
-    inWordGuessr = false;
-    startSameGame();
+      startSameGame();
   } else if (msg == "stop") {
-     // Tetris or Snake exit
+     // Tetris,Snake or SameGame exit
     inTetris = false;
     inSnake = false;
     inSameGame = false;
@@ -1403,21 +1418,6 @@ void fillRandomBoard() {
 	board[0][0] = 1;
 	board[0][1] = 1;
   }
-}
-
-// SameGame: Start a new game
-void startSameGame() {
-  memset(board, 0, sizeof(board));
-  sameGameScore = 0;
-  movesMade = 0;
-  cursorX = MATRIX_WIDTH / 2;
-  cursorY = MATRIX_HEIGHT / 2;
-  cursorBlinkVisible = true;
-  lastBlinkToggle = millis();
-  gameStatus = STATUS_PLAYING;
-  fillRandomBoard();
-  drawSameGameBoard();
-  broadcastState();
 }
 
 // SameGame: Update game status based on current board state
@@ -1748,6 +1748,8 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           snakeDir = "up";
         } else if (inTetris) {
           tetrisRotateRight();
+        } else if (inSameGame) {
+          moveCursor(0, -1);
         }
         return;
       case 0x02:
@@ -1757,6 +1759,8 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           snakeDir ="right";
         } else if (inTetris) {
           tetrisRight();
+        } else if (inSameGame) {
+          moveCursor(1, 0);
         }
         return;
       case 0x04:
@@ -1766,6 +1770,8 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           snakeDir = "down";
         } else if (inTetris) {
           tetrisDown();
+        } else if (inSameGame) {
+          moveCursor(0, 1);
         }
         return;
       case 0x06:
@@ -1775,6 +1781,8 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           snakeDir = "left";
         } else if (inTetris) {
           tetrisLeft();
+        } else if (inSameGame) {
+          moveCursor(-1, 0);
         }
         return;
     }
@@ -1786,12 +1794,18 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       // Serial.println(F("Taste A gedrueckt"));
       if (inTetris) {
         tetrisRotateLeft();
+      } else if (inSameGame) {
+        removeGroupAt(cursorX, cursorY);
+        broadcastState();
       }
       return;
     case 0x02:
       // Serial.println(F("Taste B gedrueckt"));
       if (inTetris) {
         tetrisRotateRight();
+      } else if (inSameGame) {
+        removeGroupAt(cursorX, cursorY);
+        broadcastState();
       }
       return;
     case 0x08:
@@ -1823,23 +1837,21 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       // Serial.println(F("Taste R2 gedrueckt"));
       return;
     case 0x04:
-      // Serial.println(F("Taste SL gedrueckt"));
-      if (inSnake) {
-        inSnake = false;
-        satzneu[0] = -1;
-        lastMinuteWordClock = 61;
-      } else {
-        startSnake();
-      }
+      // Serial.println(F("Taste - gedrueckt"));
+      inTetris = false;
+      inSnake = false;
+      inSameGame = false;
+      satzneu[0] = -1;
+      lastMinuteWordClock = 61;
       return;
     case 0x08:
-      // Serial.println(F("Taste SR gedrueckt"));
-      if (inTetris) {
-        inTetris = false;
-        satzneu[0] = -1;
-        lastMinuteWordClock = 61;
-      } else {
+      // Serial.println(F("Taste + gedrueckt"));
+      if (inSnake) {
         startTetris();
+      } else if (inTetris) {
+        startSameGame();
+      } else {
+        startSnake();
       }
       return;
   }
