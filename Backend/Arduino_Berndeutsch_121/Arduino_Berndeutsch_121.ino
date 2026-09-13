@@ -1427,7 +1427,9 @@ void drawSameGameBoard() {
 	for (int x = 0; x < MATRIX_WIDTH; x++) {
 	  uint8_t colorIndex = board[y][x];
 	  if (colorIndex > 0) {
-		pixels.setPixelColor(xyToIndex(x, y), GameColors[colorIndex - 1]);
+        // rot statt orange
+        if (colorIndex == 1) colorIndex = 0;
+		pixels.setPixelColor(xyToIndex(x, y), GameColors[colorIndex]);
 	  }
 	}
   }
