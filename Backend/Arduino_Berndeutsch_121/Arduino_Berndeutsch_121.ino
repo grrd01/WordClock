@@ -253,7 +253,6 @@ bool inBounds(int x, int y);
 
 // Tetris variables
 uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index, shared with SameGame
-int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
 uint8_t tetrisScore = 0;
 uint8_t tetrisHighScore = 0;
 bool inTetris = false;
@@ -1602,10 +1601,10 @@ void broadcastState() {
 // SameGame: Convert game status to string representation
 String statusToString() {
   if (gameStatus == STATUS_WON) {
-	return "gameOverWon";
+	return "samegameGameOverWon";
   }
   if (gameStatus == STATUS_STUCK) {
-	return "gameOverStuck";
+	return "samegameGameOverStuck";
   }
   return "playing";
 }
