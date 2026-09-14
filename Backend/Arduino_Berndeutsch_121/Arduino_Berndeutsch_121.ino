@@ -80,6 +80,7 @@ const char* version = "wordclockxs";
 // ToDo: PushButton-Feature
 // ToDo: Brightness-Sensor-Feature
 // ToDo: Passive-Buzzer-Feature / Wecker / Timer
+// ToDo: Temperature/Humidity-Sensor-Feature
 
 #include <Arduino.h>
 
