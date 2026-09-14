@@ -9,23 +9,77 @@
 // Kurt Meister, 2018-12-24 | Edit: 2023-04-29
 // Thanks to Manuel Meister for refactoring and adding automated summertime conversion.
 //
-// To compile, choose Tools - Partition Scheme - Huge APP (3MB No OTA/1MB SPIFFS)
-//
 // Gérard Tyedmers, 2024-01-15
 // - Web-Interface added (http://wordclock.local/)
 // - ESP32-Support added
+//
+// Daniel Illi, 2026-01-13
+// - Extract Webapp-String to separate file
+/////////////////////////////////////////////
+
+/////////////////////////////////////////////
+//
+// Connection scheme for supported hardware:
+//
+// - Adafruit_NeoPixel WS2812B
+//     VBUS/5V        -> +5V
+//     D7/GPIO13/MOSI -> DIN
+//     GND/G          -> GND
+// - Touch-Sensor TTP223
+//     VBUS/5V or 3.3v-> VCC
+//     D5/GPIO14/SCLK -> I/O
+//     GND/G          -> GND
+// - PushButton
+//     D5/GPIO14/SCLK -> one side of button
+//     GND/G          -> other side of button
+// - Brightness-Sensor GY-302 BH1750
+//     VBUS/5V        -> VCC
+//     D1/GPIO5/SCL   -> SCL
+//     D2/GPIO4/SDA   -> SDA
+//     GND/G          -> GND
+//                       ADDR not used
+// - Passive Buzzer
+//     VBUS/5V        -> VCC
+//     D6/GPIO12/MISO -> I/O
+//     GND/G          -> GND
+// - Temperature/Humidity-Sensor DHT22
+//     VBUS/5V        -> VCC
+//     D3/GPIO0       -> DAT
+//     GND/G          -> GND
+// - ShanWan Q36 Bluetooth Controller
+//
+/////////////////////////////////////////////
+
+/////////////////////////////////////////////
+//
+// To compile, choose Tools - Partition Scheme - Huge APP (3MB No OTA/1MB SPIFFS)
 //
 /////////////////////////////////////////////
 
 // set name for access-point and mdns-server
 const char* version = "wordclockxs";
-// define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
+
+// define if a touch sensor is used for power on/off: 1 = yes, 0 = no
 #define USE_TOUCH_SENSOR 0
-// define if a ShanWan Q36 Bluetooth can be paired: Controller switch: 1 = yes, 0 = no
+
+// define if a push-button is used for power on/off: 1 = yes, 0 = no
+#define USE_PUSH_BUTTON 0
+
+// define if a brightness sensor is used to controll led brightness:  1 = yes, 0 = no
+#define USE_BRIGHTNESS_SENSOR 0
+
+// define if a passive buzzer is used for alarm signals:  1 = yes, 0 = no
+#define USE_PASSIVE_BUZZER 0
+
+// define if a ShanWan Q36 Bluetooth can be paired: 1 = yes, 0 = no
 #define USE_CONTROLLER 1
 
 // ToDo: Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen
 // ToDo: Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
+// ToDo: Mastermind mit Controller steuern
+// ToDo: PushButton-Feature
+// ToDo: Brightness-Sensor-Feature
+// ToDo: Passive-Buzzer-Feature / Wecker / Timer
 
 #include <Arduino.h>
 
@@ -1910,7 +1964,12 @@ void setup() {
   pixels.begin();
   wipe();
 
-  pinMode(D5, INPUT);
+  #if USE_TOUCH_SENSOR
+    pinMode(D5, INPUT);
+  #endif
+  #if USE_PUSH_BUTTON
+    pinMode(D5, INPUT_PULLUP);
+  #endif
 
   // Initialize EEPROM and read stored values
   EEPROM.begin(512);
@@ -2326,6 +2385,22 @@ void loop() {
   // Touch sensor to toggle power
   #if USE_TOUCH_SENSOR
     if (digitalRead(D5) == LOW && lastTouchStage == true) {
+      power = 1 - power; // toggle power
+      sendParamsToClients();
+      if (power == 0) {
+        blank();
+        pixels.show();
+      } else {
+        satzneu[0] = -1;
+        lastMinuteWordClock = 61;
+      }
+    }
+    lastTouchStage = digitalRead(D5);
+  #endif
+
+  // PushButton to toggle power
+  #if USE_PUSH_BUTTON
+    if (digitalRead(D5) == HIGH && lastTouchStage == false) {
       power = 1 - power; // toggle power
       sendParamsToClients();
       if (power == 0) {
