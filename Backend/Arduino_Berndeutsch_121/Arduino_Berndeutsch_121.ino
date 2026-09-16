@@ -2695,7 +2695,7 @@ void loop() {
       cursorBlinkVisible = !cursorBlinkVisible;
       drawSameGameBoard();
     }
-  } else if (inMastermind && connectedControllers > 0) {
+  } else if (inMastermind && connectedControllers > 0 && mastermindTry < 11 && mastermindPlace < 4) {
     if (millis() - lastBlinkToggle >= blinkInterval) {
       lastBlinkToggle = millis();
       cursorBlinkVisible = !cursorBlinkVisible;
