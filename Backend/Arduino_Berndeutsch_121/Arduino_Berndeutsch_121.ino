@@ -164,8 +164,8 @@ static NimBLEClient* pClient = nullptr;
 static bool doConnect = false;
 static bool startDiscovery = false;
 static NimBLEAdvertisedDevice* targetDevice = nullptr;
-uint8_t connectedControllers = 0;
 #endif
+uint8_t connectedControllers = 0;
 
 // Current time
 unsigned long currentTime = millis();
