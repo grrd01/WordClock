@@ -2220,15 +2220,15 @@ void loop() {
                 satzneu[0] = -1;
                 lastMinuteWordClock = 61;
               } else if (inMastermind && mastermindCodeTry[3] != 0 && mastermindCodeTry[3] != 7) {
+                // restart a new game if needed
+                if (mastermindTry == 11 || mastermindPlace == 4) {
+                  startMastermind();
+                }
                 // evaluate players try
                 mastermindCodeTry[2] = extractParameterValue(url, "c3=");
                 mastermindCodeTry[1] = extractParameterValue(url, "c2=");
                 mastermindCodeTry[0] = extractParameterValue(url, "c1=");
 
-                // restart a new game if needed
-                if (mastermindTry == 11 || mastermindPlace == 4) {
-                  startMastermind();
-                }
                 evaluateMastermind();
               }
               client.println(F("HTTP/1.1 200 OK"));
