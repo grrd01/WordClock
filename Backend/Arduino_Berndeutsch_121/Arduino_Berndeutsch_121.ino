@@ -164,6 +164,7 @@ static NimBLEClient* pClient = nullptr;
 static bool doConnect = false;
 static bool startDiscovery = false;
 static NimBLEAdvertisedDevice* targetDevice = nullptr;
+uint8_t connectedControllers = 0;
 #endif
 
 // Current time
@@ -441,6 +442,7 @@ void pulseOn(int led, uint32_t color, int steps, int delayMs) {
 int8_t mastermindCode[4];
 int8_t mastermindCodeBackup[4];
 int8_t mastermindCodeTry[4];
+int8_t mastermindCodeTryBackup[4];
 int8_t mastermindTry = 0;
 int8_t mastermindCol = 1;
 int8_t mastermindPlace = 0;
@@ -1769,6 +1771,7 @@ void startMastermind() {
     pixels.setPixelColor(down(5, i), Grey);
     pixels.setPixelColor(down(10, i), Grey);
   }
+  memset(mastermindCodeTry, 1, sizeof(mastermindCodeTry));
 }
 
 /*
@@ -1793,9 +1796,10 @@ void evaluateMastermind() {
   for (uint8_t i = 0; i < 4; i++) {
     displayMastermind();
     mastermindCodeBackup[i] = mastermindCode[i];
+    mastermindCodeTryBackup[i] = mastermindCodeTry[i];
     // check right position
-    if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
-      mastermindCodeTry[i] = -1;
+    if (mastermindCodeTryBackup[i] == mastermindCodeBackup[i]) {
+      mastermindCodeTryBackup[i] = -1;
       mastermindCodeBackup[i] = -2;
       mastermindPlace ++;
       pixels.setPixelColor(down(mastermindPlace + 5, mastermindTry), White);
@@ -1804,8 +1808,8 @@ void evaluateMastermind() {
   for (uint8_t i = 0; i < 4; i++) {
     for (uint8_t j = 0; j < 4; j++) {
       // check right color
-      if (mastermindCodeTry[i] == mastermindCodeBackup[j]) {
-        mastermindCodeTry[i] = -1;
+      if (mastermindCodeTryBackup[i] == mastermindCodeBackup[j]) {
+        mastermindCodeTryBackup[i] = -1;
         mastermindCodeBackup[j] = -2;
         mastermindColor ++;
         pixels.setPixelColor(down(mastermindColor + mastermindPlace + 5, mastermindTry), Cornflower);
@@ -1983,6 +1987,17 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       } else if (inSameGame) {
         removeGroupAt(cursorX, cursorY);
         broadcastState();
+      } else if (inMastermind) {
+        if (mastermindTry == 11 || mastermindPlace == 4) {
+          // Mastermind fertig, zurueck zur WordClock
+          inMastermind = false;
+          satzneu[0] = -1;
+        } else {
+          evaluateMastermind();
+          if(mastermindTry < 11 && mastermindPlace < 4) {
+            displayMastermind();
+          }
+        }
       }
       return;
     case 0x08:
@@ -2030,7 +2045,6 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         startSameGame();
       } else if (inSameGame) {
         startMastermind();
-        memset(mastermindCodeTry, 1, sizeof(mastermindCodeTry));
         displayMastermind();
       } else {
         startSnake();
@@ -2050,6 +2064,7 @@ class ClientCallbacks : public NimBLEClientCallbacks {
 
   void onDisconnect(NimBLEClient* pClient, int reason) override {
     // Serial.printf(">> Verbindung getrennt! Reason: %d\n", reason);
+    connectedControllers--;
     setWifiStatus(Red, 1000);
     startDiscovery = false;
     NimBLEDevice::getScan()->start(0, false);
@@ -2462,6 +2477,7 @@ void loop() {
         }
 
         // Serial.printf(">> Fertig! Insgesamt auf %d Kanaele subscribed.\n", totalSubscribed);
+        connectedControllers++;
         setWifiStatus(Green, 1000);
       }
   #endif
@@ -2683,10 +2699,12 @@ void loop() {
         if (millis() - lastBlinkToggle >= blinkInterval) {
           lastBlinkToggle = millis();
           cursorBlinkVisible = !cursorBlinkVisible;
-          displayMastermind();
+          if (connectedControllers > 0) {
+            displayMastermind();
+          }
           if (cursorBlinkVisible) {
             // show cursor
-            pixels.setPixelColor(down(mastermindCol, mastermindTry), White);
+            pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), White);
             pixels.show();
           }
         }
