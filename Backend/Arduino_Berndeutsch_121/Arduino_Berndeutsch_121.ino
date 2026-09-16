@@ -438,12 +438,13 @@ void pulseOn(int led, uint32_t color, int steps, int delayMs) {
 }
 
 // Mastermind variables
-int mastermindCode[4];
-int mastermindCodeBackup[4];
-int mastermindCodeTry[4];
-int mastermindTry = 0;
-int mastermindPlace = 0;
-int mastermindColor = 0;
+int8_t mastermindCode[4];
+int8_t mastermindCodeBackup[4];
+int8_t mastermindCodeTry[4];
+int8_t mastermindTry = 0;
+int8_t mastermindCol = 1;
+int8_t mastermindPlace = 0;
+int8_t mastermindColor = 0;
 bool inMastermind = false;
 
 // WordGuessr variables
@@ -1747,7 +1748,7 @@ void wordGuessrNewGuess() {
 /*
  * Mastermind: prepares a new mastermind game
  */
-void clearMastermind() {
+void startMastermind() {
   wipe();
   inMastermind = true;
   inWordGuessr = false;
@@ -1760,12 +1761,75 @@ void clearMastermind() {
   mastermindCode[2] = random(1,7);
   mastermindCode[3] = random(1,7);
   mastermindTry = 0;
+  mastermindCol = 0;
   mastermindPlace = 0;
   mastermindColor = 0;
   for (uint8_t i = 0; i < 11; i++) {
     pixels.setPixelColor(down(0, i), Grey);
     pixels.setPixelColor(down(5, i), Grey);
     pixels.setPixelColor(down(10, i), Grey);
+  }
+}
+
+/*
+ * Mastermind: display currenmt try
+ */
+void displayMastermind() {
+  for (uint8_t i = 0; i < 4; i++) {
+    pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
+  }
+  if (power == 1) {
+    pixels.show();
+  }
+}
+
+/*
+ * Mastermind: evaluates the current try and updates the display with the results
+ */
+void evaluateMastermind() {
+  mastermindPlace = 0;
+  mastermindColor = 0;
+  mastermindCol = 0;
+  for (uint8_t i = 0; i < 4; i++) {
+    displayMastermind();
+    mastermindCodeBackup[i] = mastermindCode[i];
+    // check right position
+    if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
+      mastermindCodeTry[i] = -1;
+      mastermindCodeBackup[i] = -2;
+      mastermindPlace ++;
+      pixels.setPixelColor(down(mastermindPlace + 5, mastermindTry), White);
+    }
+  }
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      // check right color
+      if (mastermindCodeTry[i] == mastermindCodeBackup[j]) {
+        mastermindCodeTry[i] = -1;
+        mastermindCodeBackup[j] = -2;
+        mastermindColor ++;
+        pixels.setPixelColor(down(mastermindColor + mastermindPlace + 5, mastermindTry), Cornflower);
+      }
+    }
+  }
+  mastermindTry ++;
+  if (mastermindPlace == 4) {
+    // player won
+    for (uint8_t i = 0; i < mastermindTry; i++) {
+      pixels.setPixelColor(down(0, i), Green);
+      pixels.setPixelColor(down(5, i), Green);
+      pixels.setPixelColor(down(10, i), Green);
+    }
+  } else if (mastermindTry == 11) {
+    // player lost
+    for (uint8_t i = 0; i < mastermindTry; i++) {
+      pixels.setPixelColor(down(0, i), Red);
+      pixels.setPixelColor(down(5, i), Red);
+      pixels.setPixelColor(down(10, i), Red);
+    }
+  }
+  if (power == 1) {
+    pixels.show();
   }
 }
 
@@ -1810,6 +1874,19 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           tetrisRotateRight();
         } else if (inSameGame) {
           moveCursor(0, -1);
+        } else if (inMastermind) {
+          if (mastermindTry == 11 || mastermindPlace == 4) {
+            // Mastermind fertig, zurueck zur WordClock
+            inMastermind = false;
+            satzneu[0] = -1;
+          } else {
+            if (mastermindTry[mastermindCol] < 6) {
+              mastermindCodeTry[mastermindCol]++;
+            } else {
+              mastermindCodeTry[mastermindCol] = 1;
+            }
+            displayMastermind();
+          }
         }
         return;
       case 0x02:
@@ -1821,6 +1898,16 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           tetrisRight();
         } else if (inSameGame) {
           moveCursor(1, 0);
+        } else if (inMastermind) {
+          if (mastermindTry == 11 || mastermindPlace == 4) {
+            // Mastermind fertig, zurueck zur WordClock
+            inMastermind = false;
+            satzneu[0] = -1;
+          } else if mastermindCol < 3 {
+            mastermindCol++;
+          } else {
+            mastermindCol = 0;
+          }
         }
         return;
       case 0x04:
@@ -1832,6 +1919,19 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           tetrisDown();
         } else if (inSameGame) {
           moveCursor(0, 1);
+        } else if (inMastermind) {
+          if (mastermindTry == 11 || mastermindPlace == 4) {
+            // Mastermind fertig, zurueck zur WordClock
+            inMastermind = false;
+            satzneu[0] = -1;
+          } else {
+            if (mastermindTry[mastermindCol] > 1) {
+              mastermindCodeTry[mastermindCol]--;
+            } else {
+              mastermindCodeTry[mastermindCol] = 6;
+            }
+            displayMastermind();
+          }
         }
         return;
       case 0x06:
@@ -1843,6 +1943,12 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
           tetrisLeft();
         } else if (inSameGame) {
           moveCursor(-1, 0);
+        } else if (inMastermind) {
+          if mastermindCol > 0 {
+            mastermindCol--;
+          } else {
+            mastermindCol = 3;
+          }
         }
         return;
     }
@@ -1857,6 +1963,17 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       } else if (inSameGame) {
         removeGroupAt(cursorX, cursorY);
         broadcastState();
+      } else if (inMastermind) {
+        if (mastermindTry == 11 || mastermindPlace == 4) {
+          // Mastermind fertig, zurueck zur WordClock
+          inMastermind = false;
+          satzneu[0] = -1;
+        } else {
+          evaluateMastermind();
+          if(mastermindTry < 11) {
+            displayMastermind();
+          }
+        }
       }
       return;
     case 0x02:
@@ -1901,6 +2018,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       inTetris = false;
       inSnake = false;
       inSameGame = false;
+      inMastermind = false;
       satzneu[0] = -1;
       lastMinuteWordClock = 61;
       return;
@@ -1910,6 +2028,10 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         startTetris();
       } else if (inTetris) {
         startSameGame();
+      } else if (inSameGame) {
+        startMastermind();
+        memset(mastermindCodeTry, 1, sizeof(mastermindCodeTry));
+        displayMastermind();
       } else {
         startSnake();
       }
@@ -2076,64 +2198,23 @@ void loop() {
               mastermindCodeTry[3] = extractParameterValue(url, "c4=");
               if (!inMastermind && mastermindCodeTry[3] == 0 && power == 1) {
                 // start new mastermind game
-                clearMastermind();
+                startMastermind();
               } else if (inMastermind && mastermindCodeTry[3] == 7) {
                 // exit current mastermind game
                 inMastermind = false;
                 satzneu[0] = -1;
                 lastMinuteWordClock = 61;
               } else if (inMastermind && mastermindCodeTry[3] != 0 && mastermindCodeTry[3] != 7) {
-                // restart a new game if needed
-                if (mastermindTry == 11 || mastermindPlace == 4) {
-                  clearMastermind();
-                }
                 // evaluate players try
                 mastermindCodeTry[2] = extractParameterValue(url, "c3=");
                 mastermindCodeTry[1] = extractParameterValue(url, "c2=");
                 mastermindCodeTry[0] = extractParameterValue(url, "c1=");
-                mastermindPlace = 0;
-                mastermindColor = 0;
-                for (uint8_t i = 0; i < 4; i++) {
-                  pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
-                  mastermindCodeBackup[i] = mastermindCode[i];
-                  // check right position
-                  if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
-                    mastermindCodeTry[i] = -1;
-                    mastermindCodeBackup[i] = -2;
-                    mastermindPlace ++;
-                    pixels.setPixelColor(down(mastermindPlace + 5, mastermindTry), White);
-                  }
+
+                // restart a new game if needed
+                if (mastermindTry == 11 || mastermindPlace == 4) {
+                  startMastermind();
                 }
-                for (uint8_t i = 0; i < 4; i++) {
-                  for (uint8_t j = 0; j < 4; j++) {
-                    // check right color
-                    if (mastermindCodeTry[i] == mastermindCodeBackup[j]) {
-                      mastermindCodeTry[i] = -1;
-                      mastermindCodeBackup[j] = -2;
-                      mastermindColor ++;
-                      pixels.setPixelColor(down(mastermindColor + mastermindPlace + 5, mastermindTry), Cornflower);
-                    }
-                  }
-                }
-                mastermindTry ++;
-              }
-              if (mastermindPlace == 4) {
-                // player won
-                for (uint8_t i = 0; i < mastermindTry; i++) {
-                  pixels.setPixelColor(down(0, i), Green);
-                  pixels.setPixelColor(down(5, i), Green);
-                  pixels.setPixelColor(down(10, i), Green);
-                }
-              } else if (mastermindTry == 11) {
-                // player lost
-                for (uint8_t i = 0; i < mastermindTry; i++) {
-                  pixels.setPixelColor(down(0, i), Red);
-                  pixels.setPixelColor(down(5, i), Red);
-                  pixels.setPixelColor(down(10, i), Red);
-                }
-              }
-              if (power == 1) {
-                pixels.show();
+                evaluateMastermind();
               }
               client.println(F("HTTP/1.1 200 OK"));
               client.println(F("Content-type:application/json"));
@@ -2598,7 +2679,18 @@ void loop() {
       cursorBlinkVisible = !cursorBlinkVisible;
       drawSameGameBoard();
     }
-  } else if (inWordGuessr) {
+  } else if (inMastermind) {
+        if (millis() - lastBlinkToggle >= blinkInterval) {
+          lastBlinkToggle = millis();
+          cursorBlinkVisible = !cursorBlinkVisible;
+          displayMastermind();
+          if (cursorBlinkVisible) {
+            // show cursor
+            pixels.setPixelColor(down(mastermindCol, mastermindTry), White);
+            pixels.show();
+          }
+        }
+      }else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
       // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
       blank();
