@@ -1880,7 +1880,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
             inMastermind = false;
             satzneu[0] = -1;
           } else {
-            if (mastermindTry[mastermindCol] < 6) {
+            if (mastermindCodeTry[mastermindCol] < 6) {
               mastermindCodeTry[mastermindCol]++;
             } else {
               mastermindCodeTry[mastermindCol] = 1;
@@ -1903,7 +1903,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
             // Mastermind fertig, zurueck zur WordClock
             inMastermind = false;
             satzneu[0] = -1;
-          } else if mastermindCol < 3 {
+          } else if (mastermindCol < 3) {
             mastermindCol++;
           } else {
             mastermindCol = 0;
@@ -1925,7 +1925,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
             inMastermind = false;
             satzneu[0] = -1;
           } else {
-            if (mastermindTry[mastermindCol] > 1) {
+            if (mastermindCodeTry[mastermindCol] > 1) {
               mastermindCodeTry[mastermindCol]--;
             } else {
               mastermindCodeTry[mastermindCol] = 6;
@@ -1944,7 +1944,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         } else if (inSameGame) {
           moveCursor(-1, 0);
         } else if (inMastermind) {
-          if mastermindCol > 0 {
+          if (mastermindCol > 0) {
             mastermindCol--;
           } else {
             mastermindCol = 3;
