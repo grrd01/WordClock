@@ -52,7 +52,7 @@
 
 /////////////////////////////////////////////
 //
-// To compile, choose Tools - Partition Scheme - Huge APP (3MB No OTA/1MB SPIFFS)
+// IMPORTANT: To compile, choose Tools - Partition Scheme - Huge APP (3MB No OTA/1MB SPIFFS)
 //
 /////////////////////////////////////////////
 
@@ -65,11 +65,14 @@ const char* version = "wordclockxs";
 // define if a push-button is used for power on/off: 1 = yes, 0 = no
 #define USE_PUSH_BUTTON 0
 
-// define if a brightness sensor is used to controll led brightness:  1 = yes, 0 = no
+// define if a brightness sensor is used to control led brightness:  1 = yes, 0 = no
 #define USE_BRIGHTNESS_SENSOR 0
 
 // define if a passive buzzer is used for alarm signals:  1 = yes, 0 = no
 #define USE_PASSIVE_BUZZER 0
+
+// define if a temperature/humidity sensor is used:  1 = yes, 0 = no
+#define USE_TEMP_HUMID_SENSOR 0
 
 // define if a ShanWan Q36 Bluetooth can be paired: 1 = yes, 0 = no
 #define USE_CONTROLLER 1
