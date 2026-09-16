@@ -2695,20 +2695,18 @@ void loop() {
       cursorBlinkVisible = !cursorBlinkVisible;
       drawSameGameBoard();
     }
-  } else if (inMastermind) {
-        if (millis() - lastBlinkToggle >= blinkInterval) {
-          lastBlinkToggle = millis();
-          cursorBlinkVisible = !cursorBlinkVisible;
-          if (connectedControllers > 0) {
-            displayMastermind();
-          }
-          if (cursorBlinkVisible) {
-            // show cursor
-            pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), White);
-            pixels.show();
-          }
-        }
-      }else if (inWordGuessr) {
+  } else if (inMastermind && connectedControllers > 0) {
+    if (millis() - lastBlinkToggle >= blinkInterval) {
+      lastBlinkToggle = millis();
+      cursorBlinkVisible = !cursorBlinkVisible;
+      displayMastermind();
+      if (cursorBlinkVisible) {
+        // show cursor
+        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), White);
+        pixels.show();
+      }
+    }
+  } else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
       // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
       blank();
