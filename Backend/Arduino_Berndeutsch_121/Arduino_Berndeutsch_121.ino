@@ -1837,6 +1837,20 @@ void evaluateMastermind() {
   }
 }
 
+void evaluateControllerMastermind() {
+  if (mastermindTry == 11 || mastermindPlace == 4) {
+    // Mastermind fertig, zurueck zur WordClock
+    inMastermind = false;
+    satzneu[0] = -1;
+    lastMinuteWordClock = 61;
+  } else {
+    evaluateMastermind();
+    if(mastermindTry < 11 && mastermindPlace < 4) {
+      displayMastermind();
+    }
+  }
+}
+
 #if USE_CONTROLLER
 void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
   if (length < 10) return;
@@ -1883,6 +1897,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
             // Mastermind fertig, zurueck zur WordClock
             inMastermind = false;
             satzneu[0] = -1;
+            lastMinuteWordClock = 61;
           } else {
             if (mastermindCodeTry[mastermindCol] < 6) {
               mastermindCodeTry[mastermindCol]++;
@@ -1907,10 +1922,9 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
             // Mastermind fertig, zurueck zur WordClock
             inMastermind = false;
             satzneu[0] = -1;
+            lastMinuteWordClock = 61;
           } else if (mastermindCol < 3) {
             mastermindCol++;
-          } else {
-            mastermindCol = 0;
           }
         }
         return;
@@ -1928,6 +1942,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
             // Mastermind fertig, zurueck zur WordClock
             inMastermind = false;
             satzneu[0] = -1;
+            lastMinuteWordClock = 61;
           } else {
             if (mastermindCodeTry[mastermindCol] > 1) {
               mastermindCodeTry[mastermindCol]--;
@@ -1950,8 +1965,6 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         } else if (inMastermind) {
           if (mastermindCol > 0) {
             mastermindCol--;
-          } else {
-            mastermindCol = 3;
           }
         }
         return;
@@ -1968,16 +1981,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         removeGroupAt(cursorX, cursorY);
         broadcastState();
       } else if (inMastermind) {
-        if (mastermindTry == 11 || mastermindPlace == 4) {
-          // Mastermind fertig, zurueck zur WordClock
-          inMastermind = false;
-          satzneu[0] = -1;
-        } else {
-          evaluateMastermind();
-          if(mastermindTry < 11) {
-            displayMastermind();
-          }
-        }
+        evaluateControllerMastermind();
       }
       return;
     case 0x02:
@@ -1988,16 +1992,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         removeGroupAt(cursorX, cursorY);
         broadcastState();
       } else if (inMastermind) {
-        if (mastermindTry == 11 || mastermindPlace == 4) {
-          // Mastermind fertig, zurueck zur WordClock
-          inMastermind = false;
-          satzneu[0] = -1;
-        } else {
-          evaluateMastermind();
-          if(mastermindTry < 11 && mastermindPlace < 4) {
-            displayMastermind();
-          }
-        }
+        evaluateControllerMastermind();
       }
       return;
     case 0x08:
@@ -2221,10 +2216,12 @@ void loop() {
                 lastMinuteWordClock = 61;
               } else if (inMastermind && mastermindCodeTry[3] != 0 && mastermindCodeTry[3] != 7) {
                 // restart a new game if needed
+                mastermindCodeTryBackup[3] = mastermindCodeTry[3];
                 if (mastermindTry == 11 || mastermindPlace == 4) {
                   startMastermind();
                 }
                 // evaluate players try
+                mastermindCodeTry[3] = mastermindCodeTryBackup[3];
                 mastermindCodeTry[2] = extractParameterValue(url, "c3=");
                 mastermindCodeTry[1] = extractParameterValue(url, "c2=");
                 mastermindCodeTry[0] = extractParameterValue(url, "c1=");
@@ -2695,11 +2692,17 @@ void loop() {
       cursorBlinkVisible = !cursorBlinkVisible;
       drawSameGameBoard();
     }
-  } else if (inMastermind && connectedControllers > 0 && mastermindTry < 11 && mastermindPlace < 4) {
+  } else if (inMastermind && mastermindTry < 11 && mastermindPlace < 4) {
     if (millis() - lastBlinkToggle >= blinkInterval) {
       lastBlinkToggle = millis();
       cursorBlinkVisible = !cursorBlinkVisible;
-      displayMastermind();
+      if (connectedControllers > 0) {
+        displayMastermind();
+      } else {
+        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), backgroundColor);
+        pixels.show();
+      }
+
       if (cursorBlinkVisible) {
         // show cursor
         pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), White);
