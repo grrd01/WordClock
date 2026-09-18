@@ -110,6 +110,21 @@ a:active {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
+#pageIndicator {
+    position: absolute;
+    left: 50%;
+    bottom: 4.6vmin;
+    transform: translateX(-50%);
+    min-width: 4em;
+    text-align: center;
+    z-index: 1000;
+    font-size: large;
+    line-height: 1;
+    pointer-events: none;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+}
+
 #sCT, #sMM, #sWG {
     position: absolute; left: 4vmin; bottom: 4vmin;
     display: flex;
