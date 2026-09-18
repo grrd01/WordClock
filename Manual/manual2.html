@@ -19,7 +19,157 @@
     <link rel="stylesheet" href="styles/manual.css">
 </head>
 <body>
-    <div id="pageContent" class="p">
+    <svg id="prev" class="sb" viewBox="-2 -1 12 16" style="transform: rotate(180deg);">
+        <path d="M2 2 L9 7 L2 12 Z" stroke-width="1.4"></path>
+    </svg>
+
+    <svg id="next" class="sb" viewBox="-2 -1 12 16">
+        <path d="M2 2 L9 7 L2 12 Z" stroke-width="1.4"></path>
+    </svg>
+    <div id="pageWordClock" class="p">
+        <div class="pC">
+            <div class="pageHead">
+                <svg class="t" viewBox="5 0 105 115" preserveAspectRatio="xMidYMid slice" role="img">
+                    <text x="07" y="10" class="glow">E</text>
+                    <text x="17" y="10" class="glow">S</text>
+                    <text x="27" y="10">D</text>
+                    <text x="37" y="10" class="glow">I</text>
+                    <text x="47" y="10" class="glow">S</text>
+                    <text x="57" y="10" class="glow">C</text>
+                    <text x="67" y="10" class="glow">H</text>
+                    <text x="77" y="10">W</text>
+                    <text x="87" y="10" class="M5">F</text>
+                    <text x="97" y="10" class="M5">Ü</text>
+                    <text x="107" y="10" class="M5">F</text>
+
+                    <text x="07" y="20" class="M15">V</text>
+                    <text x="17" y="20" class="M15">I</text>
+                    <text x="27" y="20" class="M15">E</text>
+                    <text x="37" y="20" class="M15">R</text>
+                    <text x="47" y="20" class="M15">T</text>
+                    <text x="57" y="20" class="M15">U</text>
+                    <text x="67" y="20">T</text>
+                    <text x="77" y="20">Y</text>
+                    <text x="87" y="20" class="M10">Z</text>
+                    <text x="97" y="20" class="M10">Ä</text>
+                    <text x="107" y="20" class="M10">Ä</text>
+
+                    <text x="07" y="30" class="M20">Z</text>
+                    <text x="17" y="30" class="M20">W</text>
+                    <text x="27" y="30" class="M20">Ä</text>
+                    <text x="37" y="30" class="M20">N</text>
+                    <text x="47" y="30" class="M20">Z</text>
+                    <text x="57" y="30" class="M20">G</text>
+                    <text x="67" y="30">Q</text>
+                    <text x="77" y="30">D</text>
+                    <text x="87" y="30" class="MV">V</text>
+                    <text x="97" y="30" class="MV">O</text>
+                    <text x="107" y="30" class="MV">R</text>
+
+                    <text x="07" y="40">K</text>
+                    <text x="17" y="40" class="MA">A</text>
+                    <text x="27" y="40" class="MA">B</text>
+                    <text x="37" y="40">D</text>
+                    <text x="47" y="40" class="M30">H</text>
+                    <text x="57" y="40" class="M30">A</text>
+                    <text x="67" y="40" class="M30">U</text>
+                    <text x="77" y="40" class="M30">B</text>
+                    <text x="87" y="40" class="M30">I</text>
+                    <text x="97" y="40">T</text>
+                    <text x="107" y="40">Z</text>
+
+                    <text x="07" y="50" class="H1">E</text>
+                    <text x="17" y="50" class="H1">I</text>
+                    <text x="27" y="50" class="H1">S</text>
+                    <text x="37" y="50">Q</text>
+                    <text x="47" y="50" class="H2">Z</text>
+                    <text x="57" y="50" class="H2">W</text>
+                    <text x="67" y="50" class="H2">Ö</text>
+                    <text x="77" y="50" class="H2">I</text>
+                    <text x="87" y="50" class="H3">D</text>
+                    <text x="97" y="50" class="H3">R</text>
+                    <text x="107" y="50" class="H3">Ü</text>
+
+                    <text x="07" y="60">Z</text>
+                    <text x="17" y="60" class="H4">V</text>
+                    <text x="27" y="60" class="H4">I</text>
+                    <text x="37" y="60" class="H4">E</text>
+                    <text x="47" y="60" class="H4">R</text>
+                    <text x="57" y="60" class="H4">I</text>
+                    <text x="67" y="60" class="H5">F</text>
+                    <text x="77" y="60" class="H5">Ü</text>
+                    <text x="87" y="60" class="H5">F</text>
+                    <text x="97" y="60" class="H5">I</text>
+                    <text x="107" y="60">T</text>
+
+                    <text x="07" y="70" class="H6">S</text>
+                    <text x="17" y="70" class="H6">Ä</text>
+                    <text x="27" y="70" class="H6">C</text>
+                    <text x="37" y="70" class="H6">H</text>
+                    <text x="47" y="70" class="H6">S</text>
+                    <text x="57" y="70" class="H6">I</text>
+                    <text x="67" y="70" class="H7">S</text>
+                    <text x="77" y="70" class="H7">I</text>
+                    <text x="87" y="70" class="H7">B</text>
+                    <text x="97" y="70" class="H7">N</text>
+                    <text x="107" y="70" class="H7">I</text>
+
+                    <text x="07" y="80" class="H8">A</text>
+                    <text x="17" y="80" class="H8">C</text>
+                    <text x="27" y="80" class="H8">H</text>
+                    <text x="37" y="80" class="H8">T</text>
+                    <text x="47" y="80" class="H8">I</text>
+                    <text x="57" y="80" class="H9">N</text>
+                    <text x="67" y="80" class="H9">Ü</text>
+                    <text x="77" y="80" class="H9">N</text>
+                    <text x="87" y="80" class="H9">I</text>
+                    <text x="97" y="80">O</text>
+                    <text x="107" y="80">F</text>
+
+                    <text x="07" y="90">C</text>
+                    <text x="17" y="90" class="H10">Z</text>
+                    <text x="27" y="90" class="H10">Ä</text>
+                    <text x="37" y="90" class="H10">N</text>
+                    <text x="47" y="90" class="H10">I</text>
+                    <text x="57" y="90" class="H11">E</text>
+                    <text x="67" y="90" class="H11">U</text>
+                    <text x="77" y="90" class="H11">F</text>
+                    <text x="87" y="90" class="H11">I</text>
+                    <text x="97" y="90">D</text>
+                    <text x="107" y="90">I</text>
+
+                    <text x="07" y="100">O</text>
+                    <text x="17" y="100">K</text>
+                    <text x="27" y="100">G</text>
+                    <text x="37" y="100" class="H0">Z</text>
+                    <text x="47" y="100" class="H0">W</text>
+                    <text x="57" y="100" class="H0">Ö</text>
+                    <text x="67" y="100" class="H0">U</text>
+                    <text x="77" y="100" class="H0">F</text>
+                    <text x="87" y="100" class="H0">I</text>
+                    <text x="97" y="100">J</text>
+                    <text x="107" y="100">X</text>
+
+                    <text x="07" y="110">L</text>
+                    <text x="17" y="110">Y</text>
+                    <text x="27" y="110">B</text>
+                    <text x="37" y="112.5" class="M1">°</text>
+                    <text x="47" y="112.5" class="M2">°</text>
+                    <text x="57" y="110">P</text>
+                    <text x="67" y="112.5" class="M3">°</text>
+                    <text x="77" y="112.5" class="M4">°</text>
+                    <text x="87" y="110">M</text>
+                    <text x="97" y="110">K</text>
+                    <g stroke="#555" fill="none" stroke-width="0.7" >
+                        <path d="M 106 109.8 Q 106 106.4 109.4 106.4" />
+                        <path d="M 107.2 109.8 Q 107.2 107.8 109.4 107.8" />
+                    </g>
+                    <circle cx="108.8" cy="109.5" r="0.6" fill="#555" />
+                </svg>
+            </div>
+        </div>
+    </div>
+    <div id="pageContent" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -84,7 +234,7 @@
             </div>
         </div>
     </div>
-    <div id="pageManual" class="p">
+    <div id="pageManual" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -126,7 +276,7 @@
             </div>
         </div>
     </div>
-    <div id="pageSettings" class="p">
+    <div id="pageSettings" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -168,7 +318,7 @@
             </div>
         </div>
     </div>
-    <div id="pageSnake" class="p">
+    <div id="pageSnake" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -205,7 +355,7 @@
             </div>
         </div>
     </div>
-    <div id="pageTetris" class="p">
+    <div id="pageTetris" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -242,7 +392,7 @@
             </div>
         </div>
     </div>
-    <div id="pageSameGame" class="p">
+    <div id="pageSameGame" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -282,7 +432,7 @@
             </div>
         </div>
     </div>
-    <div id="pageMastermind" class="p">
+    <div id="pageMastermind" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -320,7 +470,7 @@
             </div>
         </div>
     </div>
-    <div id="pageWordGuessr" class="p">
+    <div id="pageWordGuessr" class="p right">
         <div class="pC">
             <div class="pageHead">
                 <svg class="t" viewBox="5 0 105 30" preserveAspectRatio="xMidYMid slice" role="img">
@@ -357,5 +507,6 @@
             </div>
         </div>
     </div>
+    <script src="scripts/manual.js"></script>
 </body>
 </html>

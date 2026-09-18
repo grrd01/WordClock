@@ -13,8 +13,8 @@ body {
     background: linear-gradient(#444, #222);
     min-width: 100vw;
     margin: 0;
-    /*position:fixed;
-    overflow:hidden;*/
+    position:fixed;
+    overflow:hidden;
     font-family: Arial, sans-serif;
     font-size: large;
     color: white;
@@ -24,11 +24,11 @@ body {
 
 .p {
     width: 100vw;
-    /*position: fixed;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    bottom: 0;*/
+    bottom: 0;
     background: linear-gradient(#444, #222);
 }
 
@@ -102,11 +102,11 @@ a:active {
     filter: brightness(125%);
 }
 
-#s, #xS, #xCT, #xGOA, #xMM, #xWG {
+#next, #xS, #xCT, #xGOA, #xMM, #xWG {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
-#p, #xGO {
+#prev, #xGO {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
