@@ -67,9 +67,7 @@ body {
     font-size:8px;
 }
 
-.g, .M5 .M5, .M10 .M10, .M15 .M15, .M20 .M20, .M30 .M30, .MV .MV, .MA .MA,
-.H1 .H1, .H2 .H2, .H3 .H3, .H4 .H4, .H5 .H5, .H6 .H6, .H7 .H7, .H8 .H8, .H9 .H9, .H10 .H10, .H11 .H11, .H0 .H0,
-.M1 .M1, .M2 .M1, .M3 .M1, .M4 .M1, .M2 .M2, .M3 .M2, .M4 .M2, .M3 .M3, .M4 .M3, .M4 .M4 {
+.g {
     fill: var(--main-color);
     text-shadow:0 0 10px var(--main-color);
 }
@@ -77,12 +75,6 @@ body {
 .off .g:not(.colorBtn) {
     fill: #555;
     text-shadow: none;
-}
-
-.d .g, .d .M5 .M5, .d .M10 .M10, .d .M15 .M15, .d .M20 .M20, .d .M30 .M30, .d .MV .MV, .d .MA .MA,
-.d .H1 .H1, .d .H2 .H2, .d .H3 .H3, .d .H4 .H4, .d .H5 .H5, .d .H6 .H6, .d .H7 .H7, .d .H8 .H8, .d .H9 .H9, .d .H10 .H10, .d .H11 .H11, .d .H0 .H0,
-.d .M1 .M1, .d .M2 .M1, .d .M3 .M1, .d .M4 .M1, .d .M2 .M2, .d .M3 .M2, .d .M4 .M2, .d .M3 .M3, .d .M4 .M3, .d .M4 .M4 {
-    filter: brightness(70%);
 }
 
 a:link {
@@ -108,6 +100,18 @@ a:active {
 
 #prev, #xGO {
     position: absolute; left: 4vmin; bottom: 4vmin;
+}
+
+#prev {
+    left: max(20px, calc(50% - 300px));
+}
+
+#next {
+    right: max(20px, calc(50% - 300px));
+}
+
+[aria-hidden="true"] {
+    display: none;
 }
 
 #pageIndicator {
