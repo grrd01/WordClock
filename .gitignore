@@ -1,5 +1,7 @@
-node_modules/
-min2.html
-package-lock.json
-min.js
-min.css
+.idea/
+Frontend/node_modules/
+Frontend/min.html
+Frontend/min2.html
+Frontend/scripts/min.js
+Frontend/styles/min.css
+Frontend/package-lock.json

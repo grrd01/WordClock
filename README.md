@@ -18,6 +18,8 @@ yarn grunt           # Compiles Frontend and updates web_interface.h
 
 After running `yarn grunt`, the file `Backend/Arduino_Berndeutsch_121/web_interface.h` is automatically updated and ready to compile with the Arduino IDE.
 
+The current sketch also supports the optional ESP32-C6 BLE controller. When compiling it for an ESP32, select the custom `partitions.csv` file in the partition scheme menu (or select `Huge APP` on boards that provide that option). The default ESP32 partition leaves only 1.3 MB for the application, which is too small for the web interface and BLE support together. The custom table reserves 3 MB for the application and requires a board with at least 4 MB flash.
+
 
 Hardware required:
 

@@ -1,6 +1,6 @@
 /////////////////////////////////////////////
 //
-// LOLIN (WEMOS) D1 mini Lite (ESP8266) Wordclock Program
+// Wordclock Program for Wemos D1 Mini (ESP8266) or XIAO ESP32C6
 // Based on sripts and snippets from:
 // Rui Santos http://randomnerdtutorials.com
 // neotrace https://www.instructables.com/id/WORK-IN-PROGRESS-Ribba-Word-Clock-With-Wemos-D1-Mi/
@@ -9,15 +9,81 @@
 // Kurt Meister, 2018-12-24 | Edit: 2023-04-29
 // Thanks to Manuel Meister for refactoring and adding automated summertime conversion.
 //
-// Gérard Tyedmers, 2024-01-15 
-// Web-Interface added (http://wordclock.local/)
+// Gérard Tyedmers, 2024-01-15
+// - Web-Interface added (http://wordclock.local/)
+// - ESP32-Support added
+//
+// Daniel Illi, 2026-01-13
+// - Extract Webapp-String to separate file
+/////////////////////////////////////////////
+
+/////////////////////////////////////////////
+//
+// Connection scheme for supported hardware:
+//
+// - Adafruit_NeoPixel WS2812B
+//     VBUS/5V        -> +5V
+//     D7/GPIO13/MOSI -> DIN
+//     GND/G          -> GND
+// - Touch-Sensor TTP223
+//     VBUS/5V or 3.3v-> VCC
+//     D5/GPIO14/SCLK -> I/O
+//     GND/G          -> GND
+// - PushButton
+//     D5/GPIO14/SCLK -> one side of button
+//     GND/G          -> other side of button
+// - Brightness-Sensor GY-302 BH1750
+//     VBUS/5V        -> VCC
+//     D1/GPIO5/SCL   -> SCL
+//     D2/GPIO4/SDA   -> SDA
+//     GND/G          -> GND
+//                       ADDR not used
+// - Passive Buzzer
+//     VBUS/5V        -> VCC
+//     D6/GPIO12/MISO -> I/O
+//     GND/G          -> GND
+// - Temperature/Humidity-Sensor DHT22
+//     VBUS/5V        -> VCC
+//     D3/GPIO0       -> DAT
+//     GND/G          -> GND
+// - ShanWan Q36 Bluetooth Controller
+//
+/////////////////////////////////////////////
+
+/////////////////////////////////////////////
+//
+// IMPORTANT: To compile, choose Tools - Partition Scheme - Huge APP (3MB No OTA/1MB SPIFFS)
 //
 /////////////////////////////////////////////
 
 // set name for access-point and mdns-server
-const char* version = "wordclock";
-// define if touch sensor is used for power on/off: Touch feature switch: 1 = yes, 0 = no
+const char* version = "wordclockxs";
+
+// define if a touch sensor is used for power on/off: 1 = yes, 0 = no
 #define USE_TOUCH_SENSOR 0
+
+// define if a push-button is used for power on/off: 1 = yes, 0 = no
+#define USE_PUSH_BUTTON 0
+
+// define if a brightness sensor is used to control led brightness:  1 = yes, 0 = no
+#define USE_BRIGHTNESS_SENSOR 0
+
+// define if a passive buzzer is used for alarm signals:  1 = yes, 0 = no
+#define USE_PASSIVE_BUZZER 0
+
+// define if a temperature/humidity sensor is used:  1 = yes, 0 = no
+#define USE_TEMP_HUMID_SENSOR 0
+
+// define if a ShanWan Q36 Bluetooth can be paired: 1 = yes, 0 = no
+#define USE_CONTROLLER 1
+
+// ToDo: Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen
+// ToDo: Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
+// ToDo: Mastermind mit Controller steuern
+// ToDo: PushButton-Feature
+// ToDo: Brightness-Sensor-Feature
+// ToDo: Passive-Buzzer-Feature / Wecker / Timer
+// ToDo: Temperature/Humidity-Sensor-Feature
 
 #include <Arduino.h>
 
@@ -27,6 +93,9 @@ const char* version = "wordclock";
 #elif defined(ARDUINO_ARCH_ESP32)
   #include <WiFi.h>
   #include <ESPmDNS.h>
+  #if USE_CONTROLLER
+    #include <NimBLEDevice.h>
+  #endif
 #else
   #error Unsupported platform
 #endif
@@ -89,6 +158,14 @@ const uint8_t eepromAddrTetrisHigh = 8;
 const uint8_t eepromAddrSnakeHigh = 9;
 const uint8_t eepromAddrSameGameHighLow = 10;  // sameGameHighScore is int (2 bytes)
 const uint8_t eepromAddrSameGameHighHigh = 11;
+
+#if USE_CONTROLLER
+static NimBLEClient* pClient = nullptr;
+static bool doConnect = false;
+static bool startDiscovery = false;
+static NimBLEAdvertisedDevice* targetDevice = nullptr;
+#endif
+uint8_t connectedControllers = 0;
 
 // Current time
 unsigned long currentTime = millis();
@@ -235,7 +312,6 @@ bool inBounds(int x, int y);
 
 // Tetris variables
 uint8_t board[11][11] = {0}; // 0 = empty, >0 = color index, shared with SameGame
-int tetrisDir = 0; // 1=rotate, 2=right, 3=down, 4=left, 5=new game, 6=exit game
 uint8_t tetrisScore = 0;
 uint8_t tetrisHighScore = 0;
 bool inTetris = false;
@@ -363,12 +439,14 @@ void pulseOn(int led, uint32_t color, int steps, int delayMs) {
 }
 
 // Mastermind variables
-int mastermindCode[4];
-int mastermindCodeBackup[4];
-int mastermindCodeTry[4];
-int mastermindTry = 0;
-int mastermindPlace = 0;
-int mastermindColor = 0;
+int8_t mastermindCode[4];
+int8_t mastermindCodeBackup[4];
+int8_t mastermindCodeTry[4];
+int8_t mastermindCodeTryBackup[4];
+int8_t mastermindTry = 0;
+int8_t mastermindCol = 1;
+int8_t mastermindPlace = 0;
+int8_t mastermindColor = 0;
 bool inMastermind = false;
 
 // WordGuessr variables
@@ -997,6 +1075,65 @@ void sendParamsToClients() {
   webSocket.broadcastTXT(msg);
 }
 
+void startTetris() {
+  // Tetris start
+  memset(board, 0, sizeof(board));
+  tetrisScore = 0;
+  gameOver = false;
+  inMastermind = false;
+  inWordGuessr = false;
+  inSnake = false;
+  blank();
+  pixels.show();
+  spawnTetromino();
+  drawBoard();
+  inTetris = true;
+  sendScoreToClients(0, tetrisHighScore);
+}
+
+void startSnake() {
+  // Snake start
+  inSnake = true;
+  inMastermind = false;
+  inWordGuessr = false;
+  inTetris = false;
+  snake[0] = 49;
+  snake[1] = 60;
+  snake[2] = 71;
+  snake[3] = -1;
+  snakeLen = 3;
+  snakeDir = "";
+  snakeNext = -1;
+  snakeSpeed = 650;
+  snakeLastMove = millis();
+  sendScoreToClients(0, snakeHighScore);
+  blank();
+  lightup(snake, Green);
+  setSnack();
+  pixels.show();
+}
+
+void startSameGame () {
+  // SameGame start
+  inSameGame = true;
+  inTetris = false;
+  inSnake = false;
+  inMastermind = false;
+  inWordGuessr = false;
+  memset(board, 0, sizeof(board));
+  sameGameScore = 0;
+  movesMade = 0;
+  cursorX = MATRIX_WIDTH / 2;
+  cursorY = MATRIX_HEIGHT / 2;
+  cursorBlinkVisible = true;
+  lastBlinkToggle = millis();
+  gameStatus = STATUS_PLAYING;
+  fillRandomBoard();
+  drawSameGameBoard();
+  broadcastState();
+}
+
+
 /*
  * WebSocket event handler: receive control commands from client
  */
@@ -1008,48 +1145,15 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
   }
   if (type != WStype_TEXT) return;
   String msg = String((char*)payload);
+
   if (msg == "tetris") {
-    // Tetris start
-    inTetris = true;
-    inMastermind = false;
-    inSameGame = false;
-    inWordGuessr = false;
-    inSnake = false;
-    blank();
-    pixels.show();
-    handleRestart();
-    sendScoreToClients(0, tetrisHighScore);
+    startTetris();
   } else if (msg == "snake") {
-    // Snake start
-    inSnake = true;
-    inMastermind = false;
-    inSameGame = false;
-    inWordGuessr = false;
-    inTetris = false;
-    snake[0] = 49;
-    snake[1] = 60;
-    snake[2] = 71;
-    snake[3] = -1;
-    snakeLen = 3;
-    snakeDir = "";
-    snakeNext = -1;
-    snakeSpeed = 650;
-    snakeLastMove = millis();
-    sendScoreToClients(0, snakeHighScore);
-    blank();
-    lightup(snake, Green);
-    setSnack();
-    pixels.show();
+    startSnake();
   } else if (msg == "samegame") {
-    // SameGame start
-    inSameGame = true;
-    inTetris = false;
-    inSnake = false;
-    inMastermind = false;
-    inWordGuessr = false;
-    startSameGame();
+      startSameGame();
   } else if (msg == "stop") {
-     // Tetris or Snake exit
+     // Tetris,Snake or SameGame exit
     inTetris = false;
     inSnake = false;
     inSameGame = false;
@@ -1059,21 +1163,13 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     snakePrevDir = snakeDir;
     snakeDir = msg;
   } else if (inTetris && msg == "left") {
-    if (!checkCollision(posX - 1, posY, rotation)) { posX--; if(!gameOver) drawBoard(); }
+    tetrisLeft();
   } else if (inTetris && msg == "right") {
-    if (!checkCollision(posX + 1, posY, rotation)) { posX++; if(!gameOver) drawBoard(); }
+    tetrisRight();
   } else if (inTetris && msg == "up") {
-    rotateTetromino();
+    tetrisRotateRight();
   } else if (inTetris && msg == "down") {
-    if (!checkCollision(posX, posY + 1, rotation)) {
-      posY++;
-    } else {
-      placeTetromino();
-      clearLines();
-      spawnTetromino();
-      if (checkCollision(posX, posY, rotation)) gameOver = true;
-    }
-    if (!gameOver) drawBoard();
+    tetrisDown();
   } else if (inSameGame && msg == "left") {
     moveCursor(-1, 0);
   } else if (inSameGame && msg == "right") {
@@ -1227,8 +1323,26 @@ void drawBoard() {
   pixels.show();
 }
 
+void tetrisRight() {
+  if (!checkCollision(posX + 1, posY, rotation)) { posX++; if(!gameOver) drawBoard(); }
+}
+void tetrisLeft() {
+  if (!checkCollision(posX - 1, posY, rotation)) { posX--; if(!gameOver) drawBoard(); }
+}
+void tetrisDown() {
+    if (!checkCollision(posX, posY + 1, rotation)) {
+      posY++;
+    } else {
+      placeTetromino();
+      clearLines();
+      spawnTetromino();
+      if (checkCollision(posX, posY, rotation)) gameOver = true;
+    }
+    if (!gameOver) drawBoard();
+}
+
 // Tetris: Rotate tetromino (clockwise)
-void rotateTetromino() {
+void tetrisRotateRight() {
   uint8_t rotated[4][4];
   for (uint8_t i = 0; i < 4; i++) {
     for (uint8_t j = 0; j < 4; j++) {
@@ -1256,12 +1370,32 @@ void rotateTetromino() {
   drawBoard();
 }
 
-// Tetris: Restart the game
-void handleRestart() {
-  memset(board, 0, sizeof(board));
-  tetrisScore = 0;
-  gameOver = false;
-  spawnTetromino();
+// Tetris: Rotate tetromino (counterclockwise)
+void tetrisRotateLeft() {
+  uint8_t rotated[4][4];
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      rotated[3-j][i] = currentPiece[i][j];
+    }
+  }
+  // Check collision for rotated piece
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      if (rotated[i][j]) {
+        int nx = posX + j;
+        int ny = posY + i;
+        if (nx < 0 || nx >= 11 || ny >= 11 || (ny >= 0 && board[ny][nx])) {
+          return; // Collision, do not rotate
+        }
+      }
+    }
+  }
+  // Apply rotation
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      currentPiece[i][j] = rotated[i][j];
+    }
+  }
   drawBoard();
 }
 
@@ -1347,21 +1481,6 @@ void fillRandomBoard() {
   }
 }
 
-// SameGame: Start a new game
-void startSameGame() {
-  memset(board, 0, sizeof(board));
-  sameGameScore = 0;
-  movesMade = 0;
-  cursorX = MATRIX_WIDTH / 2;
-  cursorY = MATRIX_HEIGHT / 2;
-  cursorBlinkVisible = true;
-  lastBlinkToggle = millis();
-  gameStatus = STATUS_PLAYING;
-  fillRandomBoard();
-  drawSameGameBoard();
-  broadcastState();
-}
-
 // SameGame: Update game status based on current board state
 void drawSameGameBoard() {
   pixels.clear();
@@ -1369,7 +1488,9 @@ void drawSameGameBoard() {
 	for (int x = 0; x < MATRIX_WIDTH; x++) {
 	  uint8_t colorIndex = board[y][x];
 	  if (colorIndex > 0) {
-		pixels.setPixelColor(xyToIndex(x, y), GameColors[colorIndex - 1]);
+        // rot statt orange
+        if (colorIndex == 1) colorIndex = 0;
+		pixels.setPixelColor(xyToIndex(x, y), GameColors[colorIndex]);
 	  }
 	}
   }
@@ -1543,10 +1664,10 @@ void broadcastState() {
 // SameGame: Convert game status to string representation
 String statusToString() {
   if (gameStatus == STATUS_WON) {
-	return "gameOverWon";
+	return "samegameGameOverWon";
   }
   if (gameStatus == STATUS_STUCK) {
-	return "gameOverStuck";
+	return "samegameGameOverStuck";
   }
   return "playing";
 }
@@ -1629,7 +1750,7 @@ void wordGuessrNewGuess() {
 /*
  * Mastermind: prepares a new mastermind game
  */
-void clearMastermind() {
+void startMastermind() {
   wipe();
   inMastermind = true;
   inWordGuessr = false;
@@ -1642,6 +1763,7 @@ void clearMastermind() {
   mastermindCode[2] = random(1,7);
   mastermindCode[3] = random(1,7);
   mastermindTry = 0;
+  mastermindCol = 0;
   mastermindPlace = 0;
   mastermindColor = 0;
   for (uint8_t i = 0; i < 11; i++) {
@@ -1649,7 +1771,326 @@ void clearMastermind() {
     pixels.setPixelColor(down(5, i), Grey);
     pixels.setPixelColor(down(10, i), Grey);
   }
+  memset(mastermindCodeTry, 1, sizeof(mastermindCodeTry));
 }
+
+/*
+ * Mastermind: display currenmt try
+ */
+void displayMastermind() {
+  for (uint8_t i = 0; i < 4; i++) {
+    pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
+  }
+  if (power == 1) {
+    pixels.show();
+  }
+}
+
+/*
+ * Mastermind: evaluates the current try and updates the display with the results
+ */
+void evaluateMastermind() {
+  mastermindPlace = 0;
+  mastermindColor = 0;
+  mastermindCol = 0;
+  for (uint8_t i = 0; i < 4; i++) {
+    displayMastermind();
+    mastermindCodeBackup[i] = mastermindCode[i];
+    mastermindCodeTryBackup[i] = mastermindCodeTry[i];
+    // check right position
+    if (mastermindCodeTryBackup[i] == mastermindCodeBackup[i]) {
+      mastermindCodeTryBackup[i] = -1;
+      mastermindCodeBackup[i] = -2;
+      mastermindPlace ++;
+      pixels.setPixelColor(down(mastermindPlace + 5, mastermindTry), White);
+    }
+  }
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = 0; j < 4; j++) {
+      // check right color
+      if (mastermindCodeTryBackup[i] == mastermindCodeBackup[j]) {
+        mastermindCodeTryBackup[i] = -1;
+        mastermindCodeBackup[j] = -2;
+        mastermindColor ++;
+        pixels.setPixelColor(down(mastermindColor + mastermindPlace + 5, mastermindTry), Cornflower);
+      }
+    }
+  }
+  mastermindTry ++;
+  if (mastermindPlace == 4) {
+    // player won
+    for (uint8_t i = 0; i < mastermindTry; i++) {
+      pixels.setPixelColor(down(0, i), Green);
+      pixels.setPixelColor(down(5, i), Green);
+      pixels.setPixelColor(down(10, i), Green);
+    }
+  } else if (mastermindTry == 11) {
+    // player lost
+    for (uint8_t i = 0; i < mastermindTry; i++) {
+      pixels.setPixelColor(down(0, i), Red);
+      pixels.setPixelColor(down(5, i), Red);
+      pixels.setPixelColor(down(10, i), Red);
+    }
+  }
+  if (power == 1) {
+    pixels.show();
+  }
+}
+
+void evaluateControllerMastermind() {
+  if (mastermindTry == 11 || mastermindPlace == 4) {
+    // Mastermind fertig, zurueck zur WordClock
+    inMastermind = false;
+    satzneu[0] = -1;
+    lastMinuteWordClock = 61;
+  } else {
+    evaluateMastermind();
+    if(mastermindTry < 11 && mastermindPlace < 4) {
+      displayMastermind();
+    }
+  }
+}
+
+#if USE_CONTROLLER
+void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+  if (length < 10) return;
+
+  uint8_t dpad    = pData[4]; // 5. Byte
+  uint8_t btnMain = pData[5]; // 6. Byte
+  uint8_t btnSub  = pData[6]; // 7. Byte
+
+  // Statische Variablen behalten ihren Wert zwischen den Aufrufen
+  static uint8_t lastDpad   = 0xFF;
+  static uint8_t lastMain   = 0x00;
+  static uint8_t lastSub    = 0x00;
+
+  // Wenn sich der Zustand seit dem letzten Paket nicht veraendert hat: Abbrechen
+  if (dpad == lastDpad && btnMain == lastMain && btnSub == lastSub) {
+    return;
+  }
+
+  // Aktuellen Zustand fuer den naechsten Vergleich speichern
+  lastDpad = dpad;
+  lastMain = btnMain;
+  lastSub  = btnSub;
+
+  // 1. Tasten losgelassen
+  if (dpad == 0xFF && btnMain == 0x00 && btnSub == 0x00) {
+    // Serial.println(F("Taste losgelassen"));
+    return;
+  }
+
+  // 2. Steuerkreuz (D-Pad)
+  if (dpad != 0xFF) {
+    switch (dpad) {
+      case 0x00:
+        // Serial.println(F("Taste UP gedrueckt"));
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir = "up";
+        } else if (inTetris) {
+          tetrisRotateRight();
+        } else if (inSameGame) {
+          moveCursor(0, -1);
+        } else if (inMastermind) {
+          if (mastermindTry == 11 || mastermindPlace == 4) {
+            // Mastermind fertig, zurueck zur WordClock
+            inMastermind = false;
+            satzneu[0] = -1;
+            lastMinuteWordClock = 61;
+          } else {
+            if (mastermindCodeTry[mastermindCol] < 6) {
+              mastermindCodeTry[mastermindCol]++;
+            } else {
+              mastermindCodeTry[mastermindCol] = 1;
+            }
+            displayMastermind();
+          }
+        }
+        return;
+      case 0x02:
+        // Serial.println(F("Taste RIGHT gedrueckt"));
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir ="right";
+        } else if (inTetris) {
+          tetrisRight();
+        } else if (inSameGame) {
+          moveCursor(1, 0);
+        } else if (inMastermind) {
+          if (mastermindTry == 11 || mastermindPlace == 4) {
+            // Mastermind fertig, zurueck zur WordClock
+            inMastermind = false;
+            satzneu[0] = -1;
+            lastMinuteWordClock = 61;
+          } else if (mastermindCol < 3) {
+            mastermindCol++;
+          }
+        }
+        return;
+      case 0x04:
+        // Serial.println(F("Taste DOWN gedrueckt"));
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir = "down";
+        } else if (inTetris) {
+          tetrisDown();
+        } else if (inSameGame) {
+          moveCursor(0, 1);
+        } else if (inMastermind) {
+          if (mastermindTry == 11 || mastermindPlace == 4) {
+            // Mastermind fertig, zurueck zur WordClock
+            inMastermind = false;
+            satzneu[0] = -1;
+            lastMinuteWordClock = 61;
+          } else {
+            if (mastermindCodeTry[mastermindCol] > 1) {
+              mastermindCodeTry[mastermindCol]--;
+            } else {
+              mastermindCodeTry[mastermindCol] = 6;
+            }
+            displayMastermind();
+          }
+        }
+        return;
+      case 0x06:
+        // Serial.println(F("Taste LEFT gedrueckt"));
+        if (inSnake) {
+          snakePrevDir = snakeDir;
+          snakeDir = "left";
+        } else if (inTetris) {
+          tetrisLeft();
+        } else if (inSameGame) {
+          moveCursor(-1, 0);
+        } else if (inMastermind) {
+          if (mastermindCol > 0) {
+            mastermindCol--;
+          }
+        }
+        return;
+    }
+  }
+
+  // 3. Haupt-Buttons (A, B, X, Y, L, R)
+  switch (btnMain) {
+    case 0x01:
+      // Serial.println(F("Taste A gedrueckt"));
+      if (inTetris) {
+        tetrisRotateLeft();
+      } else if (inSameGame) {
+        removeGroupAt(cursorX, cursorY);
+        broadcastState();
+      } else if (inMastermind) {
+        evaluateControllerMastermind();
+      }
+      return;
+    case 0x02:
+      // Serial.println(F("Taste B gedrueckt"));
+      if (inTetris) {
+        tetrisRotateRight();
+      } else if (inSameGame) {
+        removeGroupAt(cursorX, cursorY);
+        broadcastState();
+      } else if (inMastermind) {
+        evaluateControllerMastermind();
+      }
+      return;
+    case 0x08:
+      // Serial.println(F("Taste X gedrueckt"));
+      return;
+    case 0x10:
+      // Serial.println(F("Taste Y gedrueckt"));
+      return;
+    case 0x40:
+      // Serial.println(F("Taste L gedrueckt"));
+      if (inTetris) {
+        tetrisRotateLeft();
+      }
+      return;
+    case 0x80:
+      // Serial.println(F("Taste R gedrueckt"));
+      if (inTetris) {
+        tetrisRotateRight();
+      }
+      return;
+  }
+
+  // 4. Schulter- & Zusatz-Buttons (L2, R2, SL, SR)
+  switch (btnSub) {
+    case 0x01:
+      // Serial.println(F("Taste L2 gedrueckt"));
+      return;
+    case 0x02:
+      // Serial.println(F("Taste R2 gedrueckt"));
+      return;
+    case 0x04:
+      // Serial.println(F("Taste - gedrueckt"));
+      inTetris = false;
+      inSnake = false;
+      inSameGame = false;
+      inMastermind = false;
+      satzneu[0] = -1;
+      lastMinuteWordClock = 61;
+      return;
+    case 0x08:
+      // Serial.println(F("Taste + gedrueckt"));
+      if (inSnake) {
+        startTetris();
+      } else if (inTetris) {
+        startSameGame();
+      } else if (inSameGame) {
+        startMastermind();
+        displayMastermind();
+      } else {
+        startSnake();
+      }
+      return;
+  }
+
+  // Falls eine unerkannte Kombination gedrueckt wird
+  // Serial.printf("Unbekannt: [4]=0x%02X [5]=0x%02X [6]=0x%02X\n", dpad, btnMain, btnSub);
+}
+
+class ClientCallbacks : public NimBLEClientCallbacks {
+  void onConnect(NimBLEClient* pClient) override {
+    // Serial.println(F(">> Verbunden!"));
+    setWifiStatus(Yellow, 1000);
+  }
+
+  void onDisconnect(NimBLEClient* pClient, int reason) override {
+    // Serial.printf(">> Verbindung getrennt! Reason: %d\n", reason);
+    connectedControllers--;
+    setWifiStatus(Red, 1000);
+    startDiscovery = false;
+    NimBLEDevice::getScan()->start(0, false);
+  }
+
+  void onAuthenticationComplete(NimBLEConnInfo& connInfo) override {
+    if (connInfo.isEncrypted()) {
+      // Serial.println(F(">> Security/Pairing ERFOLGREICH! Starte Service-Discovery..."));
+      startDiscovery = true; // Signalisiere Hauptschleife: Jetzt sicher abfragen!
+    } else {
+      // Serial.println(F(">> Security/Pairing FEHLGESCHLAGEN!"));
+    }
+  }
+};
+
+class ScanCallbacks : public NimBLEScanCallbacks {
+  void onDiscovered(const NimBLEAdvertisedDevice* advertisedDevice) override {
+    if (advertisedDevice->getName().find("ShanWan") != std::string::npos ||
+        advertisedDevice->getName().find("Q36") != std::string::npos) {
+
+      // Serial.printf("Controller gefunden: %s [%s]\n",
+      //              advertisedDevice->getName().c_str(),
+      //              advertisedDevice->getAddress().toString().c_str());
+
+      NimBLEDevice::getScan()->stop();
+      targetDevice = const_cast<NimBLEAdvertisedDevice*>(advertisedDevice);
+      doConnect = true;
+    }
+  }
+};
+#endif
 
 /**
  * Main setup to start WordClock
@@ -1659,7 +2100,12 @@ void setup() {
   pixels.begin();
   wipe();
 
-  pinMode(D5, INPUT);
+  #if USE_TOUCH_SENSOR
+    pinMode(D5, INPUT);
+  #endif
+  #if USE_PUSH_BUTTON
+    pinMode(D5, INPUT_PULLUP);
+  #endif
 
   // Initialize EEPROM and read stored values
   EEPROM.begin(512);
@@ -1721,6 +2167,18 @@ void setup() {
   setupWifi();
   setupTime();
   randomSeed(analogRead(A0));
+
+  #if USE_CONTROLLER
+      NimBLEDevice::init("ESP32C6_HID_Host");
+
+      NimBLEDevice::setSecurityAuth(true, true, true);
+      NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+
+      NimBLEScan* pScan = NimBLEDevice::getScan();
+      pScan->setScanCallbacks(new ScanCallbacks());
+      pScan->setActiveScan(true);
+      pScan->start(0, false);
+  #endif
 }
 
 /**
@@ -1750,7 +2208,7 @@ void loop() {
               mastermindCodeTry[3] = extractParameterValue(url, "c4=");
               if (!inMastermind && mastermindCodeTry[3] == 0 && power == 1) {
                 // start new mastermind game
-                clearMastermind();
+                startMastermind();
               } else if (inMastermind && mastermindCodeTry[3] == 7) {
                 // exit current mastermind game
                 inMastermind = false;
@@ -1758,56 +2216,17 @@ void loop() {
                 lastMinuteWordClock = 61;
               } else if (inMastermind && mastermindCodeTry[3] != 0 && mastermindCodeTry[3] != 7) {
                 // restart a new game if needed
+                mastermindCodeTryBackup[3] = mastermindCodeTry[3];
                 if (mastermindTry == 11 || mastermindPlace == 4) {
-                  clearMastermind();
+                  startMastermind();
                 }
                 // evaluate players try
+                mastermindCodeTry[3] = mastermindCodeTryBackup[3];
                 mastermindCodeTry[2] = extractParameterValue(url, "c3=");
                 mastermindCodeTry[1] = extractParameterValue(url, "c2=");
                 mastermindCodeTry[0] = extractParameterValue(url, "c1=");
-                mastermindPlace = 0;
-                mastermindColor = 0;
-                for (uint8_t i = 0; i < 4; i++) {
-                  pixels.setPixelColor(down(i + 1, mastermindTry), GameColors[mastermindCodeTry[i] - 1]);
-                  mastermindCodeBackup[i] = mastermindCode[i];
-                  // check right position
-                  if (mastermindCodeTry[i] == mastermindCodeBackup[i]) {
-                    mastermindCodeTry[i] = -1;
-                    mastermindCodeBackup[i] = -2;
-                    mastermindPlace ++;
-                    pixels.setPixelColor(down(mastermindPlace + 5, mastermindTry), White);
-                  }
-                }
-                for (uint8_t i = 0; i < 4; i++) {
-                  for (uint8_t j = 0; j < 4; j++) {
-                    // check right color
-                    if (mastermindCodeTry[i] == mastermindCodeBackup[j]) {
-                      mastermindCodeTry[i] = -1;
-                      mastermindCodeBackup[j] = -2;
-                      mastermindColor ++;
-                      pixels.setPixelColor(down(mastermindColor + mastermindPlace + 5, mastermindTry), Cornflower);
-                    }
-                  }
-                }
-                mastermindTry ++;
-              }
-              if (mastermindPlace == 4) {
-                // player won
-                for (uint8_t i = 0; i < mastermindTry; i++) {
-                  pixels.setPixelColor(down(0, i), Green);
-                  pixels.setPixelColor(down(5, i), Green);
-                  pixels.setPixelColor(down(10, i), Green);
-                }
-              } else if (mastermindTry == 11) {
-                // player lost
-                for (uint8_t i = 0; i < mastermindTry; i++) {
-                  pixels.setPixelColor(down(0, i), Red);
-                  pixels.setPixelColor(down(5, i), Red);
-                  pixels.setPixelColor(down(10, i), Red);
-                }
-              }
-              if (power == 1) {
-                pixels.show();
+
+                evaluateMastermind();
               }
               client.println(F("HTTP/1.1 200 OK"));
               client.println(F("Content-type:application/json"));
@@ -2012,9 +2431,74 @@ void loop() {
     MDNS.update();
   #endif
 
+  #if USE_CONTROLLER
+    if (doConnect) {
+        doConnect = false;
+        pClient = NimBLEDevice::createClient();
+        pClient->setClientCallbacks(new ClientCallbacks());
+
+        if (pClient->connect(targetDevice)) {
+          // Serial.println(F(">> Starte Encryption..."));
+          NimBLEDevice::startSecurity(pClient->getConnHandle());
+        } else {
+          // Serial.println(F(">> Verbindung fehlgeschlagen."));
+          NimBLEDevice::getScan()->start(0, false);
+        }
+      }
+
+      // Erst ausführen, WENN onAuthenticationComplete() ERFOLGREICH meldet!
+      if (startDiscovery) {
+        startDiscovery = false;
+
+        // Kurze Pause, damit der BLE-Stack nach Key-Exchange bereit ist
+        delay(300);
+        setWifiStatus(Yellow, 1);
+        delay(200);
+        setWifiStatus(Black, 1);
+
+        int totalSubscribed = 0;
+        for (auto pService : pClient->getServices(true)) {
+          // Serial.printf("Durchsuche Service: %s\n", pService->getUUID().toString().c_str());
+          for (auto pChar : pService->getCharacteristics(true)) {
+            // Prüfe ob Characteristic Benachrichtigungen senden kann
+            if (pChar->canNotify() || pChar->canIndicate()) {
+              // Explizit auf Subscriben mit Antwort erzwingen
+              if (pChar->subscribe(true, notifyCB)) {
+                totalSubscribed++;
+                // Serial.printf("   --> ERFOLG: Subscribed auf Char: %s\n", pChar->getUUID().toString().c_str());
+              } else {
+                // Serial.printf("   --> FEHLER beim Subscriben auf Char: %s\n", pChar->getUUID().toString().c_str());
+              }
+            }
+          }
+        }
+
+        // Serial.printf(">> Fertig! Insgesamt auf %d Kanaele subscribed.\n", totalSubscribed);
+        connectedControllers++;
+        setWifiStatus(Green, 1000);
+      }
+  #endif
+
+
   // Touch sensor to toggle power
   #if USE_TOUCH_SENSOR
     if (digitalRead(D5) == LOW && lastTouchStage == true) {
+      power = 1 - power; // toggle power
+      sendParamsToClients();
+      if (power == 0) {
+        blank();
+        pixels.show();
+      } else {
+        satzneu[0] = -1;
+        lastMinuteWordClock = 61;
+      }
+    }
+    lastTouchStage = digitalRead(D5);
+  #endif
+
+  // PushButton to toggle power
+  #if USE_PUSH_BUTTON
+    if (digitalRead(D5) == HIGH && lastTouchStage == false) {
       power = 1 - power; // toggle power
       sendParamsToClients();
       if (power == 0) {
@@ -2136,7 +2620,10 @@ void loop() {
       }
       if (snakeNext == snakeSnack) {
         // found snack
-        snakeLen++;
+        if (snakeLen < 120) {
+          snakeLen++;
+        }
+
         if (snakeLen - 3 > snakeHighScore) {
           snakeHighScore = snakeLen - 3;
         }
@@ -2160,7 +2647,7 @@ void loop() {
 
       if (snakeNext == -3) {
         // game over
-        webSocket.broadcastTXT("gameOver");
+        webSocket.broadcastTXT("snakeGameOver");
         if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh) || EEPROM.read(eepromAddrSnakeHigh) == 255) {
           EEPROM.write(eepromAddrSnakeHigh, snakeHighScore);
           EEPROM.commit();
@@ -2181,9 +2668,7 @@ void loop() {
         placeTetromino();
         clearLines();
         spawnTetromino();
-        if (checkCollision(posX, posY, rotation)) {
-          gameOver = true;
-        }
+        if (checkCollision(posX, posY, rotation)) gameOver = true;
       }
       if (!gameOver) {
         drawBoard();
@@ -2191,7 +2676,7 @@ void loop() {
     }
     if (gameOver) {
       delay(500);
-      webSocket.broadcastTXT("gameOver");
+      webSocket.broadcastTXT("tetrisGameOver");
       if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh) || EEPROM.read(eepromAddrTetrisHigh) == 255) {
         EEPROM.write(eepromAddrTetrisHigh, tetrisHighScore);
         EEPROM.commit();
@@ -2207,6 +2692,23 @@ void loop() {
       cursorBlinkVisible = !cursorBlinkVisible;
       drawSameGameBoard();
     }
+  } else if (inMastermind && mastermindTry < 11 && mastermindPlace < 4) {
+    if (millis() - lastBlinkToggle >= blinkInterval) {
+      lastBlinkToggle = millis();
+      cursorBlinkVisible = !cursorBlinkVisible;
+      if (connectedControllers > 0) {
+        displayMastermind();
+      } else {
+        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), backgroundColor);
+        pixels.show();
+      }
+
+      if (cursorBlinkVisible) {
+        // show cursor
+        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), White);
+        pixels.show();
+      }
+    }
   } else if (inWordGuessr) {
     if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
       // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
@@ -2217,8 +2719,8 @@ void loop() {
         }
       pixels.show();
       wordGuessrAlert = 0;
-    } else if (millis() > wordGuessrStart + (wordGuessrHint + 1) * 30000) {
-      // nach 30 Sekunden einen weiteren Buchstaben als Hint grün färben
+    } else if (millis() > wordGuessrStart + (wordGuessrHint + 1) * 20000) {
+      // nach 20 Sekunden einen weiteren Buchstaben als Hint grün färben
       pixels.setPixelColor(wordGuessrActiveWordIndex[wordGuessrHint], Green);
       pixels.show();
       wordGuessrHint++;
