@@ -30,7 +30,7 @@ void setup()
   Serial.print("Verbunden! IP-Adresse: ");
   Serial.println(WiFi.localIP());
 
-  // Bei Android-Geräten wird der mDNS oft nicht unterstützt, dann muss auf die IP-Adresse zurückgegriffen werden
+  // Bei Android-GerÃ¤ten wird der mDNS oft nicht unterstÃ¼tzt, dann muss auf die IP-Adresse zurÃ¼ckgegriffen werden
   if (MDNS.begin(dns_name)) {
     Serial.println("DNS gestartet, erreichbar unter: ");
     Serial.println("http://" + String(dns_name) + ".local/");
@@ -59,5 +59,5 @@ void loop() {
 }
 
 void eigeneFunktion(){
-  Serial.println("unsere eigene Funktion wird ausgeführt ...");
+  Serial.println("unsere eigene Funktion wird ausgefï¿½hrt ...");
 }
