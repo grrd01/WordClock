@@ -2,13 +2,13 @@
  * ==================================================================================
  * Passive Buzzer an Wemos D1 mini
  * Verbindungsschema:
- * - VCC/5V     -> VCC
- * - D6/GPI12/MISO  -> SDA
- * - GND/G      -> GND
+ * - VCC/5V          -> VCC
+ * - D6/GPIO12/MISO  -> SDA
+ * - GND/G           -> GND
  * ==================================================================================
  */
 
-#define BUZZER_PIN D5
+#define BUZZER_PIN D6
 
 void beep() {
   tone(BUZZER_PIN, 1000); // 1 kHz
