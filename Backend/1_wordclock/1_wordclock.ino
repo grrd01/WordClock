@@ -57,7 +57,7 @@
 /////////////////////////////////////////////
 
 // set name for access-point and mdns-server
-const char* version = "wordclockxs";
+const char* version = "wordclock";
 
 // define if a touch sensor is used for power on/off: 1 = yes, 0 = no
 #define USE_TOUCH_SENSOR 0
@@ -75,15 +75,14 @@ const char* version = "wordclockxs";
 #define USE_TEMP_HUMID_SENSOR 0
 
 // define if a ShanWan Q36 Bluetooth can be paired: 1 = yes, 0 = no
-#define USE_CONTROLLER 1
+#define USE_CONTROLLER 0
 
-// ToDo: Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen
-// ToDo: Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
-// ToDo: Mastermind mit Controller steuern
-// ToDo: PushButton-Feature
-// ToDo: Brightness-Sensor-Feature
-// ToDo: Passive-Buzzer-Feature / Wecker / Timer
-// ToDo: Temperature/Humidity-Sensor-Feature
+// ToDo: Bug - Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen
+// ToDo: Bug - Controller-Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
+// ToDo: Feature - Manual in WebApp integrieren
+// ToDo: Feature - Brightness-Sensor
+// ToDo: Feature - Passive-Buzzer / Wecker / Timer
+// ToDo: Feature - Temperature/Humidity-Sensor
 
 #include <Arduino.h>
 
