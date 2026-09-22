@@ -22,6 +22,8 @@
 		pageLookup.set(pageNames[index], index);
 	});
 
+	const contentPageIndex = pageLookup.get("content");
+
 	function updatePageIndicator() {
 		if (pageIndicator) {
 			pageIndicator.textContent = (currentPageIndex + 1).toString() + "/" + pages.length.toString();
@@ -91,6 +93,13 @@
 	if (nextButton) {
 		nextButton.addEventListener("click", function () {
 			showPage(currentPageIndex + 1);
+		});
+	}
+
+	if (pageIndicator && typeof contentPageIndex === "number") {
+		pageIndicator.addEventListener("click", function (event) {
+			event.preventDefault();
+			showPage(contentPageIndex);
 		});
 	}
 
