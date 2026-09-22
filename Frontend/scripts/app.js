@@ -204,6 +204,13 @@
     }
 
     /**
+     * Open the WordClock Instructions in a new tab
+     */
+    function fOpenManual() {
+        window.open("https://grrd01.github.io/WordClock", "_blank", "noopener,noreferrer");
+    }
+
+    /**
      * Set all elements to selected color
      */
     function fChangeColor(color_in) {
@@ -501,6 +508,7 @@
      */
     fEventListener(ElementById("p"), click, fTogglePower);
     fEventListener(ElementById("s"), click, fShowSettings);
+    fEventListener(ElementById("h"), click, fOpenManual);
     fEventListener(ElementById("xS"), click, fHideSettings);
 
     fEventListener(ElementById("SN"), click, function () {

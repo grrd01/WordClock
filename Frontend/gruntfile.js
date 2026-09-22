@@ -117,7 +117,7 @@ const char web_interface[] PROGMEM = R"====(${htmlContent})====";
 `;
 
         // Write to web_interface.h
-        const outputPath = path.join(__dirname, '../Backend/Arduino_Berndeutsch_121/web_interface.h');
+        const outputPath = path.join(__dirname, '../Backend/1_wordclock/web_interface.h');
         fs.writeFileSync(outputPath, header, 'utf8');
         
         grunt.log.ok('✅ web_interface.h updated successfully!');
