@@ -9,7 +9,6 @@
 		return page.id.replace(/^page/i, "").toLowerCase();
 	});
 	const pageLookup = new Map();
-	let minute = -1;
 	let currentPageIndex = 0;
 
 
@@ -102,5 +101,16 @@
 			showPage(contentPageIndex);
 		});
 	}
+
+	document.addEventListener("keydown", function (event) {
+		if (event.key === "ArrowLeft" && currentPageIndex > 0) {
+			event.preventDefault();
+			showPage(currentPageIndex - 1);
+		}
+		if (event.key === "ArrowRight" && currentPageIndex < pages.length - 1) {
+			event.preventDefault();
+			showPage(currentPageIndex + 1);
+		}
+	});
 
 }());
