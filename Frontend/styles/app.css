@@ -143,14 +143,14 @@ ul {
     padding-left: 0;
 }
 li {
-    max-height: calc(4.5vmin + 60px);
+    /*max-height: calc(4.5vmin + 60px);*/
+    max-height: calc(4 * 4.5vmin + 60px);
     transition: max-height 0.7s ease-in-out;
     overflow: hidden;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    overflow: hidden;
 }
 li label, li svg {
     margin: 0 0 20px 20px;
@@ -205,14 +205,8 @@ rect.snb {
     height: 30.5px;
 }
 
-#pCT.tetris .sn, #pCT.tetris .sg {
-    display: none;
-}
-
-#pCT.snake .te, #pCT.snake .sg {
-    display: none;
-}
-
+#pCT.tetris .sn, #pCT.tetris .sg,
+#pCT.snake .te, #pCT.snake .sg,
 #pCT.samegame .te, #pCT.samegame .sn {
     display: none;
 }

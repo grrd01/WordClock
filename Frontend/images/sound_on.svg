@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="74" height="74" style="fill: none; stroke: white; stroke-width: 3.8; stroke-linejoin: round; stroke-linecap: round; ">
+  <path d="M45 10
+      L 45 64
+      L 28 49
+      L 15 49
+      A 5 5 0 0 1 10 44
+      L 10 30
+      A 5 5 0 0 1 15 25
+      L 28 25
+      L 45 10"/>
+  <path d="M50 30 A 5 8 0 0 1 50 44"/>
+  <path d="M55 23 A 15 18 0 0 1 55 51"/>
+  <path d="M60 16 A 25 28 0 0 1 60 58"/>
+</svg>

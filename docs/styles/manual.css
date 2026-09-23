@@ -56,6 +56,10 @@ a:link {
     color: var(--main-color);
 }
 
+.pageBody {
+    text-align: justify
+}
+
 a:visited {
     color: var(--main-color);
     filter: brightness(85%);

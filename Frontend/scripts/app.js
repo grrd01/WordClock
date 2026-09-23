@@ -634,6 +634,18 @@
         fClassList(ElementById("LGM")).add("cl");
         fClassList(ElementById("CR")).remove("ddo");
         fClassList(ElementById("LCR")).add("cl");
+        fClassList(ElementById("AL")).remove("ddo");
+        fClassList(ElementById("LAL")).add("cl");
+    });
+    fEventListener(ElementById("AL"), click, (ignore) => {
+        fClassList(ElementById("AL")).toggle("ddo");
+        fClassList(ElementById("LAL")).toggle("cl");
+        fClassList(ElementById("SE")).remove("ddo");
+        fClassList(ElementById("LSE")).add("cl");
+        fClassList(ElementById("CR")).remove("ddo");
+        fClassList(ElementById("LCR")).add("cl");
+        fClassList(ElementById("GM")).remove("ddo");
+        fClassList(ElementById("LGM")).add("cl");
     });
     fEventListener(ElementById("GM"), click, (ignore) => {
         fClassList(ElementById("GM")).toggle("ddo");
@@ -642,6 +654,8 @@
         fClassList(ElementById("LSE")).add("cl");
         fClassList(ElementById("CR")).remove("ddo");
         fClassList(ElementById("LCR")).add("cl");
+        fClassList(ElementById("AL")).remove("ddo");
+        fClassList(ElementById("LAL")).add("cl");
     });
     fEventListener(ElementById("CR"), click, (ignore) => {
         fClassList(ElementById("CR")).toggle("ddo");
@@ -650,6 +664,8 @@
         fClassList(ElementById("LSE")).add("cl");
         fClassList(ElementById("GM")).remove("ddo");
         fClassList(ElementById("LGM")).add("cl");
+        fClassList(ElementById("AL")).remove("ddo");
+        fClassList(ElementById("LAL")).add("cl");
     });
 
     ElementById("iphone").href = ElementById("icon").href;

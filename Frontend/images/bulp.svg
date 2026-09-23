@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="74" height="74" style="fill: none; stroke: white; stroke-width: 3.8; stroke-linejoin: round; stroke-linecap: round; ">
+  <g transform="scale(1.2,1) translate(-5,0)">
+    <path d="M 20 22
+  A 17 17 0 0 1  54 22
+  C 54 35, 45 35, 45 50
+  A 3 3 0 0 1 42 53
+  L 32 53
+  A 3 3 0 0 1 29 50
+  C 29 35, 20 35, 20 22
+  "/>
+    <line x1="32" y1="58" x2="42" y2="58"/>
+    <line x1="32" y1="63" x2="42" y2="63"/>
+    <line x1="36" y1="68" x2="38" y2="68"/>
+    <path d="M27 20 A 9 9 0 0 1 33 12"/>
+  </g>
+
+</svg>
