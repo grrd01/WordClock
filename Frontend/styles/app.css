@@ -144,7 +144,7 @@ ul {
 }
 li {
     /*max-height: calc(4.5vmin + 60px);*/
-    max-height: calc(4 * 4.5vmin + 60px);
+    max-height: calc(10 * 4.5vmin + 60px);
     transition: max-height 0.7s ease-in-out;
     overflow: hidden;
     display: flex;
