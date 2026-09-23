@@ -668,6 +668,19 @@
         fClassList(ElementById("LAL")).add("cl");
     });
 
+    Array.from(ElementsByClassName("day")).forEach(function (element) {
+        fEventListener(element, click, function (event) {
+            const target = event.target;
+            fClassList(fChildren(target)[0]).toggle("h");
+            fClassList(fChildren(target)[1]).toggle("h");
+            if (target.closest(".week").querySelectorAll('.h.n').length) {
+                fClassList(target.closest(".week").parentNode.children[0].children[0]).add("g");
+            } else {
+                fClassList(target.closest(".week").parentNode.children[0].children[0]).remove("g");
+            }
+        });
+    });
+
     ElementById("iphone").href = ElementById("icon").href;
     ElementById("wfl").innerHTML = ElementById("wgt").innerHTML;
     ElementById("mfl").innerHTML = ElementById("mgt").innerHTML;

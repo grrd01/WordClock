@@ -129,6 +129,10 @@ a:active {
     z-index: 1000;
 }
 
+.sb, .snb {
+    cursor: pointer;
+}
+
 .dd {
     transform: rotate(90deg);
     transition: transform 0.7s ease-in-out;
@@ -143,8 +147,7 @@ ul {
     padding-left: 0;
 }
 li {
-    /*max-height: calc(4.5vmin + 60px);*/
-    max-height: calc(10 * 4.5vmin + 60px);
+    max-height: calc(4.5vmin + 100px);
     transition: max-height 0.7s ease-in-out;
     overflow: hidden;
     display: flex;
@@ -160,7 +163,7 @@ ul.cl li {
     transition: max-height 0.7s ease-in-out;
 }
 
-circle:not(#ctrlfire) {
+svg :not(#ctrl *) {
     pointer-events: none
 }
 
@@ -186,10 +189,9 @@ input[type="text"].ok {
     border: 2px solid #059c7d;
 }
 
-.sb:hover, .sb.g, .snb:hover, .snb.g, a svg:hover    {
+.sb:hover, .sb.g, .snb:hover, .snb.g, a svg:hover, .svgMsg.g    {
     stroke: #fff;
     text-shadow:0 0 10px #fff;
-    cursor: pointer;
 }
 path.snb {
     stroke-width:1.4;
