@@ -676,19 +676,53 @@
         fragment.appendChild(ElementsByClassName("lial")[0].cloneNode(true));
     }
     ElementsByClassName("lial")[0].after(fragment);
-    // Alarm-Clock: Click-Handler auf Wochentage
-    Array.from(ElementsByClassName("day")).forEach(function (element) {
-        fEventListener(element, click, function (event) {
-            const target = event.target;
-            fClassList(fChildren(target)[0]).toggle("h");
-            fClassList(fChildren(target)[1]).toggle("h");
-            if (target.closest(".week").querySelectorAll('.h.n').length) {
-                fClassList(target.closest(".week").parentNode.children[0].children[0]).add("g");
-            } else {
-                fClassList(target.closest(".week").parentNode.children[0].children[0]).remove("g");
-            }
-        });
-    });
+     // Alarm-Clock: Click-Handler für Zeit-Input
+     Array.from(ElementsByClassName("time")).forEach(function (element) {
+         fEventListener(element, click, function (event) {
+             const timeIcon = event.target.closest(".time");
+             const label = timeIcon.nextElementSibling;
+             const currentTime = label.textContent;
+
+             let timeInput;
+             let isValid = false;
+
+             while (!isValid) {
+                 timeInput = prompt("Wenn wosch gweckt wärde? (hh:mm)", currentTime);
+
+                 // User hat Abbrechen gedrückt
+                 if (timeInput === null) {
+                     return;
+                 }
+
+                 // Validierung
+                 const timeRegex = /^([0-1][0-9]|2[0-3]|[0-9]):([0-5][0-9]|[0-9])$/;
+                 if (timeRegex.test(timeInput)) {
+                     // Format hh:mm erzwingen
+                     const parts = timeInput.split(":");
+                     const hours = parts[0].padStart(2, "0");
+                     const minutes = parts[1].padStart(2, "0");
+                     label.textContent = hours + ":" + minutes;
+                     isValid = true;
+                 } else {
+                     alert("Das isch ke gültigi Zyt.");
+                 }
+             }
+         });
+     });
+
+     // Alarm-Clock: Click-Handler auf Wochentage
+     Array.from(ElementsByClassName("day")).forEach(function (element) {
+         fEventListener(element, click, function (event) {
+             const target = event.target;
+             fClassList(fChildren(target)[0]).toggle("h");
+             fClassList(fChildren(target)[1]).toggle("h");
+             if (target.closest(".week").querySelectorAll('.h.n').length) {
+                 fClassList(target.closest(".week").parentNode.children[0].children[0]).add("g");
+             } else {
+                 fClassList(target.closest(".week").parentNode.children[0].children[0]).remove("g");
+             }
+         });
+     });
     // Alarm-Clock: Click-Handler auf Set/Unset-Buttons
     Array.from(ElementsByClassName("alset")).forEach(function (element) {
         fEventListener(element, click, function (event) {
