@@ -169,6 +169,32 @@ ul.cl li {
     transition: max-height 0.7s ease-in-out;
 }
 
+.lial > :first-child {
+    flex-grow: 1;margin-bottom: 20px;
+}
+
+.lial > :first-child > :first-child{
+    display: flex; justify-content: space-between; flex-wrap: wrap;
+}
+
+.lial > :first-child > :first-child > * {
+    display: flex; align-items: center;
+}
+
+.lial > :first-child > :nth-child(2) {
+    display: flex; margin: 0 0 20px 20px
+}
+
+.lial > :first-child > :nth-child(2) > :first-child {
+    width: 12.5%;
+}
+
+.week {
+    display: flex;
+    justify-content: space-between;
+    flex-grow: 1;
+}
+
 .week > * {
     display: flex;
     align-items: center;
@@ -176,7 +202,7 @@ ul.cl li {
     flex-wrap: wrap;
 }
 
-.week > * > * {
+.week > * > *, .lial .svgMsg {
     margin: 0;
 }
 
