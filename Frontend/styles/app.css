@@ -161,6 +161,10 @@ li.lial {
     flex-wrap: nowrap;
     width: 100%;
 }
+
+li.lial.sound-open {
+    overflow: visible;
+}
 li label, li svg {
     margin: 0 0 20px 20px;
 }
@@ -284,7 +288,7 @@ rect.snb {
 }
 
 .menu {
-    overflow-y: auto;
+    overflow-y: visible;
 }
 
 .pb, .c, .c > span {
@@ -406,4 +410,59 @@ rect.snb {
 }
 .sl::-moz-range-thumb:hover {
     outline: solid 0.45vmin #fff;
+}
+
+/* Sound Modal Styles */
+.soundPicker {
+    position: relative;
+}
+
+.sound {
+    pointer-events: auto;
+}
+
+.soundModal {
+    position: absolute;
+    background: linear-gradient(135deg, #333, #222);
+    border: 2px solid #555;
+    border-radius: 8px;
+    padding: 10px 0;
+    z-index: 10000;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 10px;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    opacity: 1;
+    visibility: visible;
+}
+
+.soundModal.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.soundOption {
+    padding: 10px 20px;
+    cursor: pointer;
+    color: #fff;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    text-shadow: 1px 1px 2px #000;
+}
+
+.soundOption:hover {
+    background-color: #555;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000, 0 0 5px #fff;
+}
+
+.soundOption.active {
+    background-color: #777;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000, 0 0 8px #fff;
+    font-weight: bold;
 }

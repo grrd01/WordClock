@@ -723,15 +723,68 @@
              }
          });
      });
-    // Alarm-Clock: Click-Handler auf Set/Unset-Buttons
-    Array.from(ElementsByClassName("alset")).forEach(function (element) {
-        fEventListener(element, click, function (event) {
-            fClassList(fChildren(event.target)[0]).toggle("h");
-            fClassList(fChildren(event.target)[1]).toggle("h");
-        });
-    });
+     // Alarm-Clock: Click-Handler auf Set/Unset-Buttons
+     Array.from(ElementsByClassName("alset")).forEach(function (element) {
+         fEventListener(element, click, function (event) {
+             fClassList(fChildren(event.target)[0]).toggle("h");
+             fClassList(fChildren(event.target)[1]).toggle("h");
+         });
+     });
 
-    ElementById("iphone").href = ElementById("icon").href;
+     // Sound-Selector pro Alarm-Eintrag
+     function closeSoundModals() {
+         Array.from(ElementsByClassName("soundModal")).forEach(function (modal) {
+             fClassList(modal).add("hidden");
+         });
+         Array.from(ElementsByClassName("lial")).forEach(function (item) {
+             fClassList(item).remove("sound-open");
+         });
+     }
+
+     Array.from(ElementsByClassName("soundPicker")).forEach(function (picker) {
+         const soundElement = picker.querySelector(".sound");
+         const soundModal = picker.querySelector(".soundModal");
+         const soundLabel = picker.querySelector(".soundLabel");
+         const soundOptions = picker.querySelectorAll(".soundOption");
+         const alarmItem = picker.closest(".lial");
+
+         soundOptions.forEach(function (option) {
+             if (option.getAttribute("data-sound") === soundLabel.textContent) {
+                 fClassList(option).add("active");
+             }
+
+             fEventListener(option, click, function (event) {
+                 event.stopPropagation();
+                 soundLabel.textContent = option.getAttribute("data-sound");
+                 soundOptions.forEach(function (opt) {
+                     fClassList(opt).remove("active");
+                 });
+                 fClassList(option).add("active");
+                 fClassList(soundModal).add("hidden");
+                 fClassList(alarmItem).remove("sound-open");
+             });
+         });
+
+         fEventListener(soundElement, click, function (event) {
+             const isHidden = fClassList(soundModal).contains("hidden");
+             event.stopPropagation();
+             closeSoundModals();
+             if (isHidden) {
+                 fClassList(soundModal).remove("hidden");
+                 fClassList(alarmItem).add("sound-open");
+             }
+         });
+
+         fEventListener(soundModal, click, function (event) {
+             event.stopPropagation();
+         });
+     });
+
+     fEventListener(doc, click, function () {
+         closeSoundModals();
+     });
+
+     ElementById("iphone").href = ElementById("icon").href;
     ElementById("wfl").innerHTML = ElementById("wgt").innerHTML;
     ElementById("mfl").innerHTML = ElementById("mgt").innerHTML;
 
