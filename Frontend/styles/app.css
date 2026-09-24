@@ -155,12 +155,33 @@ li {
     align-items: center;
     flex-wrap: wrap;
 }
+li.lial {
+    max-height: calc(4.5vmin + 300px);
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+}
 li label, li svg {
     margin: 0 0 20px 20px;
 }
 ul.cl li {
     max-height: 0;
     transition: max-height 0.7s ease-in-out;
+}
+
+.week > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.week > * > * {
+    margin: 0;
+}
+
+.alset {
+    min-width: max-content;
 }
 
 svg :not(#ctrl *) {

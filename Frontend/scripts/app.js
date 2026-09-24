@@ -668,6 +668,15 @@
         fClassList(ElementById("LAL")).add("cl");
     });
 
+    // Alarm-Clock
+    // 3 Alarm-Listitems generieren
+    const fragment = document.createDocumentFragment();
+    // Alarm-Clock: Zwei Kopien erstellen: Original + 2 Kopien = 3 Elemente
+    for (let i = 0; i < 2; i++) {
+        fragment.appendChild(ElementsByClassName("lial")[0].cloneNode(true));
+    }
+    ElementsByClassName("lial")[0].after(fragment);
+    // Alarm-Clock: Click-Handler auf Wochentage
     Array.from(ElementsByClassName("day")).forEach(function (element) {
         fEventListener(element, click, function (event) {
             const target = event.target;
@@ -678,6 +687,13 @@
             } else {
                 fClassList(target.closest(".week").parentNode.children[0].children[0]).remove("g");
             }
+        });
+    });
+    // Alarm-Clock: Click-Handler auf Set/Unset-Buttons
+    Array.from(ElementsByClassName("alset")).forEach(function (element) {
+        fEventListener(element, click, function (event) {
+            fClassList(fChildren(event.target)[0]).toggle("h");
+            fClassList(fChildren(event.target)[1]).toggle("h");
         });
     });
 
