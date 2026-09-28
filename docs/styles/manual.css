@@ -30,11 +30,11 @@ body {
     right: 0;
     bottom: 0;
     background: linear-gradient(#444, #222);
+    padding-bottom: 60px;
 }
 
 .pageBody {
     text-align: justify;
-    margin-bottom: 60px;
 }
 
 .t {
