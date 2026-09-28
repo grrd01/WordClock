@@ -440,8 +440,8 @@
         if (msg) {
             ElementById("sMM").innerHTML = msg;
         } else {
-            ElementById("sMM").innerHTML = svgCircle + "'white'/></svg>&nbsp;am richtige Ort&nbsp;" +
-                svgCircle + "'cornflowerblue'/></svg>&nbsp;di richtigi Farb";
+            ElementById("sMM").innerHTML = svgCircle + "'white'/></svg>&nbsp;aues richtig&nbsp;" +
+                svgCircle + "'cornflowerblue'/></svg>&nbsp;Farb richtig";
         }
     }
 
@@ -509,6 +509,11 @@
     fEventListener(ElementById("p"), click, fTogglePower);
     fEventListener(ElementById("s"), click, fShowSettings);
     fEventListener(ElementById("h"), click, fOpenManual);
+    Array.from(ElementsByClassName("help")).forEach(function (element) {
+        element.innerHTML = ElementById("h").innerHTML;
+        fEventListener(element, click, fOpenManual);
+    });
+
     fEventListener(ElementById("xS"), click, fHideSettings);
 
     fEventListener(ElementById("SN"), click, function () {
