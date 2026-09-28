@@ -30,6 +30,11 @@ body {
     right: 0;
     bottom: 0;
     background: linear-gradient(#444, #222);
+    padding-bottom: 60px;
+}
+
+.pageBody {
+    text-align: justify;
 }
 
 .t {
@@ -154,6 +159,7 @@ circle:not(#ctrlfire) {
     display: block;
     overflow: auto;
     margin: 0 auto 0 auto;
+    padding: 0 20px 0 20px;
     width: 600px;
     max-width: calc(100vw - 40px);
     height: 100%;

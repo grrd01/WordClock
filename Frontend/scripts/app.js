@@ -206,8 +206,12 @@
     /**
      * Open the WordClock Instructions in a new tab
      */
-    function fOpenManual() {
-        window.open("https://grrd01.github.io/WordClock", "_blank", "noopener,noreferrer");
+    function fOpenManual(game_in) {
+        let url = "https://grrd01.github.io/WordClock";
+        if (game_in) {
+            url += "?page=" + encodeURIComponent(game_in);
+        }
+        window.open(url, "_blank", "noopener,noreferrer");
     }
 
     /**
@@ -369,6 +373,7 @@
      * Display the mastermind-page
      */
     function fShowMastermind() {
+        game = "mastermind";
         fShowPage(pSettings, pMastermind);
         fSendMastermind(1);
     }
@@ -440,8 +445,8 @@
         if (msg) {
             ElementById("sMM").innerHTML = msg;
         } else {
-            ElementById("sMM").innerHTML = svgCircle + "'white'/></svg>&nbsp;am richtige Ort&nbsp;" +
-                svgCircle + "'cornflowerblue'/></svg>&nbsp;di richtigi Farb";
+            ElementById("sMM").innerHTML = svgCircle + "'white'/></svg>&nbsp;aues richtig&nbsp;" +
+                svgCircle + "'cornflowerblue'/></svg>&nbsp;Farb richtig";
         }
     }
 
@@ -449,6 +454,7 @@
      * Display the wordguessr-page
      */
     function fShowWordGuessr() {
+        game = "wordguessr";
         fShowPage(pSettings, pWordGuessr);
         fSendWordGuessr("1");
         wordGuessrScore = 0;
@@ -509,6 +515,13 @@
     fEventListener(ElementById("p"), click, fTogglePower);
     fEventListener(ElementById("s"), click, fShowSettings);
     fEventListener(ElementById("h"), click, fOpenManual);
+    Array.from(ElementsByClassName("help")).forEach(function (element) {
+        element.innerHTML = ElementById("h").innerHTML;
+        fEventListener(element, click, function () {
+            fOpenManual(game);
+        });
+    });
+
     fEventListener(ElementById("xS"), click, fHideSettings);
 
     fEventListener(ElementById("SN"), click, function () {

@@ -106,12 +106,15 @@ a:active {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
-#p, #h, #xGO {
+#p, #h, #xGO, .help {
     position: absolute; left: 4vmin; bottom: 4vmin;
 }
 
 #sCT, #sMM, #sWG {
-    position: absolute; left: 4vmin; bottom: 4vmin;
+    position: absolute;
+    left: 50%;
+    bottom: 4vmin;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
 }
