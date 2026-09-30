@@ -745,8 +745,8 @@
      });
 
      // Sound-Selector pro Alarm-Eintrag
-     function closeSoundModals() {
-         Array.from(ElementsByClassName("soundModal")).forEach(function (modal) {
+     function closemodals() {
+         Array.from(ElementsByClassName("modal")).forEach(function (modal) {
              fClassList(modal).add("hidden");
          });
          Array.from(ElementsByClassName("lial")).forEach(function (item) {
@@ -754,47 +754,47 @@
          });
      }
 
-     Array.from(ElementsByClassName("soundPicker")).forEach(function (picker) {
+     Array.from(ElementsByClassName("pick")).forEach(function (picker) {
          const soundElement = picker.querySelector(".sound");
-         const soundModal = picker.querySelector(".soundModal");
-         const soundLabel = picker.querySelector(".soundLabel");
-         const soundOptions = picker.querySelectorAll(".soundOption");
+         const modal = picker.querySelector(".modal");
+         const label = picker.querySelector("label:first-of-type");
+         const options = picker.querySelectorAll(".modal > *");
          const alarmItem = picker.closest(".lial");
 
-         soundOptions.forEach(function (option) {
-             if (option.getAttribute("data-sound") === soundLabel.textContent) {
+         options.forEach(function (option) {
+             if (option.innerHTML === label.textContent) {
                  fClassList(option).add("active");
              }
 
              fEventListener(option, click, function (event) {
                  event.stopPropagation();
-                 soundLabel.textContent = option.getAttribute("data-sound");
-                 soundOptions.forEach(function (opt) {
+                 label.textContent = option.innerHTML;
+                 options.forEach(function (opt) {
                      fClassList(opt).remove("active");
                  });
                  fClassList(option).add("active");
-                 fClassList(soundModal).add("hidden");
+                 fClassList(modal).add("hidden");
                  fClassList(alarmItem).remove("sound-open");
              });
          });
 
          fEventListener(soundElement, click, function (event) {
-             const isHidden = fClassList(soundModal).contains("hidden");
+             const isHidden = fClassList(modal).contains("hidden");
              event.stopPropagation();
-             closeSoundModals();
+             closemodals();
              if (isHidden) {
-                 fClassList(soundModal).remove("hidden");
+                 fClassList(modal).remove("hidden");
                  fClassList(alarmItem).add("sound-open");
              }
          });
 
-         fEventListener(soundModal, click, function (event) {
+         fEventListener(modal, click, function (event) {
              event.stopPropagation();
          });
      });
 
      fEventListener(doc, click, function () {
-         closeSoundModals();
+         closemodals();
      });
 
      ElementById("iphone").href = ElementById("icon").href;
