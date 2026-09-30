@@ -133,6 +133,88 @@ int effectWait = 200;
 bool effectChange = false;
 bool lastTouchStage = false;
 uint16_t frame = 0;
+
+// AlarmClock variables
+#if USE_PASSIVE_BUZZER
+    #define BUZZER_PIN D6
+
+    struct Alarm {
+        uint8_t alarm;
+        uint8_t alarmHour;
+        uint8_t alarmMinute;
+        uint8_t alarmSound;
+        uint8_t alarmLight;
+        uint8_t alarmDays[7];
+    };
+    Alarms [3] = {
+        {1, 7, 0, 1, 1, {1, 1, 1, 1, 1, 0, 0}}, // Alarm 1: set 07:00 on weekdays
+        {1, 8, 30, 2, 2, {0, 0, 0, 0, 0, 1, 1}}, // Alarm 2: set 08:30 on weekends
+        {0, 12, 0, 3, 3, {1, 1, 1, 1, 1, 1, 1}} // Alarm 3: unset 12:00 every day
+    }
+
+    void beep() {
+      tone(BUZZER_PIN, 1000); // 1 kHz
+      delay(500);
+      noTone(BUZZER_PIN);
+      delay(500);
+    }
+
+    void sirene() {
+      // Rising frequency
+      for (int freq = 500; freq <= 1500; freq += 50) {
+        tone(BUZZER_PIN, freq);
+        delay(20);
+      }
+      // Falling frequency
+      for (int freq = 1500; freq >= 500; freq -= 50) {
+        tone(BUZZER_PIN, freq);
+        delay(20);
+      }
+    }
+
+    void playTone(int frequency, int duration) {
+      tone(BUZZER_PIN, frequency, duration);
+      delay(duration * 1.3);
+    }
+
+    void mario() {
+      playTone(660, 100);
+      playTone(660, 100);
+      delay(100);
+      playTone(660, 100);
+
+      delay(150);
+      playTone(510, 100);
+      playTone(660, 100);
+      delay(150);
+      playTone(770, 100);
+
+      delay(300);
+      playTone(380, 100);
+    }
+
+    void starwars() {
+      playTone(440, 500);  // A
+      playTone(440, 500);  // A
+      playTone(440, 500);  // A
+
+      playTone(349, 350);  // F
+      playTone(523, 150);  // C
+      playTone(440, 500);  // A
+
+      playTone(349, 350);  // F
+      playTone(523, 150);  // C
+      playTone(440, 650);  // A (long note)
+    }
+
+    void (*sounds[3])() = {
+        beep,
+        sirene,
+        mario,
+        starwars
+    };
+#endif
+
 // Matrix-Drops
 struct Drop {
   float y; // aktuelle Position (kann zwischen den Zeilen liegen)
@@ -1070,6 +1152,20 @@ void sendParamsToClients() {
   msg += ", \"speed\":" + String(effectSpeed / 4 + 48);
   msg += ", \"power\":" + String(power);
   msg += ", \"ghost\":" + String(ghost);
+
+  #if USE_PASSIVE_BUZZER
+    for (int8_t i = 0; i < 3; i++) {
+      msg += ", \"a" + i + "\":" + String(Alarm[i].alarm);
+      msg += ", \"a" + i + "h\":" + String(Alarm[i].alarmHour);
+      msg += ", \"a" + i + "m\":" + String(Alarm[i].alarmMinute);
+      msg += ", \"a" + i + "s\":" + String(Alarm[i].alarmSound);
+      msg += ", \"a" + i + "l\":" + String(Alarm[i].alarmLight);
+      for (int8_t j = 0; j < 7; j++) {
+        msg += ", \"a" + i + "d" + j + "\":" + String(Alarm[i].alarmDays[j]);
+      }
+    }
+  #endif
+
   msg += "}";
   webSocket.broadcastTXT(msg);
 }
@@ -2105,6 +2201,9 @@ void setup() {
   #if USE_PUSH_BUTTON
     pinMode(D5, INPUT_PULLUP);
   #endif
+  #if USE_PASSIVE_BUZZER
+    pinMode(BUZZER_PIN, OUTPUT);
+  #endif
 
   // Initialize EEPROM and read stored values
   EEPROM.begin(512);
@@ -2290,6 +2389,36 @@ void loop() {
             } else if (header.indexOf("update_params") >= 0) {
               // Get new params from client:
               const char *url = header.c_str();
+
+              #if USE_PASSIVE_BUZZER
+              for (int8_t i = 2; i >= 0; i--) {
+                for (int8_t j = 2; i >= 0; j--) {
+                  if (extractParameterValue(url, "a" + i + "d" + j + "=") == 1) {
+                    Alarm[i].alarmDays[j] = 1;
+                  } else {
+                    Alarm[i].alarmDays[j] = 0;}
+                  }
+                }
+                if (extractParameterValue(url, "a" + i + "l=") >= 0 && extractParameterValue(url, "a" + i + "l=") <= 2) {
+                  Alarm[i].alarmLight = 1;
+                }
+                if (extractParameterValue(url, "a" + i + "s=") >= 0 && extractParameterValue(url, "a" + i + "s=") <= 4) {
+                  Alarm[i].alarmSound = extractParameterValue(url, "a" + i + "s=";
+                }
+                if (extractParameterValue(url, "a" + i + "m=") >= 0 && extractParameterValue(url, "a" + i + "m=") <= 4) {
+                  Alarm[i].alarmMinute = extractParameterValue(url, "a" + i + "m=";
+                }
+                if (extractParameterValue(url, "a" + i + "h=") >= 0 && extractParameterValue(url, "a" + i + "h=") <= 4) {
+                  Alarm[i].alarmHour = extractParameterValue(url, "a" + i + "h=";
+                }
+                if (extractParameterValue(url, "a" + i + "=") == 1) {
+                  Alarm[i].alarm = 1;
+                } else {
+                  Alarm[i].alarm = 0;}
+                }
+              }
+              #endif
+
               if (extractParameterValue(url, "ghost=") == 1) {
                 ghost = 1;
               } else {
@@ -2760,14 +2889,25 @@ void loop() {
     }
   }
 
+  getLocalTime();
+
+  #if USE_PASSIVE_BUZZER
+    for (uint8_t i = 0; i < 3; i++) {
+      if (alarms[i].alarm == 1 && alarms[i].hour == wordClockHour && alarms[i].minute == wordClockMinute) {
+        if (alarmSound[i] > 0) {
+          sounds[alarmSound[i] - 1]();
+          delay(1000);
+        }
+      }
+    }
+  #endif
+
   if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris && !inSameGame) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
-      getLocalTime();
       displayTime();
       lastMinuteWordClock = wordClockMinute;
     } else {
       displayWifiStatus();
-      getLocalTime();
     }
   }
 }

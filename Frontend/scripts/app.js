@@ -325,7 +325,7 @@
             });
             const days = item.getElementsByClassName("day");
             Array.from(days).forEach(function (day, dindex) {
-                alarmParams += "&a" + index + "d=";
+                alarmParams += "&a" + index + "d=" + dindex;
                 if (fClassList(fChildren(day)[0]).contains("h")) {
                     alarmParams += "1";
                 } else {
@@ -335,7 +335,7 @@
         });
 
         //console.log("/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost);
-        //console.log(alarmParams);
+        console.log(alarmParams);
 
         /*
         *  /update_params?red=255&green=255&blue=255&effect=0&darkmode=1&speed=1025&power=1&ghost=1
@@ -345,7 +345,7 @@
         * */
 
         let xhr = new XMLHttpRequest();
-        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
+        xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost + alarmParams, true);
         xhr.send();
     }
 
@@ -796,7 +796,7 @@
              fClassList(modal).add("hidden");
          });
          Array.from(ElementsByClassName("lial")).forEach(function (item) {
-             fClassList(item).remove("sound-open");
+             fClassList(item).remove("open");
          });
      }
 
@@ -920,17 +920,37 @@
                 fShowGameOver();
             }
             if (e.data && e.data.indexOf('effect') > 0) {
-              // get current settings from word-clock
-              let response = JSON.parse(e.data);
-              color.value = fRgb2Hex(response.red, response.green, response.blue);
-              fChangeColor(color.value);
-              fSetDarkMode(response.darkmode);
-              if (response.effect !== effect) {
+                // get current settings from word-clock
+                let response = JSON.parse(e.data);
+                color.value = fRgb2Hex(response.red, response.green, response.blue);
+                fChangeColor(color.value);
+                fSetDarkMode(response.darkmode);
+                if (response.effect !== effect) {
                   fEffect(response.effect);
-              }
-              fGhost(response.ghost);
-              fSetPower(response.power);
-              speed.value = response.speed;
+                }
+                fGhost(response.ghost);
+                fSetPower(response.power);
+                speed.value = response.speed;
+                Array.from(ElementsByClassName("lial")).forEach(function (item, i) {
+                    // AlarmClock-settings
+                    console.log(response[`a${i}`]);
+                    if (response[`a${i}`]) {
+                        item.querySelector(".alset > :first-child").classList.remove("h");
+                        item.querySelector(".alset > :last-child").classList.add("h");
+                    } else {
+                        item.querySelector(".alset > :first-child").classList.add("h");
+                        item.querySelector(".alset > :last-child").classList.remove("h");
+                    }
+                    console.log(response[`a${i}h`]);
+                    console.log(response[`a${i}m`]);
+                    item.querySelector("label").innerHTML = String(response[`a${i}h`]).padStart(2, '0') + String(response[`a${i}m`]).padStart(2, '0')
+                    console.log(response[`a${i}s`]);
+                    frosch
+                    console.log(response[`a${i}l`]);
+                    for (let j = 0; 0 < 7; j++) {
+                        console.log(response[`a${i}d${j}`]);
+                    }
+                });
             }
         };
         webSocket.onclose = function() {
