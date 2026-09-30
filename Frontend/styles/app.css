@@ -165,7 +165,7 @@ li.lial {
     width: 100%;
 }
 
-li.lial.sound-open {
+li.lial.open {
     overflow: visible;
 }
 li label, li svg {
@@ -420,7 +420,7 @@ rect.snb {
     position: relative;
 }
 
-.sound {
+.pick svg:first-of-type {
     pointer-events: auto;
 }
 

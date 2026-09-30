@@ -744,7 +744,7 @@
          });
      });
 
-     // Sound-Selector pro Alarm-Eintrag
+     // Modals für Sound und Licht
      function closemodals() {
          Array.from(ElementsByClassName("modal")).forEach(function (modal) {
              fClassList(modal).add("hidden");
@@ -755,40 +755,40 @@
      }
 
      Array.from(ElementsByClassName("pick")).forEach(function (picker) {
-         const soundElement = picker.querySelector(".sound");
-         const modal = picker.querySelector(".modal");
-         const label = picker.querySelector("label:first-of-type");
-         const options = picker.querySelectorAll(".modal > *");
+         const pickButton = picker.querySelector(".pick svg:first-of-type");
+         const pickModal = picker.querySelector(".modal");
+         const pickLabel = picker.querySelector("label:first-of-type");
+         const pickOptions = picker.querySelectorAll(".modal > *");
          const alarmItem = picker.closest(".lial");
 
-         options.forEach(function (option) {
-             if (option.innerHTML === label.textContent) {
+         pickOptions.forEach(function (option) {
+             if (option.innerHTML === pickLabel.textContent) {
                  fClassList(option).add("active");
              }
 
              fEventListener(option, click, function (event) {
                  event.stopPropagation();
-                 label.textContent = option.innerHTML;
-                 options.forEach(function (opt) {
+                 pickLabel.textContent = option.innerHTML;
+                 pickOptions.forEach(function (opt) {
                      fClassList(opt).remove("active");
                  });
                  fClassList(option).add("active");
-                 fClassList(modal).add("hidden");
-                 fClassList(alarmItem).remove("sound-open");
+                 fClassList(pickModal).add("hidden");
+                 fClassList(alarmItem).remove("open");
              });
          });
 
-         fEventListener(soundElement, click, function (event) {
-             const isHidden = fClassList(modal).contains("hidden");
+         fEventListener(pickButton, click, function (event) {
+             const isHidden = fClassList(pickModal).contains("hidden");
              event.stopPropagation();
              closemodals();
              if (isHidden) {
-                 fClassList(modal).remove("hidden");
-                 fClassList(alarmItem).add("sound-open");
+                 fClassList(pickModal).remove("hidden");
+                 fClassList(alarmItem).add("open");
              }
          });
 
-         fEventListener(modal, click, function (event) {
+         fEventListener(pickModal, click, function (event) {
              event.stopPropagation();
          });
      });
