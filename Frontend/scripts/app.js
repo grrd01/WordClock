@@ -298,6 +298,52 @@
         let red = parseInt(color.value.substring(1, 3), 16);
         let green = parseInt(color.value.substring(3, 5), 16);
         let blue = parseInt(color.value.substring(5, 7), 16);
+        let alarmParams = "";
+
+        Array.from(ElementsByClassName("lial")).forEach(function (item, index) {
+            alarmParams += "&a" + index + "=";
+            if (fClassList(item.querySelector(".alset > path")).contains("h")) {
+                alarmParams += "1";
+            } else {
+                alarmParams += "0";
+            }
+            const time = item.querySelector("label").textContent;
+            alarmParams += "&a" + index + "h=" + time.split(":")[0];
+            alarmParams += "&a" + index + "m=" + time.split(":")[1];
+            const picks = item.getElementsByClassName("pick");
+            alarmParams += "&a" + index + "s=";
+            Array.from(fChildren(fChildren(picks[0])[2])).forEach(function (option, oindex) {
+                if (option.textContent === fChildren(picks[0])[1].textContent) {
+                    alarmParams += oindex;
+                }
+            });
+            alarmParams += "&a" + index + "l=";
+            Array.from(fChildren(fChildren(picks[1])[2])).forEach(function (option, oindex) {
+                if (option.textContent === fChildren(picks[1])[1].textContent) {
+                    alarmParams += oindex;
+                }
+            });
+            const days = item.getElementsByClassName("day");
+            Array.from(days).forEach(function (day, dindex) {
+                alarmParams += "&a" + index + "d=";
+                if (fClassList(fChildren(day)[0]).contains("h")) {
+                    alarmParams += "1";
+                } else {
+                    alarmParams += "0";
+                }
+            });
+        });
+
+        //console.log("/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost);
+        //console.log(alarmParams);
+
+        /*
+        *  /update_params?red=255&green=255&blue=255&effect=0&darkmode=1&speed=1025&power=1&ghost=1
+        *  &a0=0&a0h=07&a0m=40&a0s=4&a0l=0&a0d=1&a0d=0&a0d=0&a0d=0&a0d=0&a0d=0&a0d=0
+        *  &a1=0&a1h=08&a1m=50&a1s=3&a1l=1&a1d=1&a1d=1&a1d=0&a1d=0&a1d=0&a1d=0&a1d=0
+        *  &a2=0&a2h=13&a2m=20&a2s=2&a2l=2&a2d=1&a2d=1&a2d=1&a2d=0&a2d=0&a2d=0&a2d=0
+        * */
+
         let xhr = new XMLHttpRequest();
         xhr.open("GET", "/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost, true);
         xhr.send();
