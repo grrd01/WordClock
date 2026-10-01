@@ -149,6 +149,10 @@ circle:not(#ctrlfire) {
     pointer-events: none;
 }
 
+a[target="_blank"] {
+    font-weight: bold;
+}
+
 .sb:hover, a svg:hover {
     stroke: #fff;
     text-shadow: 0 0 10px #fff;
