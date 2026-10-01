@@ -26,7 +26,7 @@
 //     D7/GPIO13/MOSI -> DIN
 //     GND/G          -> GND
 // - Touch-Sensor TTP223
-//     VBUS/5V or 3.3v-> VCC
+//     3.3v           -> VCC
 //     D5/GPIO14/SCLK -> I/O
 //     GND/G          -> GND
 // - PushButton
