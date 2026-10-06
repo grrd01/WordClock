@@ -61,7 +61,7 @@
 const char* version = "wordclock";
 
 // define if a touch sensor is used for power on/off: 1 = yes, 0 = no
-#define USE_TOUCH_SENSOR 0
+#define USE_TOUCH_SENSOR 1
 
 // define if a push-button is used for power on/off: 1 = yes, 0 = no
 #define USE_PUSH_BUTTON 0
@@ -70,7 +70,7 @@ const char* version = "wordclock";
 #define USE_BRIGHTNESS_SENSOR 0
 
 // define if a passive buzzer is used for alarm signals:  1 = yes, 0 = no
-#define USE_PASSIVE_BUZZER 0
+#define USE_PASSIVE_BUZZER 1
 
 // define if a temperature/humidity sensor is used:  1 = yes, 0 = no
 #define USE_TEMP_HUMID_SENSOR 0
@@ -146,11 +146,11 @@ uint16_t frame = 0;
         uint8_t alarmLight;
         uint8_t alarmDays[7];
     };
-    Alarms [3] = {
+    Alarm alarms [3] = {
         {1, 7, 0, 1, 1, {1, 1, 1, 1, 1, 0, 0}}, // Alarm 1: set 07:00 on weekdays
         {1, 8, 30, 2, 2, {0, 0, 0, 0, 0, 1, 1}}, // Alarm 2: set 08:30 on weekends
         {0, 12, 0, 3, 3, {1, 1, 1, 1, 1, 1, 1}} // Alarm 3: unset 12:00 every day
-    }
+    };
 
     void beep() {
       tone(BUZZER_PIN, 1000); // 1 kHz
@@ -207,7 +207,7 @@ uint16_t frame = 0;
       playTone(440, 650);  // A (long note)
     }
 
-    void (*sounds[3])() = {
+    void (*sounds[4])() = {
         beep,
         sirene,
         mario,
@@ -1155,13 +1155,13 @@ void sendParamsToClients() {
 
   #if USE_PASSIVE_BUZZER
     for (int8_t i = 0; i < 3; i++) {
-      msg += ", \"a" + i + "\":" + String(Alarm[i].alarm);
-      msg += ", \"a" + i + "h\":" + String(Alarm[i].alarmHour);
-      msg += ", \"a" + i + "m\":" + String(Alarm[i].alarmMinute);
-      msg += ", \"a" + i + "s\":" + String(Alarm[i].alarmSound);
-      msg += ", \"a" + i + "l\":" + String(Alarm[i].alarmLight);
+      msg += ", \"a" + String(i) + "\":" + String(alarms[i].alarm);
+      msg += ", \"a" + String(i) + "h\":" + String(alarms[i].alarmHour);
+      msg += ", \"a" + String(i) + "m\":" + String(alarms[i].alarmMinute);
+      msg += ", \"a" + String(i) + "s\":" + String(alarms[i].alarmSound);
+      msg += ", \"a" + String(i) + "l\":" + String(alarms[i].alarmLight);
       for (int8_t j = 0; j < 7; j++) {
-        msg += ", \"a" + i + "d" + j + "\":" + String(Alarm[i].alarmDays[j]);
+        msg += ", \"a" + String(i) + "d" + String(j) + "\":" + String(alarms[i].alarmDays[j]);
       }
     }
   #endif
@@ -2392,29 +2392,36 @@ void loop() {
 
               #if USE_PASSIVE_BUZZER
               for (int8_t i = 2; i >= 0; i--) {
-                for (int8_t j = 2; i >= 0; j--) {
-                  if (extractParameterValue(url, "a" + i + "d" + j + "=") == 1) {
-                    Alarm[i].alarmDays[j] = 1;
+                String parameterName;
+                for (int8_t j = 2; j >= 0; j--) {
+                  parameterName = "a" + String(i) + "d" + String(j) + "=";
+                  if (extractParameterValue(url, parameterName.c_str()) == 1) {
+                    alarms[i].alarmDays[j] = 1;
                   } else {
-                    Alarm[i].alarmDays[j] = 0;}
+                    alarms[i].alarmDays[j] = 0;
                   }
                 }
-                if (extractParameterValue(url, "a" + i + "l=") >= 0 && extractParameterValue(url, "a" + i + "l=") <= 2) {
-                  Alarm[i].alarmLight = 1;
+                parameterName = "a" + String(i) + "l=";
+                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 2) {
+                  alarms[i].alarmLight = extractParameterValue(url, parameterName.c_str());
                 }
-                if (extractParameterValue(url, "a" + i + "s=") >= 0 && extractParameterValue(url, "a" + i + "s=") <= 4) {
-                  Alarm[i].alarmSound = extractParameterValue(url, "a" + i + "s=";
+                parameterName = "a" + String(i) + "s=";
+                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 4) {
+                  alarms[i].alarmSound = extractParameterValue(url, parameterName.c_str());
                 }
-                if (extractParameterValue(url, "a" + i + "m=") >= 0 && extractParameterValue(url, "a" + i + "m=") <= 4) {
-                  Alarm[i].alarmMinute = extractParameterValue(url, "a" + i + "m=";
+                parameterName = "a" + String(i) + "m=";
+                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 59) {
+                  alarms[i].alarmMinute = extractParameterValue(url, parameterName.c_str());
                 }
-                if (extractParameterValue(url, "a" + i + "h=") >= 0 && extractParameterValue(url, "a" + i + "h=") <= 4) {
-                  Alarm[i].alarmHour = extractParameterValue(url, "a" + i + "h=";
+                parameterName = "a" + String(i) + "h=";
+                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 24) {
+                  alarms[i].alarmHour = extractParameterValue(url, parameterName.c_str());
                 }
-                if (extractParameterValue(url, "a" + i + "=") == 1) {
-                  Alarm[i].alarm = 1;
+                parameterName = "a" + String(i) + "=";
+                if (extractParameterValue(url, parameterName.c_str()) == 1) {
+                  alarms[i].alarm = 1;
                 } else {
-                  Alarm[i].alarm = 0;}
+                  alarms[i].alarm = 0;
                 }
               }
               #endif
@@ -2893,9 +2900,10 @@ void loop() {
 
   #if USE_PASSIVE_BUZZER
     for (uint8_t i = 0; i < 3; i++) {
-      if (alarms[i].alarm == 1 && alarms[i].hour == wordClockHour && alarms[i].minute == wordClockMinute) {
-        if (alarmSound[i] > 0) {
-          sounds[alarmSound[i] - 1]();
+      // ToDo: sicherstellen dass stundenvergleich für 24 statt 12 stunden funktioniert
+      if (alarms[i].alarm == 1 && alarms[i].alarmHour == wordClockHour && alarms[i].alarmMinute == wordClockMinute) {
+        if (alarms[i].alarmSound > 0) {
+          sounds[alarms[i].alarmSound - 1]();
           delay(1000);
         }
       }
