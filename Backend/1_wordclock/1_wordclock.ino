@@ -33,7 +33,7 @@
 //     D5/GPIO14/SCLK -> one side of button
 //     GND/G          -> other side of button
 // - Brightness-Sensor GY-302 BH1750
-//     VBUS/5V        -> VCC
+//     3.3v           -> VCC
 //     D1/GPIO5/SCL   -> SCL
 //     D2/GPIO4/SDA   -> SDA
 //     GND/G          -> GND
@@ -42,9 +42,10 @@
 //     VBUS/5V        -> VCC
 //     D6/GPIO12/MISO -> I/O
 //     GND/G          -> GND
-// - Temperature/Humidity-Sensor DHT22
-//     VBUS/5V        -> VCC
-//     D3/GPIO0       -> DAT
+// - Temperature/Humidity-Sensor SHT40
+//     3.3v           -> VCC
+//     D1/GPIO5/SCL   -> SCL
+//     D2/GPIO4/SDA   -> SDA
 //     GND/G          -> GND
 // - ShanWan Q36 Bluetooth Controller
 //
@@ -75,13 +76,13 @@ const char* version = "wordclock";
 #define USE_TEMP_HUMID_SENSOR 0
 
 // define if a ShanWan Q36 Bluetooth Controller can be paired: 1 = yes, 0 = no
-#define USE_CONTROLLER 0
+#define USE_CONTROLLER 1
 
 // ToDo: Bug - Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen
 // ToDo: Bug - Controller-Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
 // ToDo: Feature - Brightness-Sensor
 // ToDo: Feature - Passive-Buzzer / Wecker / Timer
-// ToDo: Feature - Temperature/Humidity-Sensor
+// ToDo: Feature - Temperature/Humidity-Sensor SHT40
 
 #include <Arduino.h>
 

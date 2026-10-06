@@ -11,6 +11,11 @@
 	const pageLookup = new Map();
 	let currentPageIndex = 0;
 
+	function ElementById(id) {
+		return document.getElementById(id);
+	}
+	ElementById("iphone").href = ElementById("icon").href;
+
 
 	if (pages.length === 0) {
 		return;
