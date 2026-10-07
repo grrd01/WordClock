@@ -138,6 +138,8 @@ uint16_t frame = 0;
 #if USE_PASSIVE_BUZZER
     #define BUZZER_PIN D6
 
+    int8_t alarmActive = -1;
+    unsigned long alarmInterval;
     struct Alarm {
         uint8_t alarm;
         uint8_t alarmHour;
@@ -145,11 +147,12 @@ uint16_t frame = 0;
         uint8_t alarmSound;
         uint8_t alarmLight;
         uint8_t alarmDays[7];
+        uint8_t alarmRepeat;
     };
     Alarm alarms [3] = {
-        {1, 7, 0, 1, 1, {1, 1, 1, 1, 1, 0, 0}}, // Alarm 1: set 07:00 on weekdays
-        {1, 8, 30, 2, 2, {0, 0, 0, 0, 0, 1, 1}}, // Alarm 2: set 08:30 on weekends
-        {0, 12, 0, 3, 3, {1, 1, 1, 1, 1, 1, 1}} // Alarm 3: unset 12:00 every day
+        {1, 7, 0, 1, 1, {1, 1, 1, 1, 1, 0, 0},0}, // Alarm 1: set 07:00 on weekdays
+        {1, 8, 30, 2, 2, {0, 0, 0, 0, 0, 1, 1},0}, // Alarm 2: set 08:30 on weekends
+        {0, 12, 0, 3, 3, {1, 1, 1, 1, 1, 1, 1},0} // Alarm 3: unset 12:00 every day
     };
 
     void beep() {
@@ -160,16 +163,19 @@ uint16_t frame = 0;
     }
 
     void sirene() {
+      for (uint8_t i = 0; i < 3; i++) {
       // Rising frequency
-      for (int freq = 500; freq <= 1500; freq += 50) {
-        tone(BUZZER_PIN, freq);
-        delay(20);
+        for (int freq = 500; freq <= 1500; freq += 50) {
+          tone(BUZZER_PIN, freq);
+          delay(20);
+        }
+        // Falling frequency
+        for (int freq = 1500; freq >= 500; freq -= 50) {
+          tone(BUZZER_PIN, freq);
+          delay(20);
+        }
       }
-      // Falling frequency
-      for (int freq = 1500; freq >= 500; freq -= 50) {
-        tone(BUZZER_PIN, freq);
-        delay(20);
-      }
+      noTone(BUZZER_PIN);
     }
 
     void playTone(int frequency, int duration) {
@@ -258,6 +264,7 @@ const long timeoutTime = 2000;
 uint8_t wordClockMinute = 62;
 uint8_t wordClockHour = 0;
 uint8_t lastMinuteWordClock = 61;
+uint8_t wordClockWeekday = 0; // 0=Monday ... 6=Sunday
 
 const uint8_t NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
@@ -980,6 +987,12 @@ void getLocalTime() {
   // global time values
   wordClockMinute = minute(timeWithDST);
   wordClockHour = hour(timeWithDST);
+
+  // wordClockDay = day(timeWithDST);       // 1-31
+  // wordClockMonth = month(timeWithDST);   // 1-12
+  // wordClockYear = year(timeWithDST);
+  // wordClockWeekday = weekday(timeWithDST); // 1=Sunday ... 7=Saturday
+  wordClockWeekday = (weekday(timeWithDST) + 5) % 7; // 0=Monday ... 6=Sunday
 }
 
 /**
@@ -2393,10 +2406,15 @@ void loop() {
               #if USE_PASSIVE_BUZZER
               for (int8_t i = 2; i >= 0; i--) {
                 String parameterName;
-                for (int8_t j = 2; j >= 0; j--) {
+                alarms[i].alarmRepeat = 0;
+                for (int8_t j = 6; j >= 0; j--) { 
                   parameterName = "a" + String(i) + "d" + String(j) + "=";
+                  // todo remove serial print
+                  Serial.print(parameterName);
+                  Serial.println(extractParameterValue(url, parameterName.c_str()));
                   if (extractParameterValue(url, parameterName.c_str()) == 1) {
                     alarms[i].alarmDays[j] = 1;
+                    alarms[i].alarmRepeat = 1;
                   } else {
                     alarms[i].alarmDays[j] = 0;
                   }
@@ -2618,14 +2636,25 @@ void loop() {
   // Touch sensor to toggle power
   #if USE_TOUCH_SENSOR
     if (digitalRead(D5) == LOW && lastTouchStage == true) {
-      power = 1 - power; // toggle power
-      sendParamsToClients();
-      if (power == 0) {
+      if (alarmActive >= 0) {
+        // stop alarm if active
         blank();
-        pixels.show();
-      } else {
         satzneu[0] = -1;
         lastMinuteWordClock = 61;
+        // ToDo: alarm sollte nur ausgeschaltet werden, wenn keine wiederholung - wenn er nicht ausgeschaltet wird, darf er aber nicht sofort wieder losgehen
+        alarms[alarmActive].alarm = 0;
+        alarmActive = -1;
+        sendParamsToClients();
+      } else {
+        power = 1 - power; // toggle power
+        sendParamsToClients();
+        if (power == 0) {
+          blank();
+          pixels.show();
+        } else {
+          satzneu[0] = -1;
+          lastMinuteWordClock = 61;
+        }
       }
     }
     lastTouchStage = digitalRead(D5);
@@ -2634,14 +2663,25 @@ void loop() {
   // PushButton to toggle power
   #if USE_PUSH_BUTTON
     if (digitalRead(D5) == HIGH && lastTouchStage == false) {
-      power = 1 - power; // toggle power
-      sendParamsToClients();
-      if (power == 0) {
-        blank();
-        pixels.show();
+      if (alarmActive >= 0) {
+        // stop alarm if active
+        if (alarms[alarmActive].alarmLight > 0) {
+          blank();
+          satzneu[0] = -1;
+          lastMinuteWordClock = 61;
+        }
+        alarms[alarmActive].alarm = 0;
+        alarmActive = -1;
       } else {
-        satzneu[0] = -1;
-        lastMinuteWordClock = 61;
+        power = 1 - power; // toggle power
+        sendParamsToClients();
+        if (power == 0) {
+          blank();
+          pixels.show();
+        } else {
+          satzneu[0] = -1;
+          lastMinuteWordClock = 61;
+        }
       }
     }
     lastTouchStage = digitalRead(D5);
@@ -2898,18 +2938,6 @@ void loop() {
 
   getLocalTime();
 
-  #if USE_PASSIVE_BUZZER
-    for (uint8_t i = 0; i < 3; i++) {
-      // ToDo: sicherstellen dass stundenvergleich für 24 statt 12 stunden funktioniert
-      if (alarms[i].alarm == 1 && alarms[i].alarmHour == wordClockHour && alarms[i].alarmMinute == wordClockMinute) {
-        if (alarms[i].alarmSound > 0) {
-          sounds[alarms[i].alarmSound - 1]();
-          delay(1000);
-        }
-      }
-    }
-  #endif
-
   if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris && !inSameGame) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
       displayTime();
@@ -2918,4 +2946,25 @@ void loop() {
       displayWifiStatus();
     }
   }
+
+  #if USE_PASSIVE_BUZZER
+  for (uint8_t i = 0; i < 3; i++) {
+    if (alarms[i].alarm == 1 && alarms[i].alarmHour == wordClockHour && alarms[i].alarmMinute == wordClockMinute && alarmActive != i) {
+      if ((alarms[i].alarmRepeat == 0) || (alarms[i].alarmRepeat == 1 && alarms[i].alarmDays[wordClockWeekday] == 1)) {
+        alarmActive = i;
+        alarmInterval = millis();
+      }
+    }
+  }
+  if (alarmActive >= 0 && alarmInterval < millis()) {
+    if (alarms[alarmActive].alarmLight > 0) {
+      // Todo: Implement light alarm functionality
+      alarmInterval += 6000; // wait 6 seconds before next alarm
+    }
+    if (alarms[alarmActive].alarmSound > 0) {
+      sounds[alarms[alarmActive].alarmSound - 1]();
+      alarmInterval += 3000; // wait 3 seconds before next alarm
+    }
+  }
+  #endif
 }

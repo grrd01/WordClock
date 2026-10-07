@@ -325,7 +325,7 @@
             });
             const days = item.getElementsByClassName("day");
             Array.from(days).forEach(function (day, dindex) {
-                alarmParams += "&a" + index + "d=" + dindex;
+                alarmParams += "&a" + index + "d" + dindex + "=";
                 if (fClassList(fChildren(day)[0]).contains("h")) {
                     alarmParams += "1";
                 } else {
@@ -936,18 +936,17 @@
                     // AlarmClock-settings
 
                     if (response[`a${i}`]) {
-                        item.querySelector(".alset > :first-child").classList.remove("h");
-                        item.querySelector(".alset > :last-child").classList.add("h");
-                    } else {
                         item.querySelector(".alset > :first-child").classList.add("h");
                         item.querySelector(".alset > :last-child").classList.remove("h");
+                    } else {
+                        item.querySelector(".alset > :first-child").classList.remove("h");
+                        item.querySelector(".alset > :last-child").classList.add("h");
                     }
                     item.querySelector("label").innerHTML = String(response[`a${i}h`]).padStart(2, '0') + ":" + String(response[`a${i}m`]).padStart(2, '0')
-                    item.querySelector(".pick label").innerHTML = item.querySelector(".pick .modal > :nth-child(" + response[`a${i}s`] + ")").innerHTML;
-                    item.querySelectorAll(".pick label")[1].textContent = item.querySelector(".pick:nth-child(3) .modal > :nth-child(" + response[`a${i}l`] + ")").innerHTML;
+                    item.querySelector(".pick label").innerHTML = item.querySelector(".pick .modal > :nth-child(" + (response[`a${i}s`] + 1) + ")").innerHTML;
+                    item.querySelectorAll(".pick label")[1].textContent = item.querySelector(".pick:nth-child(3) .modal > :nth-child(" + (response[`a${i}l`] + 1) + ")").innerHTML;
 
                     for (let j = 0; j < 7; j++) {
-                        console.log(response[`a${i}d${j}`]);
                         if (response[`a${i}d${j}`]) {
                             item.querySelectorAll(".day")[j].children[1].classList.remove("h");
                             item.querySelectorAll(".day")[j].children[0].classList.add("h");
