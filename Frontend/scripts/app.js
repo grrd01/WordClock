@@ -931,8 +931,7 @@
                 fGhost(response.ghost);
                 fSetPower(response.power);
                 speed.value = response.speed;
-                // ToDo
-                console.log(response);
+
                 Array.from(ElementsByClassName("lial")).forEach(function (item, i) {
                     // AlarmClock-settings
 
@@ -944,28 +943,17 @@
                         item.querySelector(".alset > :last-child").classList.remove("h");
                     }
                     item.querySelector("label").innerHTML = String(response[`a${i}h`]).padStart(2, '0') + ":" + String(response[`a${i}m`]).padStart(2, '0')
-                    // ToDo
-                    console.log(response[`a${i}s`]);
-                    console.log(item.querySelector(".pick:first-of-type"));
-                    console.log(item.querySelector(".pick:first-of-type label"));
+                    item.querySelector(".pick label").innerHTML = item.querySelector(".pick .modal > :nth-child(" + response[`a${i}s`] + ")").innerHTML;
+                    item.querySelectorAll(".pick label")[1].textContent = item.querySelector(".pick:nth-child(3) .modal > :nth-child(" + response[`a${i}l`] + ")").innerHTML;
 
-                    item.querySelector(".pick:first-of-type label").innerHTML = response[`a${i}s`];
-                    item.querySelector(".pick:first-of-type label").innerHTML = item.querySelector(".pick:first-of-type .modal > :nth-child(" + response[`a${i}s`] + ")").innerHTML;
-
-                    // Todo
-                    console.log(response[`a${i}l`]);
-                    item.querySelector(".pick:last-of-type label").innerHTML = response[`a${i}l`];
-                    item.querySelector(".pick:last-of-type label").innerHTML = item.querySelector(".pick:last-of-type .modal > :nth-child(" + response[`a${i}l`] + ")").innerHTML;
-
-                    for (let j = 0; 0 < 7; j++) {
+                    for (let j = 0; j < 7; j++) {
                         console.log(response[`a${i}d${j}`]);
                         if (response[`a${i}d${j}`]) {
-                            // querySelector('.titanic:nth-child(2)')
-                            item.querySelector(".day:nth-child(" + (j + 1) + ") > :first-child").classList.remove("h");
-                            item.querySelector(".day:nth-child(" + (j + 1) + ") > :last-child").classList.add("h");
+                            item.querySelectorAll(".day")[j].children[1].classList.remove("h");
+                            item.querySelectorAll(".day")[j].children[0].classList.add("h");
                         } else {
-                            item.querySelector(".day:nth-child(" + (j + 1) + ") > :first-child").classList.add("h");
-                            item.querySelector(".day:nth-child(" + (j + 1) + ") > :last-child").classList.remove("h");
+                            item.querySelectorAll(".day")[j].children[0].classList.remove("h");
+                            item.querySelectorAll(".day")[j].children[1].classList.add("h");
                         }
                     }
                 });
@@ -983,19 +971,5 @@
 
     // initialize websocket connection for game controls
     initWebSocket();
-
-    let test = ElementsByClassName("lial");
-    console.log(test);
-    //console.log(test.querySelector(".pick:first-of-type"));
-
-    Array.from(ElementsByClassName("lial")).forEach(function (item, i) {
-        console.log(item);
-        //console.log(item.querySelector(".pick"));
-        //console.log(item.querySelector(".pick label"));
-        console.log(item.querySelector(".pick:nth-child(1)"));
-        item.querySelector(".pick label").innerHTML = item.querySelector(".pick .modal > :nth-child(" + 4 + ")").innerHTML;
-        item.querySelectorAll(".pick label")[0].textContent = item.querySelector(".pick:nth-child(2) .modal > :nth-child(" + 5 + ")").innerHTML;
-        item.querySelectorAll(".pick label")[1].textContent = item.querySelector(".pick:nth-child(3) .modal > :nth-child(" + 2 + ")").innerHTML;
-    });
 
 }())
