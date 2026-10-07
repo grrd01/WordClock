@@ -76,7 +76,7 @@ const char* version = "wordclock";
 #define USE_TEMP_HUMID_SENSOR 0
 
 // define if a ShanWan Q36 Bluetooth Controller can be paired: 1 = yes, 0 = no
-#define USE_CONTROLLER 1
+#define USE_CONTROLLER 0
 
 // ToDo: Bug - Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen
 // ToDo: Bug - Controller-Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
