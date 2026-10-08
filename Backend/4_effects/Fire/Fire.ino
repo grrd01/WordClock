@@ -123,34 +123,33 @@ uint32_t scaleColor(uint32_t color, float brightness) {
 }
 
 uint32_t fireColorFromHeat(uint8_t heat, uint8_t y, bool blueAccent) {
-  const uint32_t ember = pixels.Color(18, 2, 0);
-  const uint32_t orange = pixels.Color(140, 24, 0);
-  const uint32_t warmOrange = pixels.Color(180, 58, 0);
-  const uint32_t yellow = pixels.Color(220, 155, 8);
-  const uint32_t hotYellow = pixels.Color(255, 220, 70);
-  const uint32_t blueBase = pixels.Color(10, 65, 170);
-
+  const uint32_t ember = pixels.Color(65, 0, 0);
+  const uint32_t red = pixels.Color(220, 5, 0);
+  const uint32_t orange = pixels.Color(255, 48, 0);
+  const uint32_t yellow = pixels.Color(255, 175, 0);
+  const uint32_t hotYellow = pixels.Color(255, 245, 75);
+  const uint32_t blue = pixels.Color(0, 22, 230);
   float heatLevel = heat / 255.0f;
   float heightFromBottom = (MATRIX_HEIGHT - 1 - y) / (float)(MATRIX_HEIGHT - 1);
-  float upperCooling = clamp01(heightFromBottom * 0.85f);
-  float shadedHeat = clamp01(heatLevel * (1.0f - upperCooling * 0.35f));
+  float upperCooling = clamp01(heightFromBottom);
+  float shadedHeat = heatLevel;
   uint32_t flameColor;
 
-  if (shadedHeat < 0.25f) {
-    flameColor = blendColor(Black, ember, shadedHeat / 0.25f);
-  } else if (shadedHeat < 0.55f) {
-    flameColor = blendColor(ember, orange, (shadedHeat - 0.25f) / 0.30f);
-  } else if (shadedHeat < 0.82f) {
-    flameColor = blendColor(orange, yellow, (shadedHeat - 0.55f) / 0.27f);
+  if (shadedHeat < 0.18f) {
+    flameColor = blendColor(Black, ember, shadedHeat / 0.18f);
+  } else if (shadedHeat < 0.40f) {
+    flameColor = blendColor(ember, red, (shadedHeat - 0.18f) / 0.22f);
+  } else if (shadedHeat < 0.65f) {
+    flameColor = blendColor(red, orange, (shadedHeat - 0.40f) / 0.25f);
+  } else if (shadedHeat < 0.88f) {
+    flameColor = blendColor(orange, yellow, (shadedHeat - 0.65f) / 0.23f);
   } else {
-    flameColor = blendColor(yellow, hotYellow, (shadedHeat - 0.82f) / 0.18f);
+    flameColor = blendColor(yellow, hotYellow, (shadedHeat - 0.88f) / 0.12f);
   }
 
-  flameColor = blendColor(flameColor, warmOrange, upperCooling * 0.55f);
-
+  flameColor = blendColor(flameColor, red, upperCooling * 0.65f);
   if (blueAccent) {
-    float accentStrength = 0.25f + heatLevel * 0.45f;
-    flameColor = blendColor(flameColor, blueBase, accentStrength);
+    flameColor = blendColor(flameColor, blue, 0.85f);
   }
 
   return scaleColor(flameColor, clamp01(heatLevel * 1.15f));
@@ -159,6 +158,8 @@ uint32_t fireColorFromHeat(uint8_t heat, uint8_t y, bool blueAccent) {
 // Fire-Effect
 void fireEffect() {
   static uint8_t heat[MATRIX_HEIGHT][MATRIX_WIDTH];
+  static uint8_t previousHeat[MATRIX_HEIGHT][MATRIX_WIDTH];
+  static uint8_t blueFlameFrames[MATRIX_WIDTH];
 
   for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
     for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
@@ -169,7 +170,21 @@ void fireEffect() {
   while (true) {
     for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
       for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
-        uint8_t cooling = random(2, 14 + y * 2);
+        previousHeat[y][x] = heat[y][x];
+      }
+    }
+
+    for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
+      if (blueFlameFrames[x] > 0) {
+        blueFlameFrames[x]--;
+      } else if (random(100) < 2) {
+        blueFlameFrames[x] = random(3, 8);
+      }
+    }
+
+    for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
+      for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
+        uint8_t cooling = random(5, 12 + (MATRIX_HEIGHT - 1 - y) * 2);
         heat[y][x] = (heat[y][x] > cooling) ? heat[y][x] - cooling : 0;
       }
     }
@@ -179,42 +194,43 @@ void fireEffect() {
         uint8_t leftX = (x == 0) ? 0 : x - 1;
         uint8_t rightX = (x == MATRIX_WIDTH - 1) ? MATRIX_WIDTH - 1 : x + 1;
         uint16_t spread = heat[y + 1][leftX] + heat[y + 1][x] + heat[y + 1][rightX];
+        uint8_t divisor = 3;
         if (y + 2 < MATRIX_HEIGHT) {
           spread += heat[y + 2][x];
-          heat[y][x] = spread / 4;
-        } else {
-          heat[y][x] = spread / 3;
+          divisor = 4;
         }
+        uint8_t risingHeat = spread / divisor;
+        uint8_t risingCooling = random(4, 9 + (MATRIX_HEIGHT - 1 - y) * 2);
+        heat[y][x] = (risingHeat > risingCooling) ? risingHeat - risingCooling : 0;
       }
     }
 
     for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
-      uint8_t baseHeat = random(175, 256);
-      if (random(100) < 28) {
-        baseHeat = random(220, 256);
-      }
-      if (random(100) < 12) {
-        baseHeat = random(110, 180);
+      uint8_t baseHeat = random(190, 256);
+      if (random(100) < 20) {
+        baseHeat = random(35, 175);
+      } else if (random(100) < 25) {
+        baseHeat = random(235, 256);
       }
       heat[MATRIX_HEIGHT - 1][x] = baseHeat;
-
-      if (random(100) < 25) {
-        uint8_t boostY = MATRIX_HEIGHT - 2;
-        uint16_t boosted = heat[boostY][x] + random(18, 55);
-        heat[boostY][x] = (boosted > 255) ? 255 : boosted;
-      }
     }
 
-    for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
-      for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
-        bool blueAccent = (y == MATRIX_HEIGHT - 1) && (heat[y][x] > 180) && (random(100) < 30);
-        pixels.setPixelColor(xyToIndex(x, y), fireColorFromHeat(heat[y][x], y, blueAccent));
+    for (uint8_t subframe = 1; subframe <= 2; subframe++) {
+      for (uint8_t y = 0; y < MATRIX_HEIGHT; y++) {
+        for (uint8_t x = 0; x < MATRIX_WIDTH; x++) {
+          uint8_t interpolatedHeat = previousHeat[y][x] +
+            ((int16_t)heat[y][x] - previousHeat[y][x]) * subframe / 2;
+          bool blueAccent = y == MATRIX_HEIGHT - 1 &&
+                            blueFlameFrames[x] > 0 &&
+                            interpolatedHeat > 70;
+          pixels.setPixelColor(xyToIndex(x, y), fireColorFromHeat(interpolatedHeat, y, blueAccent));
+        }
       }
-    }
 
-    pixels.show();
-    delay(45);
-    yield();
+      pixels.show();
+      delay(45);
+      yield();
+    }
   }
 }
 

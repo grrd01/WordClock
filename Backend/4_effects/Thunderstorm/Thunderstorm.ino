@@ -112,16 +112,48 @@ void drawPixelSafe(int8_t x, int8_t y, uint32_t color) {
 }
 
 void flashSky(uint8_t brightness, uint16_t holdMs) {
-  for (uint8_t y = 0; y < 11; y++) {
-    for (uint8_t x = 0; x < 11; x++) {
-      uint8_t flicker = random(0, 28);
-      uint8_t pixelBrightness = brightness > flicker ? brightness - flicker : 0;
-      pixels.setPixelColor(xyToIndex(x, y), scaleColor(White, pixelBrightness));
+  const uint8_t fadeSteps = 8;
+  const uint16_t fadeStepMs = (uint16_t)random(12, 46);
+  const uint32_t skyFlashColor = pixels.Color(24, 42, 100);
+  uint8_t pixelBrightness[121];
+  int8_t cloudVariation[4][4];
+
+  for (uint8_t cloudY = 0; cloudY < 4; cloudY++) {
+    for (uint8_t cloudX = 0; cloudX < 4; cloudX++) {
+      cloudVariation[cloudY][cloudX] = (int8_t)random(-75, 76);
     }
   }
 
-  pixels.show();
+  for (uint8_t y = 0; y < 11; y++) {
+    uint16_t rowBase = 20 + (uint16_t)(10 - y) * 23;
+    for (uint8_t x = 0; x < 11; x++) {
+      int16_t variation = cloudVariation[y / 3][x / 3] + random(-18, 19);
+      int16_t cloudLevel = constrain((int16_t)rowBase + variation, 0, 255);
+      pixelBrightness[xyToIndex(x, y)] = (uint8_t)cloudLevel;
+    }
+  }
+
+  for (uint8_t step = 1; step <= fadeSteps; step++) {
+    uint8_t frameBrightness = (uint16_t)brightness * step / fadeSteps;
+    for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+      uint8_t pixelLevel = (uint16_t)frameBrightness * pixelBrightness[i] / 255;
+      pixels.setPixelColor(i, scaleColor(skyFlashColor, pixelLevel));
+    }
+    pixels.show();
+    delay(fadeStepMs);
+  }
+
   delay(holdMs);
+
+  for (int8_t step = fadeSteps - 1; step >= 0; step--) {
+    uint8_t frameBrightness = (uint16_t)brightness * step / fadeSteps;
+    for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+      uint8_t pixelLevel = (uint16_t)frameBrightness * pixelBrightness[i] / 255;
+      pixels.setPixelColor(i, scaleColor(skyFlashColor, pixelLevel));
+    }
+    pixels.show();
+    delay(fadeStepMs);
+  }
 }
 
 void generateBoltPath(int8_t *boltX, int8_t *branchDir, uint8_t *branchLen) {
@@ -155,14 +187,9 @@ void drawBoltFrame(const int8_t *boltX, const int8_t *branchDir, const uint8_t *
     int8_t x = boltX[y];
 
     drawPixelSafe(x, y, boltCore);
-    drawPixelSafe(x - 1, y, boltGlow);
-    drawPixelSafe(x + 1, y, boltGlow);
-    drawPixelSafe(x, y - 1, faintGlow);
-    drawPixelSafe(x, y + 1, faintGlow);
 
     if (y > 0 && boltX[y - 1] != x) {
       drawPixelSafe(boltX[y - 1], y, faintGlow);
-      drawPixelSafe(x, y - 1, faintGlow);
     }
 
     if (branchLen[y] > 0) {
@@ -194,11 +221,14 @@ void thunderstormEffect() {
 
     uint8_t strikeCount = (uint8_t)random(1, 5);
     for (uint8_t strike = 0; strike < strikeCount; strike++) {
-      bool flashWholeSky = random(0, 100) < 32;
-      bool doubleStrike = random(0, 100) < 45;
+      bool flashWholeSky = random(0, 100) < 22;
+      bool doubleStrike = random(0, 100) < 30;
 
       if (flashWholeSky) {
-        flashSky((uint8_t)random(170, 256), (uint16_t)random(12, 35));
+        uint8_t flashBrightness = random(0, 100) < 25
+          ? (uint8_t)random(35, 120)
+          : (uint8_t)random(130, 231);
+        flashSky(flashBrightness, (uint16_t)random(18, 50));
       }
 
       generateBoltPath(boltX, branchDir, branchLen);
@@ -207,16 +237,20 @@ void thunderstormEffect() {
         delay((uint16_t)random(10, 22));
       }
 
-      delay((uint16_t)random(14, 38));
+      delay((uint16_t)random(120, 220));
 
       if (doubleStrike) {
-        flashSky((uint8_t)random(120, 200), (uint16_t)random(10, 24));
+        flashSky((uint8_t)random(45, 151), (uint16_t)random(18, 40));
         drawBoltFrame(boltX, branchDir, branchLen, 10);
-        delay((uint16_t)random(14, 32));
+        delay((uint16_t)random(120, 220));
       }
 
-      if (random(0, 100) < 55) {
-        flashSky((uint8_t)random(26, 90), (uint16_t)random(8, 20));
+      uint8_t afterglowCount = random(0, 100) < 35 ? (uint8_t)random(1, 4) : 0;
+      for (uint8_t flash = 0; flash < afterglowCount; flash++) {
+        flashSky((uint8_t)random(8, 151), (uint16_t)random(5, 101));
+        if (flash + 1 < afterglowCount) {
+          delay((uint16_t)random(45, 120));
+        }
       }
 
       wipe();

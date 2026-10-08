@@ -127,16 +127,16 @@ void renderSunriseFrame(float skyProgress, float sunProgress) {
   const uint32_t dawnBottom = pixels.Color(110, 10, 0);
   const uint32_t dayTop = pixels.Color(0, 32, 115);
   const uint32_t dayBottom = pixels.Color(28, 95, 145);
-  const uint32_t sunOrange = pixels.Color(120, 55, 0);
-  const uint32_t sunYellow = pixels.Color(120, 110, 8);
+  const uint32_t sunOrange = pixels.Color(220, 45, 0);
+  const uint32_t sunYellow = pixels.Color(255, 205, 0);
 
   float easedSky = smoothStep01(skyProgress);
   float easedSun = smoothStep01(sunProgress);
   float sunCenterX = 5.0f;
   float sunCenterY = mixFloat(12.8f, 5.0f, easedSun);
-  float sunRadius = mixFloat(3.0f, 6.45f, easedSun);
+  float sunRadius = mixFloat(2.2f, 4.5f, easedSun);
   float sunEdge = mixFloat(1.8f, 0.7f, easedSun);
-  float glowStrength = mixFloat(0.35f, 0.10f, easedSun);
+  float glowStrength = mixFloat(0.25f, 0.06f, easedSun);
   float blueShift = smoothStep01((easedSun - 0.08f) / 0.92f);
   uint32_t sunColor = blendColor(sunOrange, sunYellow, easedSun);
 
