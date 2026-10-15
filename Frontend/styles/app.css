@@ -106,8 +106,18 @@ a:active {
     position: absolute; right: 4vmin; bottom: 4vmin;
 }
 
-#p, #h, #xGO, .help {
+#p, #al, #h, #xGO, .help {
     position: absolute; left: 4vmin; bottom: 4vmin;
+}
+
+#al {
+    transform-origin: center;
+    animation: al-swing 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes al-swing {
+    from { transform: rotate(-25deg); }
+    to { transform: rotate(25deg); }
 }
 
 #sCT, #sMM, #sWG {
@@ -263,7 +273,7 @@ rect.snb {
 
 #pCT.tetris .sn, #pCT.tetris .sg,
 #pCT.snake .te, #pCT.snake .sg,
-#pCT.samegame .te, #pCT.samegame .sn {
+#pCT.samegame .te, #pCT.samegame .sn, #al:not(.al #al), .al #p {
     display: none;
 }
 

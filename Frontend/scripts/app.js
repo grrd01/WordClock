@@ -215,6 +215,15 @@
     }
 
     /**
+     * Stop alarm-clock
+     */
+    function fStopAlarm() {
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", "/stop_alarm", true);
+        xhr.send();
+    }
+
+    /**
      * Set all elements to selected color
      */
     function fChangeColor(color_in) {
@@ -333,9 +342,6 @@
                 }
             });
         });
-
-        //console.log("/update_params?red=" + red + "&green=" + green + "&blue=" + blue + "&effect=" + effect + "&darkmode=" + dark + "&speed=" + speed.value + "&power=" + power + "&ghost=" + ghost);
-        console.log(alarmParams);
 
         /*
         *  /update_params?red=255&green=255&blue=255&effect=0&darkmode=1&speed=1025&power=1&ghost=1
@@ -561,6 +567,7 @@
     fEventListener(ElementById("p"), click, fTogglePower);
     fEventListener(ElementById("s"), click, fShowSettings);
     fEventListener(ElementById("h"), click, fOpenManual);
+    fEventListener(ElementById("al"), click, fStopAlarm);
     Array.from(ElementsByClassName("help")).forEach(function (element) {
         element.innerHTML = ElementById("h").innerHTML;
         fEventListener(element, click, function () {
@@ -932,15 +939,19 @@
                 fSetPower(response.power);
                 speed.value = response.speed;
 
+                // AlarmClock-settings
+                if (response.alarm > 0) {
+                    fClassList(body).add("al");
+                } else {
+                    fClassList(body).remove("al");
+                }
                 Array.from(ElementsByClassName("lial")).forEach(function (item, i) {
-                    // AlarmClock-settings
-
                     if (response[`a${i}`]) {
-                        item.querySelector(".alset > :first-child").classList.add("h");
-                        item.querySelector(".alset > :last-child").classList.remove("h");
+                        fClassList(item.querySelector(".alset > :first-child")).add("h");
+                        fClassList(item.querySelector(".alset > :last-child")).remove("h");
                     } else {
-                        item.querySelector(".alset > :first-child").classList.remove("h");
-                        item.querySelector(".alset > :last-child").classList.add("h");
+                        fClassList(item.querySelector(".alset > :first-child")).remove("h");
+                        fClassList(item.querySelector(".alset > :last-child")).add("h");
                     }
                     item.querySelector("label").innerHTML = String(response[`a${i}h`]).padStart(2, '0') + ":" + String(response[`a${i}m`]).padStart(2, '0')
                     item.querySelector(".pick label").innerHTML = item.querySelector(".pick .modal > :nth-child(" + (response[`a${i}s`] + 1) + ")").innerHTML;
@@ -948,11 +959,11 @@
 
                     for (let j = 0; j < 7; j++) {
                         if (response[`a${i}d${j}`]) {
-                            item.querySelectorAll(".day")[j].children[1].classList.remove("h");
-                            item.querySelectorAll(".day")[j].children[0].classList.add("h");
+                            fClassList(item.querySelectorAll(".day")[j].children[1]).remove("h");
+                            fClassList(item.querySelectorAll(".day")[j].children[0]).add("h");
                         } else {
-                            item.querySelectorAll(".day")[j].children[0].classList.remove("h");
-                            item.querySelectorAll(".day")[j].children[1].classList.add("h");
+                            fClassList(item.querySelectorAll(".day")[j].children[0]).remove("h");
+                            fClassList(item.querySelectorAll(".day")[j].children[1]).add("h");
                         }
                     }
                 });
