@@ -191,8 +191,8 @@ void northernLightsEffect() {
   }
 
   pixels.show();
-  delay(35);
-  phase += 2.0f;
+  delay(25); // höherer Wert = langsamere, ruckligere Animation
+  phase += 1.5f; // höherer Wert = schnellere Animation
   if (phase > 100000.0f) {
     phase = 0.0f;
   }
