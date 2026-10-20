@@ -192,7 +192,7 @@ void northernLightsEffect() {
 
   pixels.show();
   delay(35);
-  phase += 1.0f;
+  phase += 2.0f;
   if (phase > 100000.0f) {
     phase = 0.0f;
   }
