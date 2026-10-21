@@ -67,7 +67,7 @@ const char* version = "wordclock";
 #define USE_PUSH_BUTTON 0
 
 // define if a brightness sensor is used to control led brightness:  1 = yes, 0 = no
-#define USE_BRIGHTNESS_SENSOR 0
+#define USE_BRIGHTNESS_SENSOR 1
 
 // define if a passive buzzer is used for alarm signals:  1 = yes, 0 = no
 #define USE_PASSIVE_BUZZER 1
@@ -76,7 +76,7 @@ const char* version = "wordclock";
 #define USE_TEMP_HUMID_SENSOR 0
 
 // define if a ShanWan Q36 Bluetooth Controller can be paired: 1 = yes, 0 = no
-#define USE_CONTROLLER 0
+#define USE_CONTROLLER 1
 
 // ToDo: Bug - Tetris: während Animation von gelöschten Zeilen löscht Down auf Controller zusätzliche Zeilen
 // ToDo: Bug - Controller-Pairing funktioniert manchmal nicht oder lässt Uhr abstürzen
@@ -102,6 +102,7 @@ const char* version = "wordclock";
 #if USE_BRIGHTNESS_SENSOR
   #include <Wire.h>
   #include <BH1750.h>           // v1.0.2
+  BH1750 lightMeter;
 #endif
 
 #include <WiFiManager.h>        // v2.0.17
@@ -907,25 +908,33 @@ void displayWifiStatus() {
 
 void setForegroundColor() {
   #if USE_BRIGHTNESS_SENSOR
-    float lux = lightMeter.readLightLevel();
-    Serial.print(lux);
-    Serial.println(" Lux");
+    // Display darker color between 22:00 and 07:00
+    if (darkMode == 1) {
+      float lux = lightMeter.readLightLevel();
+      Serial.print(lux);
+      Serial.println(" Lux");
 
-    float brightness = 0.05f;
-    if (lux <= 0.0f) {
-      brightness = 0.05f;
-    } else if (lux <= 500.0f) {
-      brightness = 0.05f + (lux / 500.0f) * 0.95f;
-    } else if (lux < 65535.0f) {
-      brightness = 1.0f + ((lux - 500.0f) / (65535.0f - 500.0f));
+      float brightness = 0.05f;
+      if (lux <= 0.0f) {
+        brightness = 0.05f;
+      } else if (lux <= 500.0f) {
+        brightness = 0.05f + (lux / 500.0f) * 0.95f;
+      } else if (lux < 65535.0f) {
+        brightness = 1.0f + ((lux - 500.0f) / (65535.0f - 500.0f));
+      } else {
+        brightness = 2.0f;
+      }
+
+      Serial.print(brightness);
+      Serial.println(" % Brightness");
+
+      uint8_t r = min(255, (int)(((colorDay >> 16) & 0xFF) * brightness));
+      uint8_t g = min(255, (int)(((colorDay >> 8) & 0xFF) * brightness));
+      uint8_t b = min(255, (int)((colorDay & 0xFF) * brightness));
+      foregroundColor = Adafruit_NeoPixel::Color(r, g, b);
     } else {
-      brightness = 2.0f;
+      foregroundColor = colorDay;
     }
-
-    uint8_t r = min(255, (uint8_t)(((colorDay >> 16) & 0xFF) * brightness));
-    uint8_t g = min(255, (uint8_t)(((colorDay >> 8) & 0xFF) * brightness));
-    uint8_t b = min(255, (uint8_t)((colorDay & 0xFF) * brightness));
-    foregroundColor = Adafruit_NeoPixel::Color(r, g, b);
   #else
     // Display darker color between 22:00 and 07:00
     if (darkMode == 1 && (wordClockHour >= 22 || wordClockHour < 7)) {
