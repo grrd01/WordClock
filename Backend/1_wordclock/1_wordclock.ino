@@ -99,6 +99,11 @@ const char* version = "wordclock";
   #error Unsupported platform
 #endif
 
+#if USE_BRIGHTNESS_SENSOR
+  #include <Wire.h>
+  #include <BH1750.h>           // v1.0.2
+#endif
+
 #include <WiFiManager.h>        // v2.0.17
 #include <WiFiUdp.h>
 #include <WebSocketsServer.h>   // v2.7.1
@@ -901,12 +906,34 @@ void displayWifiStatus() {
 }
 
 void setForegroundColor() {
-  // Display darker color between 22:00 and 07:00
-  if (darkMode == 1 && (wordClockHour >= 22 || wordClockHour < 7)) {
-    foregroundColor = colorNight;
-  } else {
-    foregroundColor = colorDay;
-  }
+  #if USE_BRIGHTNESS_SENSOR
+    float lux = lightMeter.readLightLevel();
+    Serial.print(lux);
+    Serial.println(" Lux");
+
+    float brightness = 0.05f;
+    if (lux <= 0.0f) {
+      brightness = 0.05f;
+    } else if (lux <= 500.0f) {
+      brightness = 0.05f + (lux / 500.0f) * 0.95f;
+    } else if (lux < 65535.0f) {
+      brightness = 1.0f + ((lux - 500.0f) / (65535.0f - 500.0f));
+    } else {
+      brightness = 2.0f;
+    }
+
+    uint8_t r = min(255, (uint8_t)(((colorDay >> 16) & 0xFF) * brightness));
+    uint8_t g = min(255, (uint8_t)(((colorDay >> 8) & 0xFF) * brightness));
+    uint8_t b = min(255, (uint8_t)((colorDay & 0xFF) * brightness));
+    foregroundColor = Adafruit_NeoPixel::Color(r, g, b);
+  #else
+    // Display darker color between 22:00 and 07:00
+    if (darkMode == 1 && (wordClockHour >= 22 || wordClockHour < 7)) {
+      foregroundColor = colorNight;
+    } else {
+      foregroundColor = colorDay;
+    }
+  #endif
 }
 
 /**
@@ -2217,6 +2244,11 @@ void setup() {
   #endif
   #if USE_PASSIVE_BUZZER
     pinMode(BUZZER_PIN, OUTPUT);
+  #endif
+  #if USE_BRIGHTNESS_SENSOR
+    Wire.begin(D2, D1);     // SDA, SCL
+    lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE);
+    //Serial.println("BH1750 gestartet");
   #endif
 
   // Initialize EEPROM and read stored values
