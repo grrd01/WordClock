@@ -1,5 +1,7 @@
 /*
  * ==================================================================================
+ * non-blocking version: void loop is running continously to check for events
+ * ==================================================================================
  * Passive Buzzer an Wemos D1 mini
  * Verbindungsschema:
  * - VCC/5V          -> VCC
@@ -10,7 +12,7 @@
 
 #define BUZZER_PIN D6
 
-int index = 2;
+int soundIndex = 0;
 
 struct SoundStep {
   int frequency;
@@ -21,6 +23,8 @@ struct SoundDefinition {
   const SoundStep* steps;
   int length;
 };
+
+void applyStep(const SoundStep& step);
 
 const SoundStep beepSequence[] = {
   {1000, 500},
@@ -35,16 +39,16 @@ const SoundStep sireneSequence[] = {
 };
 
 const SoundStep marioSequence[] = {
-  {660, 100}, {660, 100}, {0, 100}, {660, 100}, {0, 150},
-  {510, 100}, {660, 100}, {0, 150}, {770, 100}, {0, 300},
-  {380, 100}, {0, 500}
+  {660, 130}, {0, 50}, {660, 130}, {0, 170}, {660, 130}, {0, 200},
+  {510, 130}, {0, 50}, {660, 130}, {0, 200}, {770, 130}, {0, 440},
+  {380, 130}, {0, 1400}
 };
 
 const SoundStep starWarsSequence[] = {
-  {440, 500}, {440, 500}, {440, 500},
-  {349, 350}, {523, 150}, {440, 500},
-  {349, 350}, {523, 150}, {440, 650},
-  {0, 1000}
+  {440, 500}, {0, 200}, {440, 500}, {0, 200}, {440, 500}, {0, 200},
+  {349, 350}, {0, 150}, {523, 150}, {0, 50}, {440, 500}, {0, 200},
+  {349, 350}, {0, 150}, {523, 150}, {0, 50}, {440, 650},
+  {0, 2000}
 };
 
 const SoundDefinition sounds[] = {
@@ -103,13 +107,13 @@ void updateSound() {
 
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
-  startSound(index);
+  startSound(soundIndex);
 }
 
 void loop() {
   updateSound();
 
-  // später hier eine Funktion einbauen, welche index auf andere Werte setzen kann
-  // z.B. if (sensorAktiv) index = 1;
-  // if (index != oldIndex) startSound(index);
+  // später hier eine Funktion einbauen, welche soundIndex auf andere Werte setzen kann
+  // z.B. if (sensorAktiv) soundIndex = 1;
+  // if (soundIndex != oldIndex) startSound(soundIndex);
 }
