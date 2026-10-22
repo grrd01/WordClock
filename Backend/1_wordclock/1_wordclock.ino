@@ -142,89 +142,110 @@ uint16_t frame = 0;
 
 // AlarmClock variables
 #if USE_PASSIVE_BUZZER
-    #define BUZZER_PIN D6
+  #define BUZZER_PIN D6
 
-    int8_t alarmActive = -1;
-    unsigned long alarmInterval;
-    struct Alarm {
-        uint8_t alarm;
-        uint8_t alarmHour;
-        uint8_t alarmMinute;
-        uint8_t alarmSound;
-        uint8_t alarmLight;
-        uint8_t alarmDays[7];
-        uint8_t alarmRepeat;
-    };
-    Alarm alarms [3] = {
-        {0, 6, 45, 3, 0, {0, 0, 0, 0, 0, 0, 0},0}, // Alarm 1: set 07:00 on weekdays
-        {0, 7, 0, 4, 1, {0, 0, 0, 0, 0, 0, 0},0}, // Alarm 2: set 08:30 on weekends
-        {0, 7, 15, 2, 2, {0, 0, 0, 0, 0, 0, 0},0} // Alarm 3: unset 12:00 every day
-    };
+  int8_t alarmActive = -1;
 
-    void beep() {
-      tone(BUZZER_PIN, 1000); // 1 kHz
-      delay(500);
+  struct Alarm {
+    uint8_t alarm;
+    uint8_t alarmHour;
+    uint8_t alarmMinute;
+    uint8_t alarmSound;
+    uint8_t alarmLight;
+    uint8_t alarmDays[7];
+    uint8_t alarmRepeat;
+  };
+  Alarm alarms [3] = {
+    {0, 6, 45, 3, 0, {0, 0, 0, 0, 0, 0, 0},0}, // Alarm 1: set 07:00 on weekdays
+    {0, 7, 0, 4, 1, {0, 0, 0, 0, 0, 0, 0},0}, // Alarm 2: set 08:30 on weekends
+    {0, 7, 15, 2, 2, {0, 0, 0, 0, 0, 0, 0},0} // Alarm 3: unset 12:00 every day
+  };
+    
+  struct SoundStep {
+    int frequency;
+    unsigned long duration;
+  };
+    
+  const SoundStep beep[] = {
+    {1000, 500},
+    {0, 500}
+  };
+
+  const SoundStep sirene[] = {
+    {500, 20}, {550, 20}, {600, 20}, {650, 20}, {700, 20}, {750, 20}, {800, 20}, {850, 20}, {900, 20}, {950, 20},
+    {1000, 20}, {1050, 20}, {1100, 20}, {1150, 20}, {1200, 20}, {1250, 20}, {1300, 20}, {1350, 20}, {1400, 20}, {1450, 20}, {1500, 20},
+    {1450, 20}, {1400, 20}, {1350, 20}, {1300, 20}, {1250, 20}, {1200, 20}, {1150, 20}, {1100, 20}, {1050, 20}, {1000, 20},
+    {950, 20}, {900, 20}, {850, 20}, {800, 20}, {750, 20}, {700, 20}, {650, 20}, {600, 20}, {550, 20}, {500, 20}
+  };
+
+  const SoundStep mario[] = {
+    {660, 130}, {0, 50}, {660, 130}, {0, 170}, {660, 130}, {0, 200},
+    {510, 130}, {0, 50}, {660, 130}, {0, 200}, {770, 130}, {0, 440},
+    {380, 130}, {0, 1400}
+  };
+    
+  const SoundStep starWars[] = {
+    {440, 500}, {0, 200}, {440, 500}, {0, 200}, {440, 500}, {0, 200},
+    {349, 350}, {0, 150}, {523, 150}, {0, 50}, {440, 500}, {0, 200},
+    {349, 350}, {0, 150}, {523, 150}, {0, 50}, {440, 650},
+    {0, 2000}
+  };
+  
+  struct SoundDefinition {
+    const SoundStep* steps;
+    int length;
+  };
+  
+  const SoundDefinition sounds[] = {
+    {beep, sizeof(beep) / sizeof(beep[0])},
+    {sirene, sizeof(sirene) / sizeof(sirene[0])},
+    {mario, sizeof(mario) / sizeof(mario[0])},
+    {starWars, sizeof(starWars) / sizeof(starWars[0])}
+  };
+
+  const int soundCount = sizeof(sounds) / sizeof(sounds[0]);
+
+  const SoundStep* activeSequence = nullptr;
+  int activeStep = 0;
+  int activeSequenceLength = 0;
+  unsigned long stepStartTime = 0;
+
+  void applyStep(const SoundStep& step) {
+    if (step.frequency > 0) {
+      tone(BUZZER_PIN, step.frequency);
+    } else {
       noTone(BUZZER_PIN);
-      delay(500);
     }
+  }
 
-    void sirene() {
-      for (uint8_t i = 0; i < 3; i++) {
-      // Rising frequency
-        for (int freq = 500; freq <= 1500; freq += 50) {
-          tone(BUZZER_PIN, freq);
-          delay(20);
-        }
-        // Falling frequency
-        for (int freq = 1500; freq >= 500; freq -= 50) {
-          tone(BUZZER_PIN, freq);
-          delay(20);
-        }
+  void startSound(int newIndex) {
+    if (newIndex < 0 || newIndex >= soundCount) {
+      // stop any active sound
+      activeSequence = nullptr;
+      activeSequenceLength = 0;
+      noTone(BUZZER_PIN);
+      return;
+    }
+    activeSequence = sounds[newIndex].steps;
+    activeSequenceLength = sounds[newIndex].length;
+    activeStep = 0;
+    stepStartTime = millis();
+    applyStep(activeSequence[activeStep]);
+  }
+
+  void updateSound() {
+    if (activeSequence == nullptr) {
+      return;
+    }
+    if (millis() - stepStartTime >= activeSequence[activeStep].duration) {
+      activeStep++;
+      if (activeStep >= activeSequenceLength) {
+        activeStep = 0;
       }
-      noTone(BUZZER_PIN);
+      stepStartTime = millis();
+      applyStep(activeSequence[activeStep]);
     }
-
-    void playTone(int frequency, int duration) {
-      tone(BUZZER_PIN, frequency, duration);
-      delay(duration * 1.3);
-    }
-
-    void mario() {
-      playTone(660, 100);
-      playTone(660, 100);
-      delay(100);
-      playTone(660, 100);
-
-      delay(150);
-      playTone(510, 100);
-      playTone(660, 100);
-      delay(150);
-      playTone(770, 100);
-
-      delay(300);
-      playTone(380, 100);
-    }
-
-    void starwars() {
-      playTone(440, 500);  // A
-      playTone(440, 500);  // A
-      playTone(440, 500);  // A
-
-      playTone(349, 350);  // F
-      playTone(523, 150);  // C
-      playTone(440, 500);  // A
-
-      playTone(349, 350);  // F
-      playTone(523, 150);  // C
-      playTone(440, 650);  // A (long note)
-    }
-
-    void (*sounds[4])() = {
-        beep,
-        sirene,
-        mario,
-        starwars
-    };
+  }
 #endif
 
 // Matrix-Drops
@@ -2598,6 +2619,7 @@ void loop() {
               // ToDo: alarm sollte nur ausgeschaltet werden, wenn keine wiederholung - wenn er nicht ausgeschaltet wird, darf er aber nicht sofort wieder losgehen
               alarms[alarmActive].alarm = 0;
               alarmActive = -1;
+              startSound(alarmActive);
               sendParamsToClients();
             } else {
               // New connection, send web interface to client:
@@ -2694,6 +2716,7 @@ void loop() {
         // ToDo: alarm sollte nur ausgeschaltet werden, wenn keine wiederholung - wenn er nicht ausgeschaltet wird, darf er aber nicht sofort wieder losgehen
         alarms[alarmActive].alarm = 0;
         alarmActive = -1;
+        startSound(alarmActive);
         sendParamsToClients();
       } else {
         power = 1 - power; // toggle power
@@ -2722,6 +2745,8 @@ void loop() {
         }
         alarms[alarmActive].alarm = 0;
         alarmActive = -1;
+        startSound(alarmActive);
+        sendParamsToClients();
       } else {
         power = 1 - power; // toggle power
         sendParamsToClients();
@@ -3003,18 +3028,21 @@ void loop() {
       if ((alarms[i].alarmRepeat == 0) || (alarms[i].alarmRepeat == 1 && alarms[i].alarmDays[wordClockWeekday] == 1)) {
         alarmActive = i;
         sendParamsToClients();
-        alarmInterval = millis();
+        if (alarms[alarmActive].alarmSound > 0) {
+          startSound(alarms[alarmActive].alarmSound - 1);
+        }
+        if (alarms[alarmActive].alarmLight > 0) {
+          // Todo: Implement light alarm functionality
+        }
       }
     }
   }
-  if (alarmActive >= 0 && alarmInterval < millis()) {
+  if (alarmActive >= 0) {
     if (alarms[alarmActive].alarmLight > 0) {
-      // Todo: Implement light alarm functionality
-      alarmInterval += 6000; // wait 6 seconds before next alarm
+      // Todo: update light alarm animation
     }
     if (alarms[alarmActive].alarmSound > 0) {
-      sounds[alarms[alarmActive].alarmSound - 1]();
-      alarmInterval += 3000; // wait 3 seconds before next alarm
+      updateSound();
     }
   }
   #endif
