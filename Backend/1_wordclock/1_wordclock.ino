@@ -1251,9 +1251,10 @@ void stopGames() {
 
 void startTetris() {
   // Tetris start
-  stopGames();
   memset(board, 0, sizeof(board));
   tetrisScore = 0;
+  gameOver = false;
+  stopGames();
   blank();
   pixels.show();
   spawnTetromino();
