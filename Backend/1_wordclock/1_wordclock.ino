@@ -1241,14 +1241,19 @@ void sendParamsToClients() {
   webSocket.broadcastTXT(msg);
 }
 
-void startTetris() {
-  // Tetris start
-  memset(board, 0, sizeof(board));
-  tetrisScore = 0;
-  gameOver = false;
+void stopGames() {
+  inSameGame = false;
+  inTetris = false;
+  inSnake = false;
   inMastermind = false;
   inWordGuessr = false;
-  inSnake = false;
+}
+
+void startTetris() {
+  // Tetris start
+  stopGames();
+  memset(board, 0, sizeof(board));
+  tetrisScore = 0;
   blank();
   pixels.show();
   spawnTetromino();
@@ -1259,10 +1264,8 @@ void startTetris() {
 
 void startSnake() {
   // Snake start
+  stopGames();
   inSnake = true;
-  inMastermind = false;
-  inWordGuessr = false;
-  inTetris = false;
   snake[0] = 49;
   snake[1] = 60;
   snake[2] = 71;
@@ -1281,11 +1284,8 @@ void startSnake() {
 
 void startSameGame () {
   // SameGame start
+  stopGames();
   inSameGame = true;
-  inTetris = false;
-  inSnake = false;
-  inMastermind = false;
-  inWordGuessr = false;
   memset(board, 0, sizeof(board));
   sameGameScore = 0;
   movesMade = 0;
@@ -1320,9 +1320,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       startSameGame();
   } else if (msg == "stop") {
      // Tetris,Snake or SameGame exit
-    inTetris = false;
-    inSnake = false;
-    inSameGame = false;
+    stopGames();
     satzneu[0] = -1;
     lastMinuteWordClock = 61;
   } else if (inSnake) {
@@ -1768,13 +1766,13 @@ void updateGameStatus() {
   if (boardIsEmpty()) {
 	gameStatus = STATUS_WON;
     chase(Green);
-    inSameGame = false;
+    stopGames();
     satzneu[0] = -1;
     lastMinuteWordClock = 61;
   } else if (!hasPossibleMove()) {
 	gameStatus = STATUS_STUCK;
     chase(Red);
-    inSameGame = false;
+    stopGames();
     satzneu[0] = -1;
     lastMinuteWordClock = 61;
   } else {
@@ -1918,11 +1916,8 @@ void wordGuessrNewGuess() {
  */
 void startMastermind() {
   wipe();
+  stopGames();
   inMastermind = true;
-  inWordGuessr = false;
-  inSnake = false;
-  inTetris = false;
-  inSameGame = false;
   randomSeed(micros());
   mastermindCode[0] = random(1,7);
   mastermindCode[1] = random(1,7);
@@ -2006,7 +2001,7 @@ void evaluateMastermind() {
 void evaluateControllerMastermind() {
   if (mastermindTry == 11 || mastermindPlace == 4) {
     // Mastermind fertig, zurueck zur WordClock
-    inMastermind = false;
+    stopGames();
     satzneu[0] = -1;
     lastMinuteWordClock = 61;
   } else {
@@ -2061,7 +2056,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         } else if (inMastermind) {
           if (mastermindTry == 11 || mastermindPlace == 4) {
             // Mastermind fertig, zurueck zur WordClock
-            inMastermind = false;
+            stopGames();
             satzneu[0] = -1;
             lastMinuteWordClock = 61;
           } else {
@@ -2086,7 +2081,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         } else if (inMastermind) {
           if (mastermindTry == 11 || mastermindPlace == 4) {
             // Mastermind fertig, zurueck zur WordClock
-            inMastermind = false;
+            stopGames();
             satzneu[0] = -1;
             lastMinuteWordClock = 61;
           } else if (mastermindCol < 3) {
@@ -2106,7 +2101,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
         } else if (inMastermind) {
           if (mastermindTry == 11 || mastermindPlace == 4) {
             // Mastermind fertig, zurueck zur WordClock
-            inMastermind = false;
+            stopGames();
             satzneu[0] = -1;
             lastMinuteWordClock = 61;
           } else {
@@ -2191,10 +2186,7 @@ void notifyCB(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, boo
       return;
     case 0x04:
       // Serial.println(F("Taste - gedrueckt"));
-      inTetris = false;
-      inSnake = false;
-      inSameGame = false;
-      inMastermind = false;
+      stopGames();
       satzneu[0] = -1;
       lastMinuteWordClock = 61;
       return;
@@ -2257,6 +2249,401 @@ class ScanCallbacks : public NimBLEScanCallbacks {
   }
 };
 #endif
+
+void updateParams() {
+  // Get new params from client:
+  const char *url = header.c_str();
+
+  #if USE_PASSIVE_BUZZER
+  for (int8_t i = 2; i >= 0; i--) {
+    String parameterName;
+    alarms[i].alarmRepeat = 0;
+    for (int8_t j = 6; j >= 0; j--) {
+      parameterName = "a" + String(i) + "d" + String(j) + "=";
+      // todo remove serial print
+      Serial.print(parameterName);
+      Serial.println(extractParameterValue(url, parameterName.c_str()));
+      if (extractParameterValue(url, parameterName.c_str()) == 1) {
+        alarms[i].alarmDays[j] = 1;
+        alarms[i].alarmRepeat = 1;
+      } else {
+        alarms[i].alarmDays[j] = 0;
+      }
+    }
+    parameterName = "a" + String(i) + "l=";
+    if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 2) {
+      alarms[i].alarmLight = extractParameterValue(url, parameterName.c_str());
+    }
+    parameterName = "a" + String(i) + "s=";
+    if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 4) {
+      alarms[i].alarmSound = extractParameterValue(url, parameterName.c_str());
+    }
+    parameterName = "a" + String(i) + "m=";
+    if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 59) {
+      alarms[i].alarmMinute = extractParameterValue(url, parameterName.c_str());
+    }
+    parameterName = "a" + String(i) + "h=";
+    if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 24) {
+      alarms[i].alarmHour = extractParameterValue(url, parameterName.c_str());
+    }
+    parameterName = "a" + String(i) + "=";
+    if (extractParameterValue(url, parameterName.c_str()) == 1) {
+      alarms[i].alarm = 1;
+    } else {
+      alarms[i].alarm = 0;
+    }
+  }
+  #endif
+
+  if (extractParameterValue(url, "ghost=") == 1) {
+    ghost = 1;
+  } else {
+    ghost = 0;
+  }
+  // Save ghost to EEPROM if it changed
+  uint8_t storedGhost = EEPROM.read(eepromAddrGhost);
+  if (storedGhost != ghost) {
+    effectChange = true;
+    EEPROM.write(eepromAddrGhost, ghost);
+    EEPROM.commit();
+  }
+  if (extractParameterValue(url, "power=") == 1) {
+    if (power == 0) {
+      satzneu[0] = -1;
+    }
+    power = 1;
+  } else {
+    power = 0;
+    blank();
+    pixels.show();
+  }
+  if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
+    effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
+  }
+  // Save effectSpeed to EEPROM if it changed
+  int storedValueInt = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
+  if (storedValueInt != effectSpeed) {
+    effectChange = true;
+    EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
+    EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);
+    EEPROM.commit();
+  }
+  if (extractParameterValue(url, "darkmode=") == 1) {
+    darkMode = 1;
+  } else {
+    darkMode = 0;
+  }
+  // Save darkMode to EEPROM if it changed
+  uint8_t storedDarkMode = EEPROM.read(eepromAddrDarkMode);
+  if (storedDarkMode != darkMode) {
+    EEPROM.write(eepromAddrDarkMode, darkMode);
+    EEPROM.commit();
+  }
+  if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
+    effect = extractParameterValue(url, "effect=");
+  }
+  // Save effect to EEPROM if it changed
+  uint8_t storedEffect = EEPROM.read(eepromAddrEffect);
+  if (storedEffect != effect) {
+    effectChange = true;
+    EEPROM.write(eepromAddrEffect, effect);
+    EEPROM.commit();
+  }
+  if (extractParameterValue(url, "blue=") >= 0 && extractParameterValue(url, "blue=") <= 255) {
+    rgbBlue = extractParameterValue(url, "blue=");
+  }
+  // Save rgbBlue to EEPROM if it changed
+  uint8_t storedBlue = EEPROM.read(eepromAddrBlue);
+  if (storedBlue != rgbBlue) {
+    effectChange = true;
+    EEPROM.write(eepromAddrBlue, rgbBlue);
+    EEPROM.commit();
+  }
+  if (extractParameterValue(url, "green=") >= 0 && extractParameterValue(url, "green=") <= 255) {
+    rgbGreen = extractParameterValue(url, "green=");
+  }
+  // Save rgbGreen to EEPROM if it changed
+  uint8_t storedGreen = EEPROM.read(eepromAddrGreen);
+  if (storedGreen != rgbGreen) {
+    effectChange = true;
+    EEPROM.write(eepromAddrGreen, rgbGreen);
+    EEPROM.commit();
+  }
+  if (extractParameterValue(url, "red=") >= 0 && extractParameterValue(url, "red=") <= 255) {
+    rgbRed = extractParameterValue(url, "red=");
+  }
+  // Save rgbRed to EEPROM if it changed
+  uint8_t storedRed = EEPROM.read(eepromAddrRed);
+  if (storedRed != rgbRed) {
+    effectChange = true;
+    EEPROM.write(eepromAddrRed, rgbRed);
+    EEPROM.commit();
+  }
+  colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+  colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+  setForegroundColor();
+  if (effect == 1) {
+    // colorWheel
+    rgbRed = 255;
+    rgbGreen = 0;
+    rgbBlue = 0;
+    effectWait = effectSpeed;
+  } else if (effect == 2) {
+    // rainbow
+    effectWait = effectSpeed / 8;
+  }
+  lastMinuteWordClock = 61;
+  // send current params to all connected WebSocket clients
+  sendParamsToClients();
+}
+
+void checkGhost() {
+  // display ghost if enabled
+  if (ghost == 1 && ghostHour == wordClockHour && ghostMinute == wordClockMinute) {
+    if (!inGhost) {
+      inGhost = true;
+      // loop 11 Zeilen
+      for (int8_t j = 11; j >= 0; j--) {
+        blank();
+        // Schleife durch das Array
+        for (int8_t i = 0; i < numPixels; i++) {
+          int ghostPixel = WordGhost[i];
+          // Wenn der Wert -1 erreicht wird, die Schleife beenden
+          if (WordGhost[i] == -1) {
+            break;
+          }
+          // pixel um anzahl Zeilen nach unten verschieben
+          ghostPixel = down(ghostPixel,j);
+          pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
+        }
+        pixels.show();
+        delay(200);
+      }
+    } else {
+      // ghost eyes
+      ghostStep = ghostStep + ghostChange;
+      if (ghostStep == 100) {
+        ghostChange = -1;
+      } else if (ghostStep == 0) {
+        ghostChange = 1;
+      }
+      // Calculate the RGB values for the current step
+      int tempRed   = (120 * ghostStep) / 100;    // Red value from 0 to 100
+      int tempBlue  = (6 * ghostStep) / 100;      // Blue value from 0 to 5
+
+      lightup(WordGhostEyes, pixels.Color(tempRed, 0, tempBlue));
+      pixels.show();
+      delay(10);
+      getLocalTime();
+    }
+
+    return;
+  }
+  // hide ghost
+  if (inGhost && ghostMinute != wordClockMinute) {
+    // hide ghost
+    inGhost = false;
+    // loop 11 Zeilen
+    for (int8_t j = 0; j < 11; j++) {
+      blank();
+      // Schleife durch das Array
+      for (int8_t i = 0; i < numPixels; i++) {
+        int ghostPixel = WordGhost[i];
+        // Wenn der Wert -1 erreicht wird, die Schleife beenden
+        if (WordGhost[i] == -1) {
+          break;
+        }
+        // pixel um anzahl Zeilen nach unten verschieben
+        ghostPixel = down(ghostPixel,j);
+        pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
+      }
+      pixels.show();
+      delay(200);
+    }
+  }
+}
+
+void checkGames() {
+  if (inSnake) {
+    if (millis() - snakeLastMove >= snakeSpeed) {
+      snakeLastMove = millis();
+      snakeNext = -1;
+      if (snakeDir == "up") {
+        snakeNext = snake[0] - 1 - 2 * (snake[0] % 11);
+        if (snakeNext < 0) {
+          snakeNext = -3;
+        }
+      } else if (snakeDir == "right") {
+        snakeNext = snake[0] + 1 - 2 * ((snake[0] / 11) % 2);
+        if (floor(snakeNext / 11) != snake[0] / 11) {
+          snakeNext = -3;
+        }
+      } else if (snakeDir == "down") {
+        snakeNext = snake[0] + 1 + 2 * (10 - snake[0] % 11);
+        if (snakeNext > 120) {
+          snakeNext = -3;
+        }
+      } else if (snakeDir == "left") {
+        // move snake left
+        snakeNext = snake[0] - 1 + 2 * ((snake[0] / 11) % 2);
+        if (floor(snakeNext / 11) != snake[0] / 11 || snakeNext == -1) {
+          snakeNext = -3;
+        }
+      }
+      if (snakeNext == snake[1]) {
+        // ignore move backwards
+        snakeDir = snakePrevDir;
+        snakeNext = -2;
+      }
+      for (int8_t i = snakeLen - 1; i > 1; i--) {
+        if (snakeNext == snake[i]) {
+          // bite own tail
+          snakeNext = -3;
+        }
+      }
+      if (snakeNext == snakeSnack) {
+        // found snack
+        if (snakeLen < 120) {
+          snakeLen++;
+        }
+
+        if (snakeLen - 3 > snakeHighScore) {
+          snakeHighScore = snakeLen - 3;
+        }
+        sendScoreToClients(snakeLen - 3, snakeHighScore);
+        snake[snakeLen] = -1;
+        setSnack();
+        snakeSpeed = snakeSpeed - 4;
+      }
+
+      if (snakeNext >= 0) {
+        // move snake one step forward
+        for (int8_t i = snakeLen - 1; i > 0; i--) {
+          snake[i] = snake[i-1];
+        }
+        snake[0] = snakeNext;
+        blank();
+        lightup(snake, Green);
+        pixels.setPixelColor(snakeSnack, Red);
+        pixels.show();
+      }
+
+      if (snakeNext == -3) {
+        // game over
+        webSocket.broadcastTXT("snakeGameOver");
+        if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh) || EEPROM.read(eepromAddrSnakeHigh) == 255) {
+          EEPROM.write(eepromAddrSnakeHigh, snakeHighScore);
+          EEPROM.commit();
+        }
+        chase(Red);
+        stopGames();
+        satzneu[0] = -1;
+        lastMinuteWordClock = 61;
+      }
+
+    }
+  } else if (inTetris) {
+    if (!gameOver && millis() - lastDrop > dropInterval) {
+      lastDrop = millis();
+      if (!checkCollision(posX, posY + 1, rotation)) {
+        posY++;
+      } else {
+        placeTetromino();
+        clearLines();
+        spawnTetromino();
+        if (checkCollision(posX, posY, rotation)) gameOver = true;
+      }
+      if (!gameOver) {
+        drawBoard();
+      }
+    }
+    if (gameOver) {
+      delay(500);
+      webSocket.broadcastTXT("tetrisGameOver");
+      if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh) || EEPROM.read(eepromAddrTetrisHigh) == 255) {
+        EEPROM.write(eepromAddrTetrisHigh, tetrisHighScore);
+        EEPROM.commit();
+      }
+      chase(Red);
+      stopGames();
+      satzneu[0] = -1;
+      lastMinuteWordClock = 61;
+    }
+  } else if (inSameGame) {
+    if (millis() - lastBlinkToggle >= blinkInterval) {
+      lastBlinkToggle = millis();
+      cursorBlinkVisible = !cursorBlinkVisible;
+      drawSameGameBoard();
+    }
+  } else if (inMastermind && mastermindTry < 11 && mastermindPlace < 4) {
+    if (millis() - lastBlinkToggle >= blinkInterval) {
+      lastBlinkToggle = millis();
+      cursorBlinkVisible = !cursorBlinkVisible;
+      if (connectedControllers > 0) {
+        displayMastermind();
+      } else {
+        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), backgroundColor);
+        pixels.show();
+      }
+
+      if (cursorBlinkVisible) {
+        // show cursor
+        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), White);
+        pixels.show();
+      }
+    }
+  } else if (inWordGuessr) {
+    if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
+      // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
+      blank();
+      lightup(wordGuessrActiveWordIndex, foregroundColor);
+      for (uint8_t i = 0; i < wordGuessrHint; i++) {
+          pixels.setPixelColor(wordGuessrActiveWordIndex[i], Green);
+        }
+      pixels.show();
+      wordGuessrAlert = 0;
+    } else if (millis() > wordGuessrStart + (wordGuessrHint + 1) * 20000) {
+      // nach 20 Sekunden einen weiteren Buchstaben als Hint grün färben
+      pixels.setPixelColor(wordGuessrActiveWordIndex[wordGuessrHint], Green);
+      pixels.show();
+      wordGuessrHint++;
+      // falls alle Buchstaben schon grün sind, zum nächsten Wort wechseln
+      if (wordGuessrActiveWordIndex[wordGuessrHint] == -1) {
+        wordGuessrNewGuess();
+        wordGuessrAlert = millis() + 100;
+      }
+    }
+  } else if (effect == 1) {
+    // colorWheel
+    if (effectWait > 0) {
+      effectWait--;
+    } else {
+      effectWait = effectSpeed;
+      if (rgbRed > 0 && rgbBlue == 0) {
+        rgbRed--;
+        rgbGreen++;
+      } else if (rgbGreen > 0) {
+        rgbGreen--;
+        rgbBlue++;
+      } else {
+        rgbBlue--;
+        rgbRed++;
+      }
+      colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
+      colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
+      lastMinuteWordClock = 61;
+    }
+  } else if (effect == 2) {
+    // rainbow
+    if (effectWait > 0) {
+      effectWait--;
+    } else {
+      effectWait = effectSpeed / 8;
+      frame++;
+      lastMinuteWordClock = 61;
+    }
+  }
+}
 
 /**
  * Main setup to start WordClock
@@ -2385,7 +2772,7 @@ void loop() {
                 startMastermind();
               } else if (inMastermind && mastermindCodeTry[3] == 7) {
                 // exit current mastermind game
-                inMastermind = false;
+                stopGames();
                 satzneu[0] = -1;
                 lastMinuteWordClock = 61;
               } else if (inMastermind && mastermindCodeTry[3] != 0 && mastermindCodeTry[3] != 7) {
@@ -2418,18 +2805,15 @@ void loop() {
               if (header.indexOf("new") >= 0) {
                 if (!inWordGuessr) {
                   // start new wordguessr game
+                  stopGames();
                   inWordGuessr = true;
-                  inSnake = false;
-                  inTetris = false;
-                  inSameGame = false;
-                  inMastermind = false;
                   wordGuessrNewGuess();
                   wordGuessrAlert = millis();
                 }
                 wordGuessrScore = -1;
               } else if (header.indexOf("exit") >= 0 && inWordGuessr) {
                 // exit current wordguessr game
-                inWordGuessr = false;
+                stopGames();
                 satzneu[0] = -1;
                 lastMinuteWordClock = 61;
                 wordGuessrScore = -2;
@@ -2463,155 +2847,12 @@ void loop() {
               client.println(wordGuessrScore);
               client.println(F("}"));
             } else if (header.indexOf("update_params") >= 0) {
-              // Get new params from client:
-              const char *url = header.c_str();
-
-              #if USE_PASSIVE_BUZZER
-              for (int8_t i = 2; i >= 0; i--) {
-                String parameterName;
-                alarms[i].alarmRepeat = 0;
-                for (int8_t j = 6; j >= 0; j--) {
-                  parameterName = "a" + String(i) + "d" + String(j) + "=";
-                  // todo remove serial print
-                  Serial.print(parameterName);
-                  Serial.println(extractParameterValue(url, parameterName.c_str()));
-                  if (extractParameterValue(url, parameterName.c_str()) == 1) {
-                    alarms[i].alarmDays[j] = 1;
-                    alarms[i].alarmRepeat = 1;
-                  } else {
-                    alarms[i].alarmDays[j] = 0;
-                  }
-                }
-                parameterName = "a" + String(i) + "l=";
-                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 2) {
-                  alarms[i].alarmLight = extractParameterValue(url, parameterName.c_str());
-                }
-                parameterName = "a" + String(i) + "s=";
-                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 4) {
-                  alarms[i].alarmSound = extractParameterValue(url, parameterName.c_str());
-                }
-                parameterName = "a" + String(i) + "m=";
-                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 59) {
-                  alarms[i].alarmMinute = extractParameterValue(url, parameterName.c_str());
-                }
-                parameterName = "a" + String(i) + "h=";
-                if (extractParameterValue(url, parameterName.c_str()) >= 0 && extractParameterValue(url, parameterName.c_str()) <= 24) {
-                  alarms[i].alarmHour = extractParameterValue(url, parameterName.c_str());
-                }
-                parameterName = "a" + String(i) + "=";
-                if (extractParameterValue(url, parameterName.c_str()) == 1) {
-                  alarms[i].alarm = 1;
-                } else {
-                  alarms[i].alarm = 0;
-                }
-              }
-              #endif
-
-              if (extractParameterValue(url, "ghost=") == 1) {
-                ghost = 1;
-              } else {
-                ghost = 0;
-              }
-              // Save ghost to EEPROM if it changed
-              uint8_t storedGhost = EEPROM.read(eepromAddrGhost);
-              if (storedGhost != ghost) {
-                effectChange = true;
-                EEPROM.write(eepromAddrGhost, ghost);
-                EEPROM.commit();
-              }
-              if (extractParameterValue(url, "power=") == 1) {
-                if (power == 0) {
-                  satzneu[0] = -1;
-                }
-                power = 1;
-              } else {
-                power = 0;
-                blank();
-                pixels.show();
-              }
-              if (extractParameterValue(url, "speed=") >= 50 && extractParameterValue(url, "speed=") <= 2000) {
-                effectSpeed = (extractParameterValue(url, "speed=") - 48) * 4; // map 50-2000 from WebParameter to 8-7808 in Arduino
-              }
-              // Save effectSpeed to EEPROM if it changed
-              int storedValueInt = (EEPROM.read(eepromAddrEffectSpeedHigh) << 8) | EEPROM.read(eepromAddrEffectSpeedLow);
-              if (storedValueInt != effectSpeed) {
-                effectChange = true;
-                EEPROM.write(eepromAddrEffectSpeedLow, effectSpeed & 0xFF);
-                EEPROM.write(eepromAddrEffectSpeedHigh, (effectSpeed >> 8) & 0xFF);
-                EEPROM.commit();
-              }
-              if (extractParameterValue(url, "darkmode=") == 1) {
-                darkMode = 1;
-              } else {
-                darkMode = 0;
-              }
-              // Save darkMode to EEPROM if it changed
-              uint8_t storedDarkMode = EEPROM.read(eepromAddrDarkMode);
-              if (storedDarkMode != darkMode) {
-                EEPROM.write(eepromAddrDarkMode, darkMode);
-                EEPROM.commit();
-              }
-              if (extractParameterValue(url, "effect=") >= 0 && extractParameterValue(url, "effect=") <= 5) {
-                effect = extractParameterValue(url, "effect=");
-              }
-              // Save effect to EEPROM if it changed
-              uint8_t storedEffect = EEPROM.read(eepromAddrEffect);
-              if (storedEffect != effect) {
-                effectChange = true;
-                EEPROM.write(eepromAddrEffect, effect);
-                EEPROM.commit();
-              }
-              if (extractParameterValue(url, "blue=") >= 0 && extractParameterValue(url, "blue=") <= 255) {
-                rgbBlue = extractParameterValue(url, "blue=");
-              }
-              // Save rgbBlue to EEPROM if it changed
-              uint8_t storedBlue = EEPROM.read(eepromAddrBlue);
-              if (storedBlue != rgbBlue) {
-                effectChange = true;
-                EEPROM.write(eepromAddrBlue, rgbBlue);
-                EEPROM.commit();
-              }
-              if (extractParameterValue(url, "green=") >= 0 && extractParameterValue(url, "green=") <= 255) {
-                rgbGreen = extractParameterValue(url, "green=");
-              }
-              // Save rgbGreen to EEPROM if it changed
-              uint8_t storedGreen = EEPROM.read(eepromAddrGreen);
-              if (storedGreen != rgbGreen) {
-                effectChange = true;
-                EEPROM.write(eepromAddrGreen, rgbGreen);
-                EEPROM.commit();
-              }
-              if (extractParameterValue(url, "red=") >= 0 && extractParameterValue(url, "red=") <= 255) {
-                rgbRed = extractParameterValue(url, "red=");
-              }
-              // Save rgbRed to EEPROM if it changed
-              uint8_t storedRed = EEPROM.read(eepromAddrRed);
-              if (storedRed != rgbRed) {
-                effectChange = true;
-                EEPROM.write(eepromAddrRed, rgbRed);
-                EEPROM.commit();
-              }
-              colorDay = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
-              colorNight = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
-              setForegroundColor();
-              if (effect == 1) {
-                // colorWheel
-                rgbRed = 255;
-                rgbGreen = 0;
-                rgbBlue = 0;
-                effectWait = effectSpeed;
-              } else if (effect == 2) {
-                // rainbow
-                effectWait = effectSpeed / 8;
-              }
-              lastMinuteWordClock = 61;
+              updateParams();
               client.println(F("HTTP/1.1 200 OK"));
               client.println(F("Content-type:text/plain"));
               client.println(F("Connection: close"));
               client.println();
               client.println(F("OK"));
-              // send current params to all connected WebSocket clients
-              sendParamsToClients();
             } else if (header.indexOf("stop_alarm") >= 0 && alarmActive >= 0) {
               blank();
               satzneu[0] = -1;
@@ -2762,258 +3003,14 @@ void loop() {
     lastTouchStage = digitalRead(D5);
   #endif
 
-  // sleep and return when power off
-  if (power == 0) {
-    return;
-  }
-
-  // display ghost if enabled
-  if (ghost == 1 && ghostHour == wordClockHour && ghostMinute == wordClockMinute) {
-    if (!inGhost) {
-      inGhost = true;
-      // loop 11 Zeilen
-      for (int8_t j = 11; j >= 0; j--) {
-        blank();
-        // Schleife durch das Array
-        for (int8_t i = 0; i < numPixels; i++) {
-          int ghostPixel = WordGhost[i];
-          // Wenn der Wert -1 erreicht wird, die Schleife beenden
-          if (WordGhost[i] == -1) {
-            break;
-          }
-          // pixel um anzahl Zeilen nach unten verschieben
-          ghostPixel = down(ghostPixel,j);
-          pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
-        }
-        pixels.show();
-        delay(200);
-      }
-    } else {
-      // ghost eyes
-      ghostStep = ghostStep + ghostChange;
-      if (ghostStep == 100) {
-        ghostChange = -1;
-      } else if (ghostStep == 0) {
-        ghostChange = 1;
-      }
-      // Calculate the RGB values for the current step
-      int tempRed   = (120 * ghostStep) / 100;    // Red value from 0 to 100
-      int tempBlue  = (6 * ghostStep) / 100;      // Blue value from 0 to 5
-
-      lightup(WordGhostEyes, pixels.Color(tempRed, 0, tempBlue));
-      pixels.show();
-      delay(10);
-      getLocalTime();
-    }
-
-    return;
-  }
-  // hide ghost
-  if (inGhost && ghostMinute != wordClockMinute) {
-    // hide ghost
-    inGhost = false;
-    // loop 11 Zeilen
-      for (int8_t j = 0; j < 11; j++) {
-        blank();
-        // Schleife durch das Array
-        for (int8_t i = 0; i < numPixels; i++) {
-          int ghostPixel = WordGhost[i];
-          // Wenn der Wert -1 erreicht wird, die Schleife beenden
-          if (WordGhost[i] == -1) {
-            break;
-          }
-          // pixel um anzahl Zeilen nach unten verschieben
-          ghostPixel = down(ghostPixel,j);
-          pixels.setPixelColor(ghostPixel, scaleColor(White, (11 - (float)j) / 11));
-        }
-        pixels.show();
-        delay(200);
-      }
-  }
-
-  if (inSnake) {
-    if (millis() - snakeLastMove >= snakeSpeed) {
-      snakeLastMove = millis();
-      snakeNext = -1;
-      if (snakeDir == "up") {
-        snakeNext = snake[0] - 1 - 2 * (snake[0] % 11);
-        if (snakeNext < 0) {
-          snakeNext = -3;
-        }
-      } else if (snakeDir == "right") {
-        snakeNext = snake[0] + 1 - 2 * ((snake[0] / 11) % 2);
-        if (floor(snakeNext / 11) != snake[0] / 11) {
-          snakeNext = -3;
-        }
-      } else if (snakeDir == "down") {
-        snakeNext = snake[0] + 1 + 2 * (10 - snake[0] % 11);
-        if (snakeNext > 120) {
-          snakeNext = -3;
-        }
-      } else if (snakeDir == "left") {
-        // move snake left
-        snakeNext = snake[0] - 1 + 2 * ((snake[0] / 11) % 2);
-        if (floor(snakeNext / 11) != snake[0] / 11 || snakeNext == -1) {
-          snakeNext = -3;
-        }
-      }
-      if (snakeNext == snake[1]) {
-        // ignore move backwards
-        snakeDir = snakePrevDir;
-        snakeNext = -2;
-      }
-      for (int8_t i = snakeLen - 1; i > 1; i--) {
-        if (snakeNext == snake[i]) {
-          // bite own tail
-          snakeNext = -3;
-        }
-      }
-      if (snakeNext == snakeSnack) {
-        // found snack
-        if (snakeLen < 120) {
-          snakeLen++;
-        }
-
-        if (snakeLen - 3 > snakeHighScore) {
-          snakeHighScore = snakeLen - 3;
-        }
-        sendScoreToClients(snakeLen - 3, snakeHighScore);
-        snake[snakeLen] = -1;
-        setSnack();
-        snakeSpeed = snakeSpeed - 4;
-      }
-
-      if (snakeNext >= 0) {
-        // move snake one step forward
-        for (int8_t i = snakeLen - 1; i > 0; i--) {
-          snake[i] = snake[i-1];
-        }
-        snake[0] = snakeNext;
-        blank();
-        lightup(snake, Green);
-        pixels.setPixelColor(snakeSnack, Red);
-        pixels.show();
-      }
-
-      if (snakeNext == -3) {
-        // game over
-        webSocket.broadcastTXT("snakeGameOver");
-        if (snakeHighScore > EEPROM.read(eepromAddrSnakeHigh) || EEPROM.read(eepromAddrSnakeHigh) == 255) {
-          EEPROM.write(eepromAddrSnakeHigh, snakeHighScore);
-          EEPROM.commit();
-        }
-        chase(Red);
-        inSnake = false;
-        satzneu[0] = -1;
-        lastMinuteWordClock = 61;
-      }
-
-    }
-  } else if (inTetris) {
-    if (!gameOver && millis() - lastDrop > dropInterval) {
-      lastDrop = millis();
-      if (!checkCollision(posX, posY + 1, rotation)) {
-        posY++;
-      } else {
-        placeTetromino();
-        clearLines();
-        spawnTetromino();
-        if (checkCollision(posX, posY, rotation)) gameOver = true;
-      }
-      if (!gameOver) {
-        drawBoard();
-      }
-    }
-    if (gameOver) {
-      delay(500);
-      webSocket.broadcastTXT("tetrisGameOver");
-      if (tetrisHighScore > EEPROM.read(eepromAddrTetrisHigh) || EEPROM.read(eepromAddrTetrisHigh) == 255) {
-        EEPROM.write(eepromAddrTetrisHigh, tetrisHighScore);
-        EEPROM.commit();
-      }
-      chase(Red);
-      inTetris = false;
-      satzneu[0] = -1;
-      lastMinuteWordClock = 61;
-    }
-  } else if (inSameGame) {
-    if (millis() - lastBlinkToggle >= blinkInterval) {
-      lastBlinkToggle = millis();
-      cursorBlinkVisible = !cursorBlinkVisible;
-      drawSameGameBoard();
-    }
-  } else if (inMastermind && mastermindTry < 11 && mastermindPlace < 4) {
-    if (millis() - lastBlinkToggle >= blinkInterval) {
-      lastBlinkToggle = millis();
-      cursorBlinkVisible = !cursorBlinkVisible;
-      if (connectedControllers > 0) {
-        displayMastermind();
-      } else {
-        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), backgroundColor);
-        pixels.show();
-      }
-
-      if (cursorBlinkVisible) {
-        // show cursor
-        pixels.setPixelColor(down(mastermindCol + 1, mastermindTry), White);
-        pixels.show();
-      }
-    }
-  } else if (inWordGuessr) {
-    if (wordGuessrAlert > 0 && wordGuessrAlert < millis()) {
-      // nach Alert (richtig/falsch) wieder auf normale Anzeige wechseln
-      blank();
-      lightup(wordGuessrActiveWordIndex, foregroundColor);
-      for (uint8_t i = 0; i < wordGuessrHint; i++) {
-          pixels.setPixelColor(wordGuessrActiveWordIndex[i], Green);
-        }
-      pixels.show();
-      wordGuessrAlert = 0;
-    } else if (millis() > wordGuessrStart + (wordGuessrHint + 1) * 20000) {
-      // nach 20 Sekunden einen weiteren Buchstaben als Hint grün färben
-      pixels.setPixelColor(wordGuessrActiveWordIndex[wordGuessrHint], Green);
-      pixels.show();
-      wordGuessrHint++;
-      // falls alle Buchstaben schon grün sind, zum nächsten Wort wechseln
-      if (wordGuessrActiveWordIndex[wordGuessrHint] == -1) {
-        wordGuessrNewGuess();
-        wordGuessrAlert = millis() + 100;
-      }
-    }
-  } else if (effect == 1) {
-    // colorWheel
-    if (effectWait > 0) {
-      effectWait--;
-    } else {
-      effectWait = effectSpeed;
-      if (rgbRed > 0 && rgbBlue == 0) {
-        rgbRed--;
-        rgbGreen++;
-      } else if (rgbGreen > 0) {
-        rgbGreen--;
-        rgbBlue++;
-      } else {
-        rgbBlue--;
-        rgbRed++;
-      }
-      colorDay  = Adafruit_NeoPixel::Color(rgbRed / 5, rgbGreen / 5, rgbBlue / 5);
-      colorNight  = Adafruit_NeoPixel::Color(rgbRed / 25, rgbGreen / 25, rgbBlue / 25);
-      lastMinuteWordClock = 61;
-    }
-  } else if (effect == 2) {
-    // rainbow
-    if (effectWait > 0) {
-      effectWait--;
-    } else {
-      effectWait = effectSpeed / 8;
-      frame++;
-      lastMinuteWordClock = 61;
-    }
+  if (power == 1) {
+    checkGhost();
+    checkGames();
   }
 
   getLocalTime();
 
-  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris && !inSameGame) {
+  if (timeStatus() != timeNotSet && !inSnake && !inMastermind && !inWordGuessr && !inTetris && !inSameGame && power == 1) {
     if (lastMinuteWordClock != wordClockMinute) { //update the display only if time has changed
       displayTime();
       lastMinuteWordClock = wordClockMinute;
@@ -3026,6 +3023,10 @@ void loop() {
   for (uint8_t i = 0; i < 3; i++) {
     if (alarms[i].alarm == 1 && alarms[i].alarmHour == wordClockHour && alarms[i].alarmMinute == wordClockMinute && alarmActive != i) {
       if ((alarms[i].alarmRepeat == 0) || (alarms[i].alarmRepeat == 1 && alarms[i].alarmDays[wordClockWeekday] == 1)) {
+        if (power == 0) {
+          satzneu[0] = -1;
+          power = 1;
+        }
         alarmActive = i;
         sendParamsToClients();
         if (alarms[alarmActive].alarmSound > 0) {
